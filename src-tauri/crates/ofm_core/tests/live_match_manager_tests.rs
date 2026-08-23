@@ -188,6 +188,22 @@ fn create_live_match_succeeds() {
 }
 
 #[test]
+fn create_live_match_uses_the_competition_substitution_rules() {
+    let mut game = make_game_with_fixture();
+    let rules = &mut game.league.as_mut().expect("test league").rules;
+    rules.max_substitutes = 3;
+    rules.max_substitution_windows = 2;
+    rules.half_time_does_not_count_as_substitution_window = false;
+
+    let session = live_match_manager::create_live_match(&game, 0, MatchMode::Live, false)
+        .expect("competition fixture should create a live match");
+    let snapshot = session.snapshot();
+
+    assert_eq!(snapshot.max_subs, 3);
+    assert_eq!(snapshot.max_substitution_windows, 2);
+}
+
+#[test]
 fn create_live_match_uses_saved_starting_xi() {
     let mut game = make_game_with_fixture();
     let saved_xi_ids = vec![

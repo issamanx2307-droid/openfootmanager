@@ -78,7 +78,13 @@ focused regression test now passes. Run the full workspace suite before a PR.
 
 ## Next session entry point
 
-Continue Phase 1 by connecting competition rules to match setup; its engine
-still has a legacy default substitution limit. Phase 2 has begun with the
-append-only `career_versions` migration; next, add the repository API that
-persists and reads the pinned version contract.
+Phase 1 now passes competition-owned substitution limits and windows into live
+match setup. `CompetitionRules` owns the defaults (5 substitutes, 3 windows,
+half-time exempt), and focused engine/core regressions cover both enforcement
+and setup propagation. The engine's standalone constructor intentionally keeps
+the same defaults for simulations and legacy tests.
+
+Next: finish Phase 1 by carrying the Albion rules-pack selection into career
+creation rather than relying on only the domain defaults. Phase 2 has begun
+with the append-only `career_versions` migration; continue the repository API
+that persists and reads the pinned version contract.

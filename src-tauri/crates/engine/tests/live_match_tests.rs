@@ -528,6 +528,49 @@ fn max_substitutions_enforced() {
 }
 
 #[test]
+fn competition_substitution_windows_are_enforced_at_match_time() {
+    let home = make_team("home", "Home FC", 70, PlayStyle::Balanced);
+    let away = make_team("away", "Away FC", 70, PlayStyle::Balanced);
+    let mut state = LiveMatchState::new_with_substitution_rules(
+        home,
+        away,
+        MatchConfig::default(),
+        make_bench("home", 65),
+        make_bench("away", 65),
+        false,
+        SubstitutionRules {
+            max_substitutes: 5,
+            max_windows: 2,
+            half_time_does_not_count_as_window: true,
+        },
+    );
+    let mut rng = seeded_rng(42);
+    state.step_minute(&mut rng);
+    state.step_minute(&mut rng);
+
+    for _ in 0..2 {
+        let snapshot = state.snapshot();
+        let result = state.apply_command(MatchCommand::Substitute {
+            side: Side::Home,
+            player_off_id: snapshot.home_team.players[1].id.clone(),
+            player_on_id: state.bench(Side::Home)[0].id.clone(),
+        });
+        assert!(result.is_ok());
+        state.step_minute(&mut rng);
+    }
+
+    let snapshot = state.snapshot();
+    let result = state.apply_command(MatchCommand::Substitute {
+        side: Side::Home,
+        player_off_id: snapshot.home_team.players[1].id.clone(),
+        player_on_id: state.bench(Side::Home)[0].id.clone(),
+    });
+    assert_eq!(result.unwrap_err(), "be.error.liveMatch.maxSubstitutionsReached");
+    assert_eq!(snapshot.home_substitution_windows_used, 2);
+    assert_eq!(snapshot.max_substitution_windows, 2);
+}
+
+#[test]
 fn substitution_invalid_player_off_fails() {
     let mut state = make_live_match(false);
     let mut rng = seeded_rng(42);

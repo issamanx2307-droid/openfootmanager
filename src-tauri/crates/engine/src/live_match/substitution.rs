@@ -22,6 +22,9 @@ impl LiveMatchState {
         if *subs_made >= self.max_subs {
             return Err("be.error.liveMatch.maxSubstitutionsReached".into());
         }
+        if self.substitution_window_is_exhausted(side) {
+            return Err("be.error.liveMatch.maxSubstitutionsReached".into());
+        }
 
         // Cannot substitute a player who has been sent off
         if self.sent_off.contains(player_off_id) {
@@ -79,6 +82,7 @@ impl LiveMatchState {
             Side::Home => &mut self.home_subs_made,
             Side::Away => &mut self.away_subs_made,
         } += 1;
+        self.record_substitution_window(side);
 
         // Record the substitution
         let evt = MatchEvent::new(
@@ -99,6 +103,40 @@ impl LiveMatchState {
         });
 
         Ok(())
+    }
+
+    fn substitution_window_is_exhausted(&self, side: Side) -> bool {
+        if self.is_half_time_substitution() {
+            return false;
+        }
+        let windows = match side {
+            Side::Home => &self.home_substitution_windows,
+            Side::Away => &self.away_substitution_windows,
+        };
+        windows.last().copied() != Some(self.current_minute)
+            && windows.len() >= self.substitution_rules.max_windows as usize
+    }
+
+    fn record_substitution_window(&mut self, side: Side) {
+        if self.is_half_time_substitution() {
+            return;
+        }
+        let minute = self.current_minute;
+        let windows = match side {
+            Side::Home => &mut self.home_substitution_windows,
+            Side::Away => &mut self.away_substitution_windows,
+        };
+        if windows.last().copied() != Some(minute) {
+            windows.push(minute);
+        }
+    }
+
+    fn is_half_time_substitution(&self) -> bool {
+        self.substitution_rules.half_time_does_not_count_as_window
+            && matches!(
+                self.phase,
+                super::MatchPhase::HalfTime | super::MatchPhase::ExtraTimeHalfTime
+            )
     }
 
     /// Pre-match swap: exchange a starting player with a bench player without

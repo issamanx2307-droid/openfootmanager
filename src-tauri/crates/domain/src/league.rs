@@ -49,9 +49,27 @@ pub struct CompetitionRules {
     /// like the World Cup where multiple matches happen on the same day.
     #[serde(default = "default_knockout_matches_per_day")]
     pub knockout_matches_per_day: u32,
+    /// Match-day substitution allowance. This belongs to the competition, not
+    /// the simulation engine: different cups and historical rulesets can
+    /// therefore run under their own limits.
+    #[serde(default = "default_max_substitutes")]
+    pub max_substitutes: u8,
+    /// Number of in-play substitution windows available to each team.
+    #[serde(default = "default_max_substitution_windows")]
+    pub max_substitution_windows: u8,
+    /// When true, substitutions made during half-time do not consume one of
+    /// the in-play windows.
+    #[serde(default)]
+    pub half_time_does_not_count_as_substitution_window: bool,
 }
 
 fn default_knockout_matches_per_day() -> u32 { 1 }
+fn default_max_substitutes() -> u8 {
+    5
+}
+fn default_max_substitution_windows() -> u8 {
+    3
+}
 
 impl Default for CompetitionRules {
     fn default() -> Self {
@@ -64,6 +82,9 @@ impl Default for CompetitionRules {
             group_matchday_gap_days: 7,
             knockout_round_gap_days: 14,
             knockout_matches_per_day: 1,
+            max_substitutes: default_max_substitutes(),
+            max_substitution_windows: default_max_substitution_windows(),
+            half_time_does_not_count_as_substitution_window: true,
         }
     }
 }

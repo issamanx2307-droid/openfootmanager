@@ -141,6 +141,9 @@ pub struct MatchSnapshot {
     pub home_subs_made: u8,
     pub away_subs_made: u8,
     pub max_subs: u8,
+    pub max_substitution_windows: u8,
+    pub home_substitution_windows_used: u8,
+    pub away_substitution_windows_used: u8,
     pub home_set_pieces: SetPieceTakers,
     pub away_set_pieces: SetPieceTakers,
     pub substitutions: Vec<SubstitutionRecord>,
@@ -149,6 +152,25 @@ pub struct MatchSnapshot {
     pub away_yellows: HashMap<String, u8>,
     pub sent_off: HashSet<String>,
     pub penalty_shootout: Option<PenaltyShootoutSnapshot>,
+}
+
+/// Competition-owned match-day substitution policy.  The engine receives a
+/// value at setup time rather than deciding a season-wide constant itself.
+#[derive(Debug, Clone, Copy)]
+pub struct SubstitutionRules {
+    pub max_substitutes: u8,
+    pub max_windows: u8,
+    pub half_time_does_not_count_as_window: bool,
+}
+
+impl Default for SubstitutionRules {
+    fn default() -> Self {
+        Self {
+            max_substitutes: 5,
+            max_windows: 3,
+            half_time_does_not_count_as_window: true,
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +238,9 @@ pub struct LiveMatchState {
     home_subs_made: u8,
     away_subs_made: u8,
     max_subs: u8,
+    substitution_rules: SubstitutionRules,
+    home_substitution_windows: Vec<u8>,
+    away_substitution_windows: Vec<u8>,
     substitutions: Vec<SubstitutionRecord>,
 
     // Bench players (available for substitution)
@@ -256,6 +281,29 @@ impl LiveMatchState {
         away_bench: Vec<PlayerData>,
         allows_extra_time: bool,
     ) -> Self {
+        Self::new_with_substitution_rules(
+            home,
+            away,
+            config,
+            home_bench,
+            away_bench,
+            allows_extra_time,
+            SubstitutionRules::default(),
+        )
+    }
+
+    /// Create a live match using the selected competition's substitution
+    /// policy. The legacy [`Self::new`] constructor remains a standard-rules
+    /// convenience for standalone simulations and tests.
+    pub fn new_with_substitution_rules(
+        home: TeamData,
+        away: TeamData,
+        config: MatchConfig,
+        home_bench: Vec<PlayerData>,
+        away_bench: Vec<PlayerData>,
+        allows_extra_time: bool,
+        substitution_rules: SubstitutionRules,
+    ) -> Self {
         // Initialize player conditions from their condition attribute
         let mut player_conditions = HashMap::new();
         for p in home.players.iter().chain(away.players.iter()) {
@@ -279,7 +327,10 @@ impl LiveMatchState {
             sent_off: HashSet::new(),
             home_subs_made: 0,
             away_subs_made: 0,
-            max_subs: 5,
+            max_subs: substitution_rules.max_substitutes,
+            substitution_rules,
+            home_substitution_windows: Vec::new(),
+            away_substitution_windows: Vec::new(),
             substitutions: Vec::new(),
             home_bench,
             away_bench,

@@ -17,6 +17,7 @@ use domain::team::MatchRoles;
 use engine::ai::{self, AiPersonality, AiProfile};
 use engine::{
     LiveMatchState, MatchCommand, MatchConfig, MatchPhase, MatchSnapshot, MinuteResult, Side,
+    SubstitutionRules,
 };
 
 const LIVE_MATCH_NO_LEAGUE_ERROR: &str = "be.error.liveMatch.noLeague";
@@ -263,14 +264,22 @@ pub fn create_live_match(
     let away_auto_selection = auto_select_set_pieces(game, &away_starter_ids);
 
     let config = MatchConfig::default();
+    let substitution_rules = SubstitutionRules {
+        max_substitutes: league.rules.max_substitutes,
+        max_windows: league.rules.max_substitution_windows,
+        half_time_does_not_count_as_window: league
+            .rules
+            .half_time_does_not_count_as_substitution_window,
+    };
 
-    let mut match_state = LiveMatchState::new(
+    let mut match_state = LiveMatchState::new_with_substitution_rules(
         home_xi,
         away_xi,
         config,
         home_bench,
         away_bench,
         allows_extra_time,
+        substitution_rules,
     );
     apply_saved_match_roles(
         &mut match_state,

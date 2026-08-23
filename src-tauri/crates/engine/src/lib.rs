@@ -12,7 +12,7 @@ pub use engine::simulate_with_rng;
 pub use event::{EventType, MatchEvent};
 pub use live_match::{
     LiveMatchState, MatchCommand, MatchPhase, MatchSnapshot, MinuteResult,
-    PenaltyShootoutSnapshot, SetPieceTakers, SubstitutionRecord,
+    PenaltyShootoutSnapshot, SetPieceTakers, SubstitutionRecord, SubstitutionRules,
 };
 pub use report::{GoalDetail, GoalSource, MatchReport, PlayerMatchStats, TeamStats};
 pub use types::{
