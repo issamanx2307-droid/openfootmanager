@@ -115,7 +115,8 @@ provenance and a machine/human diff. The desktop app verifies that hash again
 before importing a snapshot, converts the immutable source into a separate
 playable world database, and only uses it for subsequently-created careers.
 The Settings screen exposes the import action; New Game prefers the imported
-snapshot over the FPL baseline and binds the existing England rules pack.
+snapshot over the FPL baseline and binds the existing England rules pack. Each
+new snapshot career also pins its published content hash in the career lockfile.
 
 Evidence: `npm run test:data-pipeline`; `cargo test -p openfootmanager
 snapshot_data --lib`; `npm run build`. The Rust test verifies the exact content
