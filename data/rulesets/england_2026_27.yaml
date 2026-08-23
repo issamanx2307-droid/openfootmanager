@@ -1,0 +1,251 @@
+# Project Albion ruleset — England domestic pyramid + domestic cups.
+# See 02_TECHNICAL_ARCHITECTURE.md ("Ruleset design") and
+# 03_DATA_SNAPSHOT_AND_DATABASE.md. Competition rules are versioned
+# configuration, not permanent constants — bump ruleset_version on change.
+ruleset_id: england-2026-27-v1
+ruleset_version: 1
+season: "2026/27"
+competitions:
+  - id: premier-league
+    name: Premier League
+    format: league
+    tier: 1
+    participant_clubs: 20
+    points:
+      win: 3
+      draw: 1
+      loss: 0
+    tie_breakers:
+      - goal_difference
+      - goals_for
+      - head_to_head_points
+    relegation:
+      automatic_slots: 3
+      playoff_slots: 0
+      target_competition_id: championship
+    transfer_windows:
+      - name: summer
+        start_month: 6
+        start_day: 10
+        end_month: 9
+        end_day: 1
+      - name: winter
+        start_month: 1
+        start_day: 1
+        end_month: 2
+        end_day: 3
+    registration:
+      max_squad_size: 25
+      min_homegrown: 8
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+
+  - id: championship
+    name: Championship
+    format: league
+    tier: 2
+    participant_clubs: 24
+    points:
+      win: 3
+      draw: 1
+      loss: 0
+    tie_breakers:
+      - goal_difference
+      - goals_for
+      - head_to_head_points
+    promotion:
+      automatic_slots: 2
+      playoff_slots: 4
+      target_competition_id: premier-league
+    relegation:
+      automatic_slots: 3
+      playoff_slots: 0
+      target_competition_id: league-one
+    playoff:
+      participants: 4
+      two_legged_semis: true
+      final_at_neutral_venue: true
+    transfer_windows:
+      - name: summer
+        start_month: 6
+        start_day: 10
+        end_month: 9
+        end_day: 1
+      - name: winter
+        start_month: 1
+        start_day: 1
+        end_month: 2
+        end_day: 3
+    registration:
+      max_squad_size: 25
+      min_homegrown: 8
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+
+  - id: league-one
+    name: League One
+    format: league
+    tier: 3
+    participant_clubs: 24
+    points:
+      win: 3
+      draw: 1
+      loss: 0
+    tie_breakers:
+      - goal_difference
+      - goals_for
+      - head_to_head_points
+    promotion:
+      automatic_slots: 2
+      playoff_slots: 4
+      target_competition_id: championship
+    relegation:
+      automatic_slots: 4
+      playoff_slots: 0
+      target_competition_id: league-two
+    playoff:
+      participants: 4
+      two_legged_semis: true
+      final_at_neutral_venue: true
+    transfer_windows:
+      - name: summer
+        start_month: 6
+        start_day: 10
+        end_month: 9
+        end_day: 1
+      - name: winter
+        start_month: 1
+        start_day: 1
+        end_month: 2
+        end_day: 3
+    registration:
+      max_squad_size: 22
+      min_homegrown: 8
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+
+  - id: league-two
+    name: League Two
+    format: league
+    tier: 4
+    participant_clubs: 24
+    points:
+      win: 3
+      draw: 1
+      loss: 0
+    tie_breakers:
+      - goal_difference
+      - goals_for
+      - head_to_head_points
+    promotion:
+      automatic_slots: 3
+      playoff_slots: 4
+      target_competition_id: league-one
+    relegation:
+      automatic_slots: 2
+      playoff_slots: 0
+      target_competition_id: national-league
+    playoff:
+      participants: 4
+      two_legged_semis: true
+      final_at_neutral_venue: true
+    transfer_windows:
+      - name: summer
+        start_month: 6
+        start_day: 10
+        end_month: 9
+        end_day: 1
+      - name: winter
+        start_month: 1
+        start_day: 1
+        end_month: 2
+        end_day: 3
+    registration:
+      max_squad_size: 22
+      min_homegrown: 8
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+
+  - id: national-league
+    name: National League
+    format: league
+    tier: 5
+    participant_clubs: 24
+    points:
+      win: 3
+      draw: 1
+      loss: 0
+    tie_breakers:
+      - goal_difference
+      - goals_for
+      - head_to_head_points
+    promotion:
+      automatic_slots: 1
+      playoff_slots: 4
+      target_competition_id: league-two
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+
+  - id: fa-cup
+    name: FA Cup
+    format: knockout_cup
+    tier: 0
+    participant_clubs: 124
+    cup:
+      rounds: 6
+      extra_time: true
+      penalties_after_extra_time: true
+      seeded_draw: false
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+    qualification:
+      source_competition_id: national-league
+      slots_from_source: 4
+
+  - id: efl-cup
+    name: EFL Cup
+    format: knockout_cup
+    tier: 0
+    participant_clubs: 92
+    cup:
+      rounds: 5
+      extra_time: false
+      penalties_after_extra_time: true
+      seeded_draw: false
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+    qualification:
+      source_competition_id: league-two
+      slots_from_source: 24
+
+  - id: community-shield
+    name: Community Shield
+    format: knockout_cup
+    tier: 0
+    participant_clubs: 2
+    cup:
+      rounds: 1
+      extra_time: false
+      penalties_after_extra_time: true
+      seeded_draw: false
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+    qualification:
+      source_competition_id: premier-league
+      slots_from_source: 1

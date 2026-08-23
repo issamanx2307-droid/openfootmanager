@@ -1,0 +1,71 @@
+# Project Albion ruleset — continental competitions for qualifying English
+# clubs. Structural placeholder for group-then-knockout formats; exact
+# quotas are illustrative and versioned like any other ruleset.
+ruleset_id: continental-2026-27-v1
+ruleset_version: 1
+season: "2026/27"
+competitions:
+  - id: champions-league
+    name: Champions League
+    format: group_then_knockout
+    tier: 0
+    participant_clubs: 36
+    cup:
+      rounds: 4
+      extra_time: true
+      penalties_after_extra_time: true
+      seeded_draw: true
+      two_legged_from_round: 1
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+    qualification:
+      source_ruleset_id: england-2026-27-v1
+      source_competition_id: premier-league
+      slots_from_source: 4
+
+  - id: europa-league
+    name: Europa League
+    format: group_then_knockout
+    tier: 0
+    participant_clubs: 36
+    cup:
+      rounds: 4
+      extra_time: true
+      penalties_after_extra_time: true
+      seeded_draw: true
+      two_legged_from_round: 1
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+    qualification:
+      source_ruleset_id: england-2026-27-v1
+      source_competition_id: premier-league
+      slots_from_source: 2
+
+  - id: conference-league
+    name: Conference League
+    format: group_then_knockout
+    tier: 0
+    participant_clubs: 36
+    cup:
+      rounds: 4
+      extra_time: true
+      penalties_after_extra_time: true
+      seeded_draw: true
+      two_legged_from_round: 1
+    substitutions:
+      max_substitutes: 5
+      max_windows: 3
+      half_time_does_not_count_as_window: true
+    # Real-world Conference League slots are partly fed by the domestic
+    # FA Cup, which lives in england_2026_27.yaml, not this file.
+    # albion_rules::validate() only checks references within one manifest;
+    # cross-ruleset qualification (domestic -> continental) is resolved by
+    # a ruleset registry in Phase 4, not by this per-file validator. Until
+    # then this models the England-only path so the file validates alone.
+    qualification:
+      source_competition_id: europa-league
+      slots_from_source: 1
