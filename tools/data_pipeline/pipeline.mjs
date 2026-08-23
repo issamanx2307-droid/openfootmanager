@@ -5,6 +5,11 @@ import { dirname, resolve } from "node:path";
 const canonical = (value) => JSON.stringify(value, Object.keys(value).sort());
 const hash = (value) => createHash("sha256").update(canonical(value)).digest("hex");
 
+export class JsonSnapshotProvider {
+  constructor(path) { this.path = path; }
+  async load() { return JSON.parse(await readFile(resolve(this.path), "utf8")); }
+}
+
 export function normalizeSnapshot(input) {
   const clubs = [...(input.clubs ?? [])]
     .map(({ id, name, country = "ENG" }) => ({ id, name, country }))
