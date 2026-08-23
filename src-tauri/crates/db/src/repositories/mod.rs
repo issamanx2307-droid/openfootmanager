@@ -1,3 +1,4 @@
+pub mod career_version_repo;
 pub mod competition_repo;
 pub mod league_repo;
 pub mod manager_repo;
