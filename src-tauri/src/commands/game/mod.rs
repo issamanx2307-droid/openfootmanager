@@ -820,10 +820,23 @@ fn build_foundation_competition_plan(
         let (actual_cup_start, _) =
             ofm_core::generator::start_date_at_game_open(game_start, cup_month, 1);
         let cup_actual_start = actual_cup_start + Duration::days(35);
+        let (national_cup_id, national_cup_name, national_cup_name_key) = if country == "ENG" {
+            (
+                "eng-fa-cup".to_string(),
+                "FA Cup".to_string(),
+                "tournaments.competitions.faCup".to_string(),
+            )
+        } else {
+            (
+                format!("{country_slug}-cup"),
+                format!("{country_label} Cup"),
+                "tournaments.competitions.nationalCup".to_string(),
+            )
+        };
         planned.push((
             CompetitionDefinition {
-                id: format!("{country_slug}-cup"),
-                name: format!("{country_label} Cup"),
+                id: national_cup_id,
+                name: national_cup_name,
                 r#type: CompetitionType::Cup,
                 scope: CompetitionScope::Domestic,
                 region_id: Some(region_id.clone()),
@@ -838,7 +851,7 @@ fn build_foundation_competition_plan(
                 berths: vec![continental_berth(BerthRule::CupWinner)],
                 season_start_month: Some(cup_actual_start.month() as u8),
                 season_start_day: Some(cup_actual_start.day() as u8),
-                name_key: Some("tournaments.competitions.nationalCup".to_string()),
+                name_key: Some(national_cup_name_key),
                 logo: None,
             },
             cup_actual_start,
@@ -2066,7 +2079,8 @@ mod testkit;
 mod tests {
     use super::testkit::*;
     use super::{
-        apply_england_ruleset, bootstrap_team_selection, brazil_state_region, build_foundation_competitions,
+        apply_england_ruleset, bootstrap_team_selection, brazil_state_region, build_foundation_competition_plan,
+        build_foundation_competitions,
         build_game_from_world_data, create_new_save, ensure_international_windows,
         game_clock_for_world, load_world_data_from_path, package_folder_name,
         parse_competition_definitions, rebuild_competitions_for_management_date,
@@ -2118,6 +2132,34 @@ mod tests {
         assert!(!game.competitions[0]
             .rules
             .half_time_does_not_count_as_substitution_window);
+    }
+
+    #[test]
+    fn england_foundation_uses_the_fa_cup_identity() {
+        let teams = (0..8)
+            .map(|index| nation_team(&format!("eng-{index}"), "ENG", 500 - index))
+            .collect();
+        let game = Game::new(
+            GameClock::new(start_date_for_year(2026).unwrap()),
+            manager_for("eng-0"),
+            teams,
+            vec![],
+            vec![],
+            vec![],
+        );
+        let plan = build_foundation_competition_plan(&game, game.clock.start_date);
+        let fa_cup = plan
+            .iter()
+            .map(|(definition, _)| definition)
+            .find(|definition| definition.id == "eng-fa-cup")
+            .expect("England creates its national cup");
+        assert_eq!(fa_cup.name, "FA Cup");
+        assert_eq!(fa_cup.r#type, CompetitionType::Cup);
+        assert_eq!(fa_cup.scope, CompetitionScope::Domestic);
+        assert_eq!(fa_cup.participants.explicit.as_ref().map(Vec::len), Some(8));
+        assert!(!plan
+            .iter()
+            .any(|(definition, _)| definition.id == "eng-cup"));
     }
 
     #[test]
