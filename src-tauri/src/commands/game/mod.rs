@@ -135,18 +135,21 @@ fn load_england_ruleset(
 }
 
 fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifest) {
-    for competition in &mut game.competitions {
-        if competition.country_id.as_deref() != Some("ENG")
-            || competition.kind != CompetitionType::League
-        {
-            continue;
-        }
-        let Some(source) = ruleset.competitions.iter().find(|source| {
-            source.format == albion_rules::CompetitionFormat::League
-                && source.participant_clubs as usize == competition.participant_ids.len()
-        }) else {
-            continue;
-        };
+    let mut competition_indices: Vec<usize> = game.competitions.iter().enumerate()
+        .filter(|(_, competition)| competition.country_id.as_deref() == Some("ENG") && competition.kind == CompetitionType::League)
+        .map(|(index, _)| index)
+        .collect();
+    competition_indices.sort_by_key(|&index| game.competitions[index].priority);
+    let mut sources: Vec<&albion_rules::CompetitionRules> = ruleset.competitions.iter()
+        .filter(|source| source.format == albion_rules::CompetitionFormat::League)
+        .collect();
+    sources.sort_by_key(|source| source.tier);
+
+    for (tier, competition_index) in competition_indices.into_iter().enumerate() {
+        let competition = &mut game.competitions[competition_index];
+        let Some(source) = sources.get(tier).copied().or_else(|| {
+            sources.iter().copied().find(|source| source.participant_clubs as usize == competition.participant_ids.len())
+        }) else { continue; };
         if let Some(substitutions) = source.substitutions {
             competition.rules.max_substitutes = substitutions.max_substitutes;
             competition.rules.max_substitution_windows = substitutions.max_windows;
