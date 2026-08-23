@@ -20,6 +20,26 @@ pub struct CareerVersions {
     pub rating_model_version: String,
 }
 
+/// Why a career cannot be opened against a requested runtime contract.
+/// Callers map these stable keys to localized UI text; no raw database error
+/// leaks into a compatibility screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CareerVersionCompatibilityError {
+    Missing,
+    Incompatible,
+    LoadFailed,
+}
+
+impl CareerVersionCompatibilityError {
+    pub const fn message_key(self) -> &'static str {
+        match self {
+            Self::Missing => "be.error.careerVersions.missing",
+            Self::Incompatible => "be.error.careerVersions.incompatible",
+            Self::LoadFailed => "be.error.careerVersions.loadFailed",
+        }
+    }
+}
+
 impl CareerVersions {
     /// Convert the protocol compatibility contract into the relational form
     /// stored with a career. A running server may be unbound, but a career
@@ -127,6 +147,24 @@ pub fn load_career_versions(conn: &Connection) -> Result<Option<CareerVersions>,
     }
 }
 
+/// Check the persisted career contract before opening it. Missing metadata is
+/// deliberately an error rather than an implicit match: migration/import code
+/// can handle it explicitly without risking an old save being reinterpreted.
+pub fn validate_career_versions(
+    conn: &Connection,
+    runtime: &VersionSet,
+) -> Result<(), CareerVersionCompatibilityError> {
+    let persisted =
+        load_career_versions(conn).map_err(|_| CareerVersionCompatibilityError::LoadFailed)?;
+    let persisted = persisted.ok_or(CareerVersionCompatibilityError::Missing)?;
+
+    if persisted.to_version_set().is_compatible_with(runtime) {
+        Ok(())
+    } else {
+        Err(CareerVersionCompatibilityError::Incompatible)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,5 +220,37 @@ mod tests {
             });
         let stored = CareerVersions::from_version_set(&version_set).unwrap();
         assert_eq!(stored.to_version_set(), version_set);
+    }
+
+    #[test]
+    fn compatibility_check_rejects_missing_or_mismatched_career_versions() {
+        let database = GameDatabase::open_in_memory().unwrap();
+        let runtime = CURRENT_VERSIONS
+            .to_owned_set()
+            .with_ruleset(RulesetVersion {
+                ruleset_id: "england-2026-27-v1".into(),
+                ruleset_version: 1,
+            });
+
+        assert_eq!(
+            validate_career_versions(database.conn(), &runtime).unwrap_err(),
+            CareerVersionCompatibilityError::Missing
+        );
+
+        upsert_career_versions(
+            database.conn(),
+            &CareerVersions::from_version_set(&runtime).unwrap(),
+        )
+        .unwrap();
+        assert!(validate_career_versions(database.conn(), &runtime).is_ok());
+
+        let incompatible = runtime.clone().with_ruleset(RulesetVersion {
+            ruleset_id: "england-2026-27-v1".into(),
+            ruleset_version: 2,
+        });
+        assert_eq!(
+            validate_career_versions(database.conn(), &incompatible).unwrap_err(),
+            CareerVersionCompatibilityError::Incompatible
+        );
     }
 }
