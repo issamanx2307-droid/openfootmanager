@@ -31,6 +31,16 @@ export function diffSnapshots(before, after) {
   });
 }
 
+export function createCareerSeed(snapshot) {
+  const normalized = normalizeSnapshot(snapshot);
+  return {
+    sourceSnapshotHash: normalized.contentHash,
+    season: normalized.season,
+    clubs: normalized.clubs,
+    players: normalized.players,
+  };
+}
+
 export function formatDiffReport(diff) {
   if (diff.length === 0) return "Snapshot diff: no player transfers.";
   return ["Snapshot diff: player transfers", ...diff.map((move) =>
