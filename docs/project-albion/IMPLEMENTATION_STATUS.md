@@ -63,7 +63,7 @@ focused regression test now passes. Run the full workspace suite before a PR.
 |---|---|---|
 | 0 | Baseline audit | DONE |
 | 1 | Versions, protocol, rules foundation | DONE |
-| 2 | Relational per-career save | IN PROGRESS |
+| 2 | Relational per-career save | DONE |
 | 3 | Snapshot/data pipeline | NOT STARTED |
 | 4 | Competition/calendar | NOT STARTED |
 | 5 | Core management systems | NOT STARTED |
@@ -95,10 +95,6 @@ career validates it against the runtime and backfills the contract for older
 pinned saves. Random and legacy careers remain usable without an invented
 ruleset.
 
-Next: use the pinned ruleset as the source for competition registration and
-transfer-window enforcement, rather than only its substitution limits. Phase 2
-continues with relational save coverage for the remaining competition state.
-
 Phase 1 completion evidence: `cargo test -p albion_rules` passes 13 validation and
 round-trip tests; `cargo test -p albion_protocol` passes 6 envelope and exact
 compatibility tests. Ruleset-owned substitution, transfer-calendar, and squad
@@ -107,3 +103,11 @@ with it. The active England/FPL path has no season-specific football rule
 constant outside the selected ruleset; remaining engine and season-context
 defaults are intentionally retained only for simulations and legacy careers
 without a pinned ruleset.
+
+Phase 2 completion evidence: each career has its own migrated SQLite database;
+the repository suite covers create/mutate/close/reopen state, schema migrations,
+and the default snapshot rotation now retains a recoverable database before an
+overwrite. `test_save_game_updates_existing` asserts that snapshot behavior.
+
+Next: begin Phase 3 with the normalized snapshot/data pipeline and a synthetic
+fixture dataset that can exercise publish, diff, and update flows headlessly.
