@@ -222,6 +222,36 @@ mod tests {
     }
 
     #[test]
+    fn configured_playoff_winner_takes_the_final_promotion_slot() {
+        let mut top = division(
+            "top",
+            0,
+            &[("t1", 60), ("t2", 50), ("t3", 40), ("t4", 30), ("t5", 20), ("t6", 10)],
+        );
+        top.rules.relegation_automatic_slots = 2;
+        let mut second = division(
+            "second",
+            1,
+            &[("s1", 60), ("s2", 50), ("s3", 40), ("s4", 30), ("s5", 20), ("s6", 10)],
+        );
+        second.rules.promotion_automatic_slots = 1;
+        second.rules.promotion_playoff_slots = 4;
+        let mut divisions = vec![top, second];
+        let winners = std::collections::HashMap::from([(
+            "second-playoff-2-5".to_string(),
+            "s4".to_string(),
+        )]);
+
+        apply_promotion_relegation_with_playoff_winners(&mut divisions, &winners);
+
+        assert!(divisions[0].participant_ids.contains(&"s1".to_string()));
+        assert!(divisions[0].participant_ids.contains(&"s4".to_string()));
+        assert!(!divisions[0].participant_ids.contains(&"s2".to_string()));
+        assert_eq!(divisions[0].participant_ids.len(), 6);
+        assert_eq!(divisions[1].participant_ids.len(), 6);
+    }
+
+    #[test]
     fn twenty_structural_seasons_preserve_pyramid_membership_and_schedules() {
         let mut divisions = vec![
             division("tier-1", 0, &[("a", 40), ("b", 30), ("c", 20), ("d", 10)]),
