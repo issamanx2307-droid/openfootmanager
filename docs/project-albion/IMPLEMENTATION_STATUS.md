@@ -64,7 +64,7 @@ focused regression test now passes. Run the full workspace suite before a PR.
 | 0 | Baseline audit | DONE |
 | 1 | Versions, protocol, rules foundation | DONE |
 | 2 | Relational per-career save | DONE |
-| 3 | Snapshot/data pipeline | IN PROGRESS |
+| 3 | Snapshot/data pipeline | DONE |
 | 4 | Competition/calendar | NOT STARTED |
 | 5 | Core management systems | NOT STARTED |
 | 6 | Albion match engine v1 | NOT STARTED |
@@ -126,5 +126,14 @@ snapshot_data --lib`; `npm run build`. The Rust test verifies the exact content
 hash emitted by the Node fixture, so the import boundary is covered rather than
 only each implementation in isolation.
 
-Next: add the identity-review layer, then cover Snapshot A/B career creation
-end-to-end (including proof that an existing career is unchanged).
+Phase 3 completion evidence: `npm run test:data-pipeline` covers manual JSON
+and CSV adapters, deterministic fixture publication, hash verification, FK and
+duplicate validation, transfer diffing, stable IDs across Snapshot A/B, and an
+ambiguous-name case that fails publication until an explicit identity review is
+recorded. `cargo test -p openfootmanager snapshot_data --lib` verifies the
+exact Node-produced hash at the import boundary, the rating baseline, and the
+Snapshot A/B import flow: B carries the transfer into a new playable world
+while A remains unchanged. Phase 2's save close/reopen and backup coverage
+continues to protect the resulting per-career state.
+
+Next: begin Phase 4 competition/calendar implementation.
