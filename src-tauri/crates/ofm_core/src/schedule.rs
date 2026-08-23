@@ -276,6 +276,44 @@ pub fn generate_knockout_cup(
     cup
 }
 
+/// Build a visible knockout playoff from a finished league table. The caller
+/// owns when it is staged; the bracket itself follows the normal cup resolver,
+/// so the eventual berth is derived from a real final rather than table order.
+pub fn generate_league_playoff(
+    league: &League,
+    from: u32,
+    to: u32,
+    start_date: DateTime<Utc>,
+) -> Option<League> {
+    if from == 0 || to < from {
+        return None;
+    }
+    let entrants = league
+        .sorted_standings()
+        .into_iter()
+        .skip((from - 1) as usize)
+        .take((to - from + 1) as usize)
+        .map(|entry| entry.team_id)
+        .collect::<Vec<_>>();
+    (entrants.len() >= 2).then(|| {
+        let mut playoff = generate_knockout_cup(
+            &format!("{} Playoff", league.name),
+            league.season,
+            &entrants,
+            start_date,
+            CompetitionType::Cup,
+            league.scope.clone(),
+        );
+        playoff.id = format!("{}-playoff-{}-{}", league.id, from, to);
+        for fixture in &mut playoff.fixtures {
+            fixture.competition_id = playoff.id.clone();
+        }
+        playoff.country_id = league.country_id.clone();
+        playoff.region_id = league.region_id.clone();
+        playoff
+    })
+}
+
 /// Seed the next knockout round of `cup` from `team_ids` (strongest first —
 /// any byes for a non-power-of-two field go to the leading seeds).
 pub fn seed_knockout_round(
@@ -871,6 +909,20 @@ mod tests {
             .collect::<std::collections::HashMap<_, _>>();
         assert_eq!(dates["league"], "2026-08-01");
         assert_eq!(dates["cup"], "2026-08-02");
+    }
+
+    #[test]
+    fn league_playoff_uses_the_requested_finishing_range() {
+        let teams: Vec<String> = (1..=6).map(|number| format!("team-{number}")).collect();
+        let kickoff = Utc.with_ymd_and_hms(2026, 8, 1, 0, 0, 0).unwrap();
+        let mut league = generate_league("Championship", 2026, &teams, kickoff);
+        for (rank, standing) in league.standings.iter_mut().enumerate() {
+            standing.points = 100 - rank as u32;
+        }
+        let playoff = generate_league_playoff(&league, 3, 6, kickoff).expect("four teams qualify");
+        assert_eq!(playoff.id, format!("{}-playoff-3-6", league.id));
+        assert_eq!(playoff.participant_ids, teams[2..].to_vec());
+        assert_eq!(playoff.fixtures.len(), 2);
     }
 
     #[test]

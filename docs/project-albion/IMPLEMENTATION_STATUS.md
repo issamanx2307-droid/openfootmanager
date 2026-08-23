@@ -142,9 +142,13 @@ regression coverage before extending any missing competition formats. The first
 regression drives a three-tier pyramid through 20 seasons, asserting that every
 club belongs to exactly one tier and every regenerated fixture is valid. England's
 national cup is now represented as the FA Cup while retaining the generic
-knockout/calendar engine.
+knockout/calendar engine. The calendar core can now turn an explicit league-table
+range into a visible knockout playoff and resolve a `PlayoffWinner` berth from
+its completed final, rather than silently treating that berth as a table place.
 
 Evidence: `cargo test -p ofm_core
 promotion::tests::twenty_structural_seasons_preserve_pyramid_membership_and_schedules`
 and `cargo test -p openfootmanager england_foundation_uses_the_fa_cup_identity
---lib` pass.
+--lib` pass. `cargo test -p ofm_core league_playoff --lib` and `cargo test -p
+ofm_core playoff_berth --lib` cover playoff entrant selection and qualification
+from the settled final.

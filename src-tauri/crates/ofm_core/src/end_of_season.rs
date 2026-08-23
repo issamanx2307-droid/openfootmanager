@@ -354,8 +354,7 @@ pub fn competition_has_incoming_berths(game: &Game, target_id: &str) -> bool {
 }
 
 /// Teams a single berth rule selects from a competition's finished results.
-/// `PlayoffWinner` is scheduled and resolved separately (Phase C.3b).
-fn evaluate_berth_rule(source: &League, rule: &BerthRule) -> Vec<String> {
+fn evaluate_berth_rule(game: &Game, source: &League, rule: &BerthRule) -> Vec<String> {
     match rule {
         BerthRule::PositionRange { from, to } => {
             let start = (*from as usize).saturating_sub(1);
@@ -371,17 +370,25 @@ fn evaluate_berth_rule(source: &League, rule: &BerthRule) -> Vec<String> {
         BerthRule::CupWinner => crate::world_cup::world_cup_champion(source)
             .into_iter()
             .collect(),
-        BerthRule::PlayoffWinner { .. } => Vec::new(),
+        BerthRule::PlayoffWinner { from, to } => {
+            let playoff_id = format!("{}-playoff-{from}-{to}", source.id);
+            game.competitions
+                .iter()
+                .find(|competition| competition.id == playoff_id)
+                .and_then(crate::world_cup::world_cup_champion)
+                .into_iter()
+                .collect()
+        }
     }
 }
 
 /// Teams a single competition's results award to `target` via its berths.
-fn berth_winners(source: &League, target_id: &str) -> Vec<String> {
+fn berth_winners(game: &Game, source: &League, target_id: &str) -> Vec<String> {
     source
         .berths
         .iter()
         .filter(|berth| berth.target == target_id)
-        .flat_map(|berth| evaluate_berth_rule(source, &berth.rule))
+        .flat_map(|berth| evaluate_berth_rule(game, source, &berth.rule))
         .collect()
 }
 
@@ -394,7 +401,7 @@ pub fn berth_qualified_entrants(game: &Game, target: &League) -> Vec<String> {
     let mut qualified: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     for source in &game.competitions {
-        for team_id in berth_winners(source, &target.id) {
+        for team_id in berth_winners(game, source, &target.id) {
             if seen.insert(team_id.clone()) {
                 qualified.push(team_id);
             }
@@ -442,7 +449,7 @@ pub fn resolve_continental_fields(game: &Game) -> std::collections::HashMap<Stri
     };
     for source in &game.competitions {
         for berth in &source.berths {
-            for winner in evaluate_berth_rule(source, &berth.rule) {
+            for winner in evaluate_berth_rule(game, source, &berth.rule) {
                 consider(&winner, &berth.target);
                 if let Some(fallback) = &berth.fallback_to {
                     consider(&winner, fallback);
@@ -770,6 +777,32 @@ mod community_shield_tests {
     #[test]
     fn community_shield_uses_runner_up_when_one_team_wins_the_double() {
         assert_eq!(english_community_shield_entrants(&game_with_winners("champion")), Some(vec!["champion".to_string(), "runner-up".to_string()]));
+    }
+
+    #[test]
+    fn playoff_berth_uses_the_completed_playoff_final_winner() {
+        let mut game = game_with_winners("cup-winner");
+        game.competitions[0].id = "eng-d2".to_string();
+        let mut playoff = League::new(
+            "eng-d2-playoff-3-6".to_string(),
+            "Championship Playoff".to_string(),
+            2026,
+            &[],
+        );
+        playoff.fixtures = vec![Fixture {
+            id: "playoff-final".to_string(), competition_id: playoff.id.clone(), matchday: 1,
+            date: "2026-05-25".to_string(), home_team_id: "playoff-winner".to_string(), away_team_id: "playoff-runner-up".to_string(),
+            competition: FixtureCompetition::Cup, status: FixtureStatus::Completed,
+            result: Some(MatchResult { home_goals: 1, away_goals: 0, home_scorers: vec![], away_scorers: vec![], report: None, home_penalties: None, away_penalties: None }),
+        }];
+        playoff.knockout_rounds = vec![KnockoutRoundState { id: "playoff-final-round".to_string(), name: "Final".to_string(), fixture_ids: vec!["playoff-final".to_string()], bye_team_ids: vec![], completed: true }];
+        game.competitions.push(playoff);
+
+        let source = game.competitions.iter().find(|competition| competition.id == "eng-d2").unwrap();
+        assert_eq!(
+            evaluate_berth_rule(&game, source, &BerthRule::PlayoffWinner { from: 3, to: 6 }),
+            vec!["playoff-winner".to_string()]
+        );
     }
 }
 
