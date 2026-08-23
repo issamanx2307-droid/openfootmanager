@@ -340,6 +340,8 @@ impl GamePersistenceReader {
                 serde_json::from_str(&meta.package_lockfile_json)
                     .map_err(|_| "be.error.gamePersistence.loadFailed".to_string())?
             },
+            ruleset_id: None,
+            ruleset_version: None,
         };
         game.promote_legacy_league();
         ofm_core::season_context::refresh_game_context(&mut game);

@@ -32,6 +32,7 @@ domain = { path = "crates/domain" }
 ofm_core = { path = "crates/ofm_core" }
 engine = { path = "crates/engine" }
 db = { path = "crates/db" }
+albion_rules = { path = "crates/albion_rules" }
 chrono = "0.4.44"
 rand = "0.10"
 semver = "1"

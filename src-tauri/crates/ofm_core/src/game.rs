@@ -120,6 +120,12 @@ pub struct Game {
     /// Records which `.ofm` packages were used to build this save.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub package_lockfile: Vec<crate::generator::PackageLock>,
+    /// Exact competition rules pack selected at career creation. This is kept
+    /// with the playable state as well as the relational version contract.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ruleset_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ruleset_version: Option<u32>,
 }
 
 impl Game {
@@ -158,6 +164,8 @@ impl Game {
             world_history: WorldHistoryArchive::default(),
             extra_translations: std::collections::HashMap::new(),
             package_lockfile: vec![],
+            ruleset_id: None,
+            ruleset_version: None,
         };
         game.promote_legacy_league();
         crate::football_identity::upgrade_game_football_identities(&mut game);

@@ -84,7 +84,12 @@ half-time exempt), and focused engine/core regressions cover both enforcement
 and setup propagation. The engine's standalone constructor intentionally keeps
 the same defaults for simulations and legacy tests.
 
-Next: finish Phase 1 by carrying the Albion rules-pack selection into career
-creation rather than relying on only the domain defaults. Phase 2 has begun
-with the append-only `career_versions` migration; continue the repository API
-that persists and reads the pinned version contract.
+FPL-based careers now load the bundled England 2026/27 rules pack at creation,
+apply its top-flight substitution settings to the generated English competition,
+and retain the selected ruleset id/version in the live game state. The ruleset
+files are included in the desktop bundle; a focused startup regression protects
+the mapping.
+
+Next: persist the live ruleset selection through the per-career save metadata
+and connect it to the existing `career_versions` repository contract. Phase 2
+has begun with the append-only `career_versions` migration.

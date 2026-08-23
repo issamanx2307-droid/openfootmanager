@@ -85,6 +85,66 @@ fn load_world_data(
     }
 }
 
+const FPL_WORLD_ID: &str = "fpl-core-insights-2026-2027";
+
+/// FPL supplies the English top-flight roster, so its careers carry the
+/// season-specific England rules pack rather than inheriting generic world
+/// generation defaults.
+fn load_england_ruleset(
+    app_handle: &tauri::AppHandle,
+) -> Result<albion_rules::RulesetManifest, String> {
+    use tauri::Manager;
+    let candidates = [
+        app_handle
+            .path()
+            .app_data_dir()
+            .ok()
+            .map(|dir| dir.join("data/rulesets/england_2026_27.yaml")),
+        app_handle
+            .path()
+            .resource_dir()
+            .ok()
+            .map(|dir| dir.join("data/rulesets/england_2026_27.yaml")),
+        Some(std::path::PathBuf::from(
+            "data/rulesets/england_2026_27.yaml",
+        )),
+    ];
+    let path = candidates
+        .into_iter()
+        .flatten()
+        .find(|path| path.is_file())
+        .ok_or_else(|| "be.error.worldReadFileFailed".to_string())?;
+    let ruleset =
+        albion_rules::load_from_path(&path).map_err(|_| "be.error.worldReadFileFailed".to_string())?;
+    albion_rules::validate(&ruleset).map_err(|_| "be.error.worldReadFileFailed".to_string())?;
+    Ok(ruleset)
+}
+
+fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifest) {
+    for competition in &mut game.competitions {
+        if competition.country_id.as_deref() != Some("ENG")
+            || competition.kind != CompetitionType::League
+        {
+            continue;
+        }
+        let Some(source) = ruleset.competitions.iter().find(|source| {
+            source.format == albion_rules::CompetitionFormat::League
+                && source.participant_clubs as usize == competition.participant_ids.len()
+        }) else {
+            continue;
+        };
+        if let Some(substitutions) = source.substitutions {
+            competition.rules.max_substitutes = substitutions.max_substitutes;
+            competition.rules.max_substitution_windows = substitutions.max_windows;
+            competition.rules.half_time_does_not_count_as_substitution_window =
+                substitutions.half_time_does_not_count_as_window;
+        }
+    }
+    game.ruleset_id = Some(ruleset.ruleset_id.clone());
+    game.ruleset_version = Some(ruleset.ruleset_version);
+    game.sync_legacy_league();
+}
+
 /// Load world data from a stack of installed `.ofm` packages (by id).
 /// Packages are merged in order with last-wins semantics for duplicate ids.
 /// Also returns the package lockfile entries for saving alongside the game.
@@ -1653,6 +1713,19 @@ pub async fn start_new_game(
     let (mut new_game, stats_state) =
         build_game_from_world_data(clock, manager, &startup_options, world);
 
+    if new_game.ruleset_id.is_none()
+        && new_game
+            .competitions
+            .iter()
+            .any(|competition| competition.country_id.as_deref() == Some("ENG"))
+        && world_source
+            .as_deref()
+            .is_some_and(|source| source.contains(FPL_WORLD_ID))
+    {
+        let ruleset = load_england_ruleset(&app_handle)?;
+        apply_england_ruleset(&mut new_game, &ruleset);
+    }
+
     new_game.package_lockfile = package_lockfile;
 
     info!(
@@ -1962,7 +2035,7 @@ mod testkit;
 mod tests {
     use super::testkit::*;
     use super::{
-        bootstrap_team_selection, brazil_state_region, build_foundation_competitions,
+        apply_england_ruleset, bootstrap_team_selection, brazil_state_region, build_foundation_competitions,
         build_game_from_world_data, create_new_save, ensure_international_windows,
         game_clock_for_world, load_world_data_from_path, package_folder_name,
         parse_competition_definitions, rebuild_competitions_for_management_date,
@@ -1979,6 +2052,39 @@ mod tests {
         news::NewsCategory,
     };
     use ofm_core::{clock::GameClock, game::Game};
+
+    #[test]
+    fn england_ruleset_pins_and_applies_top_flight_substitution_rules() {
+        let mut game = Game::new(
+            GameClock::new(start_date_for_year(2026).unwrap()),
+            manager_for("eng-team-1"),
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+        );
+        let team_ids = (1..=20)
+            .map(|number| format!("eng-team-{number}"))
+            .collect::<Vec<_>>();
+        let mut league = League::new("eng-1".to_string(), "England".to_string(), 2026, &team_ids);
+        league.country_id = Some("ENG".to_string());
+        game.competitions = vec![league];
+
+        let ruleset = albion_rules::load_from_yaml_str(
+            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
+        )
+        .expect("test ruleset should parse");
+
+        apply_england_ruleset(&mut game, &ruleset);
+
+        assert_eq!(game.ruleset_id.as_deref(), Some("england-test"));
+        assert_eq!(game.ruleset_version, Some(7));
+        assert_eq!(game.competitions[0].rules.max_substitutes, 4);
+        assert_eq!(game.competitions[0].rules.max_substitution_windows, 2);
+        assert!(!game.competitions[0]
+            .rules
+            .half_time_does_not_count_as_substitution_window);
+    }
 
     #[test]
     fn world_cup_summer_career_stages_and_surfaces_the_tournament() {
