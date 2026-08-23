@@ -1,6 +1,7 @@
 pub mod club;
 pub mod contracts;
 pub mod finances;
+pub mod fpl_data;
 pub mod game;
 pub mod jobs;
 pub mod live_match;
@@ -25,6 +26,7 @@ pub mod world;
 pub use club::*;
 pub use contracts::*;
 pub use finances::*;
+pub use fpl_data::*;
 pub use game::*;
 pub use jobs::*;
 pub use live_match::*;

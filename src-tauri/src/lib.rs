@@ -196,6 +196,8 @@ pub fn run() {
             uninstall_package,
             check_package_stack,
             get_nations,
+            get_fpl_data_source_status,
+            update_fpl_data_source,
             start_new_game,
             validate_competition_definitions,
             validate_world_package,

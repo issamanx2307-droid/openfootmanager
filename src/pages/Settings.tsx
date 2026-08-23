@@ -43,6 +43,11 @@ export default function Settings() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearSuccess, setClearSuccess] = useState(false);
   const [exportPath, setExportPath] = useState<string | null>(null);
+  const [fplDataStatus, setFplDataStatus] = useState<{
+    cached: boolean;
+    updatedAt: string | null;
+  } | null>(null);
+  const [isUpdatingFplData, setIsUpdatingFplData] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(
     !!document.fullscreenElement,
   );
@@ -75,6 +80,12 @@ export default function Settings() {
       void changeAppLanguage(settings.language);
     }
   }, [loaded, settings.language, i18n]);
+
+  useEffect(() => {
+    void invoke<{ cached: boolean; updatedAt: string | null }>(
+      "get_fpl_data_source_status",
+    ).then(setFplDataStatus).catch(() => setFplDataStatus(null));
+  }, []);
 
   const handleUpdate = (partial: Partial<AppSettings>) => {
     updateSettings(partial);
@@ -117,6 +128,20 @@ export default function Settings() {
       setTimeout(() => setExportPath(null), 5000);
     } catch (err) {
       console.error("Failed to export world:", err);
+    }
+  };
+
+  const handleUpdateFplData = async () => {
+    setIsUpdatingFplData(true);
+    try {
+      const status = await invoke<{ cached: boolean; updatedAt: string | null }>(
+        "update_fpl_data_source",
+      );
+      setFplDataStatus(status);
+    } catch (error) {
+      console.error("Failed to update FPL Core Insights data:", error);
+    } finally {
+      setIsUpdatingFplData(false);
     }
   };
 
@@ -371,6 +396,26 @@ export default function Settings() {
           {exportPath && (
             <p className="text-xs text-primary-500 -mt-2 ml-1">
               {t("settings.exportedTo", { path: exportPath })}
+            </p>
+          )}
+
+          <SettingRow
+            label="FPL Core Insights"
+            description="github.com/olbauday/FPL-Core-Insights · Premier League source data"
+          >
+            <button
+              type="button"
+              onClick={() => void handleUpdateFplData()}
+              disabled={isUpdatingFplData}
+              className="flex items-center gap-2 rounded-lg bg-primary-500/10 px-4 py-2 text-sm font-heading font-bold uppercase tracking-wider text-primary-600 transition-colors hover:bg-primary-500/20 disabled:cursor-wait disabled:opacity-70 dark:text-primary-400"
+            >
+              <Download className={isUpdatingFplData ? "h-4 w-4 animate-bounce" : "h-4 w-4"} />
+              {t("managerProfiles.saveConfirm.update", { name: "FPL Core Insights" })}
+            </button>
+          </SettingRow>
+          {fplDataStatus?.updatedAt && (
+            <p className="-mt-2 ml-1 text-xs text-primary-500">
+              {fplDataStatus.updatedAt}
             </p>
           )}
 
