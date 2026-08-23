@@ -43,6 +43,29 @@ impl CanonicalCareer {
             .map_err(|_| ErrorCode::AuthInvalid)
     }
 
+    /// A deliberately narrow resync view. It contains only the reconnecting
+    /// manager's club state and avoids serializing the canonical `Game` or
+    /// hidden player data to every connected client.
+    pub fn manager_dashboard(&self, manager_id: Uuid) -> Result<Value, ErrorCode> {
+        let team_id = self.controlled_team_id(manager_id)?;
+        let team = self
+            .game
+            .teams
+            .iter()
+            .find(|team| team.id == team_id)
+            .ok_or(ErrorCode::AuthInvalid)?;
+        Ok(json!({
+            "currentDate": self.game.clock.current_date.format("%Y-%m-%d").to_string(),
+            "club": {
+                "id": team.id,
+                "name": team.name,
+                "finance": team.finance,
+                "formation": team.formation,
+                "playStyle": format!("{:?}", team.play_style),
+            },
+        }))
+    }
+
     /// Advance AI-only dates until a controlled club reaches a scheduled
     /// fixture. The caller must create and coordinate that live match instead
     /// of passing it through the instant simulator.
@@ -331,5 +354,14 @@ mod tests {
 
         let outcome = career.advance_until_human_blocker(&HashSet::from([club_id]));
         assert!(matches!(outcome, Advancement::HumanFixture { fixture_id: actual, .. } if actual == fixture_id));
+    }
+
+    #[test]
+    fn manager_dashboard_is_a_narrow_club_view() {
+        let (career, manager_id) = career();
+        let view = career.manager_dashboard(manager_id).unwrap();
+        assert_eq!(view["club"]["name"], "Albion");
+        assert!(view.get("players").is_none());
+        assert!(view.get("managers").is_none());
     }
 }

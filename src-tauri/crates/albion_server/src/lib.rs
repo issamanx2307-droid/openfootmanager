@@ -185,6 +185,15 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
     if send_event(&mut socket, hello).await.is_err() {
         return;
     }
+    let manager_view = {
+        let session = state.0.lock().expect("career session lock poisoned");
+        session.manager_dashboard_event(manager_id)
+    };
+    if let Some(view) = manager_view
+        && send_event(&mut socket, view).await.is_err()
+    {
+        return;
+    }
 
     let mut live_tick = tokio::time::interval(Duration::from_millis(500));
     loop {
@@ -279,6 +288,13 @@ impl CareerSession {
             if *manager != request.manager_id {
                 return Err(ApiError::protocol(ErrorCode::ClubAlreadyControlled));
             }
+        }
+        if self
+            .claimed_clubs
+            .iter()
+            .any(|(club_id, manager_id)| *manager_id == request.manager_id && *club_id != request.club_id)
+        {
+            return Err(ApiError::protocol(ErrorCode::ClubAlreadyControlled));
         }
         if !self.slots.contains_key(&request.manager_id) && self.slots.len() >= MAX_MANAGER_SLOTS {
             return Err(ApiError::protocol(ErrorCode::AuthInvalid));
@@ -442,6 +458,16 @@ impl CareerSession {
             is_ready: self.ready_managers.contains(&manager_id),
             other_manager_ready,
         })
+    }
+
+    fn manager_dashboard_event(&self, manager_id: Uuid) -> Option<ServerEvent> {
+        let career = self.career.as_ref()?;
+        let payload = career.manager_dashboard(manager_id).ok()?;
+        Some(ServerEvent::ViewSnapshot(albion_protocol::event::ViewSnapshotBody {
+            revision: self.revision,
+            view_name: "dashboard".into(),
+            payload,
+        }))
     }
 
     fn apply_live_command(
@@ -714,6 +740,15 @@ mod tests {
         let club = Uuid::new_v4();
         session.join(join_request(manager_a, club)).unwrap();
         let error = session.join(join_request(Uuid::new_v4(), club)).unwrap_err();
+        assert_eq!(error.0.code, ErrorCode::ClubAlreadyControlled);
+    }
+
+    #[test]
+    fn a_manager_cannot_claim_a_second_club_through_join() {
+        let mut session = session();
+        let manager = Uuid::new_v4();
+        session.join(join_request(manager, Uuid::new_v4())).unwrap();
+        let error = session.join(join_request(manager, Uuid::new_v4())).unwrap_err();
         assert_eq!(error.0.code, ErrorCode::ClubAlreadyControlled);
     }
 
