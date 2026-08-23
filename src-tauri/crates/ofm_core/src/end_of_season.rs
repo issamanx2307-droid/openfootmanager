@@ -627,6 +627,17 @@ fn regenerate_competitions_for_new_season(
     // competition is reset for the next season.
     let community_shield_entrants = english_community_shield_entrants(game);
 
+    // Playoffs are one-season brackets. Qualification above has already read
+    // their final winners, so discard them instead of regenerating last
+    // season's entrants into a stale next-season competition.
+    let playoff_ids = league_playoff_ids(&game.competitions);
+    if !playoff_ids.is_empty() {
+        game.competitions
+            .retain(|competition| !playoff_ids.contains(&competition.id));
+        game.active_competition_ids
+            .retain(|competition_id| !playoff_ids.contains(competition_id));
+    }
+
     apply_pyramid_promotion_relegation(&mut game.competitions);
 
     // Re-seed continental competitions with this season's qualified entrants
@@ -719,6 +730,24 @@ fn league_playoffs_are_settled(game: &Game, league: &League) -> bool {
             .is_some(),
         _ => true,
     })
+}
+
+/// Runtime ids of the ephemeral playoffs that domestic league berth rules
+/// create for this season. Next season's completed table stages a fresh bracket
+/// with new entrants.
+fn league_playoff_ids(competitions: &[League]) -> std::collections::HashSet<String> {
+    competitions
+        .iter()
+        .filter(|competition| competition.rules.format == CompetitionFormat::LeagueTable)
+        .flat_map(|competition| {
+            competition.berths.iter().filter_map(move |berth| match &berth.rule {
+                BerthRule::PlayoffWinner { from, to } => {
+                    Some(format!("{}-playoff-{from}-{to}", competition.id))
+                }
+                _ => None,
+            })
+        })
+        .collect()
 }
 
 /// Stage every playoff required by a completed league's berth rules. The
@@ -897,6 +926,7 @@ mod community_shield_tests {
         game.competitions.push(league);
 
         assert!(!is_season_complete(&game), "an unstaged playoff blocks rollover");
+        assert!(league_playoff_ids(&game.competitions).contains("playoff-league-playoff-3-4"));
         assert_eq!(stage_pending_league_playoffs(&mut game), 1);
         let playoff = game.competitions.iter().find(|competition| competition.id == "playoff-league-playoff-3-4").unwrap();
         assert_eq!(playoff.participant_ids, teams[2..].to_vec());
