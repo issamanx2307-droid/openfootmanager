@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+export const RATING_MODEL_VERSION = "albion-rating-v1";
+
 export class SnapshotValidationError extends Error {
   constructor(errors) {
     super(`Snapshot validation failed:\n- ${errors.join("\n- ")}`);
@@ -20,6 +22,26 @@ function canonical(value) {
 
 export function contentHash(value) {
   return `sha256:${createHash("sha256").update(canonical(value)).digest("hex")}`;
+}
+
+function deterministicNumber(seed, limit) {
+  return createHash("sha256").update(seed).digest().readUInt32BE(0) % limit;
+}
+
+/// Generates a clearly-labelled fallback estimate when a provider has no
+/// performance metrics. The stable player id keeps the uncertainty reproducible
+/// across a transfer to a later snapshot.
+export function ratePlayer(player) {
+  const seed = `${RATING_MODEL_VERSION}:${player.id}`;
+  const overall = 48 + deterministicNumber(seed, 22);
+  return {
+    modelVersion: RATING_MODEL_VERSION,
+    origin: "albion_rating_v1",
+    overall,
+    potential: Math.min(99, overall + 3 + deterministicNumber(`${seed}:potential`, 13)),
+    confidence: "low",
+    factors: ["stable-id deterministic fallback"],
+  };
 }
 
 export class JsonSnapshotProvider {
@@ -119,9 +141,16 @@ export function normalizeSnapshot(input) {
     .map(({ id, name, country = "ENG" }) => ({ id, name, country }))
     .sort((a, b) => a.id.localeCompare(b.id));
   const players = [...input.players]
-    .map(({ id, name, clubId, position }) => ({ id, name, clubId, position }))
+    .map(({ id, name, clubId, position }) => ({ id, name, clubId, position, rating: ratePlayer({ id }) }))
     .sort((a, b) => a.id.localeCompare(b.id));
-  const snapshot = { schemaVersion: 1, season: input.season, clubs, players, provenance: normalizedProvenance(input.provenance) };
+  const snapshot = {
+    schemaVersion: 1,
+    season: input.season,
+    ratingModelVersion: RATING_MODEL_VERSION,
+    clubs,
+    players,
+    provenance: normalizedProvenance(input.provenance),
+  };
   return { ...snapshot, contentHash: contentHash(snapshot) };
 }
 

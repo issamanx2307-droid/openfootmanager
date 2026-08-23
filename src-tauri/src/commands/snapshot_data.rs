@@ -46,6 +46,15 @@ struct SnapshotPlayer {
     name: String,
     club_id: String,
     position: String,
+    #[serde(default)]
+    rating: Option<SnapshotRating>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SnapshotRating {
+    overall: u8,
+    potential: u8,
 }
 
 fn default_country() -> String {
@@ -147,6 +156,34 @@ fn short_name(name: &str) -> String {
         .to_ascii_uppercase()
 }
 
+fn apply_snapshot_rating(player: &mut domain::player::Player, rating: &SnapshotRating) {
+    // The pipeline labels this estimate as `albion_rating_v1`. Source facts do
+    // not claim to contain in-game attributes, so we translate its bounded
+    // ability summary into a coherent baseline before deriving the live rating.
+    let overall = rating.overall.clamp(1, 99);
+    let attributes = &mut player.attributes;
+    attributes.pace = overall;
+    attributes.stamina = overall;
+    attributes.strength = overall;
+    attributes.agility = overall;
+    attributes.passing = overall;
+    attributes.shooting = overall;
+    attributes.tackling = overall;
+    attributes.dribbling = overall;
+    attributes.defending = overall;
+    attributes.positioning = overall;
+    attributes.vision = overall;
+    attributes.decisions = overall;
+    attributes.composure = overall;
+    attributes.aggression = overall;
+    attributes.teamwork = overall;
+    attributes.leadership = overall;
+    attributes.handling = overall;
+    attributes.reflexes = overall;
+    attributes.aerial = overall;
+    player.potential = rating.potential.clamp(overall, 99);
+}
+
 fn overlay_snapshot_roster(
     world: &mut ofm_core::generator::WorldData,
     mut clubs: Vec<SnapshotClub>,
@@ -220,6 +257,9 @@ fn overlay_snapshot_roster(
         player.transfer_offers.clear();
         player.loan_offers.clear();
         player.active_loan = None;
+        if let Some(rating) = &source.rating {
+            apply_snapshot_rating(&mut player, rating);
+        }
         ofm_core::player_rating::refresh_player_derived(&mut player, 2026);
         world.players.push(player);
     }
@@ -333,5 +373,38 @@ mod tests {
                 .len(),
             2
         );
+    }
+
+    #[test]
+    fn imported_rating_estimate_sets_a_coherent_playable_baseline() {
+        let mut world = ofm_core::generator::generate_world_data(
+            &ofm_core::generator::DefinitionSources::embedded_only(),
+        );
+        overlay_snapshot_roster(
+            &mut world,
+            vec![SnapshotClub {
+                id: "test".to_string(),
+                name: "Test Albion".to_string(),
+                country: "ENG".to_string(),
+            }],
+            vec![SnapshotPlayer {
+                id: "player".to_string(),
+                name: "Rated Player".to_string(),
+                club_id: "test".to_string(),
+                position: "ST".to_string(),
+                rating: Some(SnapshotRating {
+                    overall: 67,
+                    potential: 79,
+                }),
+            }],
+        )
+        .expect("generated England teams should accept a source roster");
+        let player = world
+            .players
+            .iter()
+            .find(|player| player.id == "snapshot-player")
+            .expect("rated player should be imported");
+        assert_eq!(player.attributes.shooting, 67);
+        assert_eq!(player.potential, 79);
     }
 }
