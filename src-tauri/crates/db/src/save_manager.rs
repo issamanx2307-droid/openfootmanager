@@ -1,3 +1,4 @@
+use albion_protocol::{CURRENT_VERSIONS, RulesetVersion};
 use chrono::Utc;
 use domain::stats::StatsState;
 use log::info;
@@ -16,7 +17,7 @@ use ofm_core::player_rating::{
 
 use crate::game_database::GameDatabase;
 use crate::game_persistence::{GamePersistenceReader, GamePersistenceWriter};
-use crate::repositories::{league_repo, meta_repo};
+use crate::repositories::{career_version_repo, league_repo, meta_repo};
 use crate::save_index::{SaveEntry, compute_checksum, save_entry_metadata_from_game};
 use crate::save_index_manager::SaveIndexManager;
 use crate::save_load_error::SaveLoadError;
@@ -42,6 +43,24 @@ fn backend_error_with_param(key: &str, param_name: &str, param_value: &str) -> S
 
 fn save_not_found_error(save_id: &str) -> String {
     backend_error_with_param("be.error.saveNotFound", "saveId", save_id)
+}
+
+/// Store the Albion compatibility contract only for careers that have a
+/// pinned ruleset. Older and freely generated careers remain loadable without
+/// inventing a ruleset retroactively.
+fn persist_career_versions(db: &GameDatabase, game: &Game) -> Result<(), String> {
+    let (Some(ruleset_id), Some(ruleset_version)) = (&game.ruleset_id, game.ruleset_version)
+    else {
+        return Ok(());
+    };
+    let versions = CURRENT_VERSIONS
+        .to_owned_set()
+        .with_ruleset(RulesetVersion {
+            ruleset_id: ruleset_id.clone(),
+            ruleset_version,
+        });
+    let persisted = career_version_repo::CareerVersions::from_version_set(&versions)?;
+    career_version_repo::upsert_career_versions(db.conn(), &persisted)
 }
 
 /// Number of `.db.snap-*` files to keep next to each save when the
@@ -194,6 +213,7 @@ impl SaveManager {
 
         let db = GameDatabase::open(&db_path)?;
         GamePersistenceWriter::write_game(&db, &persisted_game, &save_id, save_name)?;
+        persist_career_versions(&db, &persisted_game)?;
         drop(db);
 
         let checksum = compute_checksum(&db_path)?;
@@ -249,6 +269,7 @@ impl SaveManager {
             &save_id,
             save_name,
         )?;
+        persist_career_versions(&db, &persisted_game)?;
         let write_ms = write_timer.elapsed().as_millis();
         drop(db);
 
@@ -308,6 +329,7 @@ impl SaveManager {
         snapshot_db_before_write(&db_path)?;
         let db = GameDatabase::open(&db_path)?;
         GamePersistenceWriter::write_game(&db, &persisted_game, save_id, &save_name)?;
+        persist_career_versions(&db, &persisted_game)?;
         drop(db);
 
         let checksum = compute_checksum(&db_path)?;
@@ -394,6 +416,7 @@ impl SaveManager {
             save_id,
             &entry.name,
         )?;
+        persist_career_versions(&db, &persisted_game)?;
         let write_ms = write_timer.elapsed().as_millis();
         drop(db);
 
@@ -464,6 +487,22 @@ impl SaveManager {
         let mut game = GamePersistenceReader::read_game(&db)
             .map_err(|_| crate::save_load_error::SaveLoadError::MissingData.i18n_key())?;
         let mut needs_resave = false;
+
+        if let (Some(ruleset_id), Some(ruleset_version)) =
+            (&game.ruleset_id, game.ruleset_version)
+        {
+            let runtime = CURRENT_VERSIONS
+                .to_owned_set()
+                .with_ruleset(RulesetVersion {
+                    ruleset_id: ruleset_id.clone(),
+                    ruleset_version,
+                });
+            match career_version_repo::load_career_versions(db.conn())? {
+                Some(_) => career_version_repo::validate_career_versions(db.conn(), &runtime)
+                    .map_err(|error| error.message_key().to_string())?,
+                None => needs_resave = true,
+            }
+        }
 
         // Save-format gate: reject saves from a newer build whose format this
         // build can't understand, and flag older saves so the migrations below
@@ -569,6 +608,7 @@ impl SaveManager {
             snapshot_db_before_write(&db_path)?;
             let db = GameDatabase::open(&db_path)?;
             GamePersistenceWriter::write_game(&db, &game, save_id, &save_name)?;
+            persist_career_versions(&db, &game)?;
             drop(db);
 
             let checksum = compute_checksum(&db_path)?;
@@ -1503,6 +1543,29 @@ mod tests {
         assert_eq!(loaded.staff.len(), 1);
         assert_eq!(loaded.clock.start_date, game.clock.start_date);
         assert_eq!(loaded.clock.current_date, game.clock.current_date);
+    }
+
+    #[test]
+    fn test_pinned_ruleset_creates_and_validates_career_versions() {
+        let dir = tempfile::tempdir().unwrap();
+        let saves_dir = dir.path().join("saves");
+        let mut sm = SaveManager::init(&saves_dir).unwrap();
+        let mut game = sample_game();
+        game.ruleset_id = Some("england-2026-27-v1".to_string());
+        game.ruleset_version = Some(1);
+
+        let save_id = sm.create_save(&game, "Pinned Career").unwrap();
+        let db = GameDatabase::open(&saves_dir.join(format!("{save_id}.db"))).unwrap();
+        let versions = career_version_repo::load_career_versions(db.conn())
+            .unwrap()
+            .unwrap();
+        assert_eq!(versions.ruleset_id, "england-2026-27-v1");
+        assert_eq!(versions.ruleset_version, 1);
+        drop(db);
+
+        let loaded = sm.load_game(&save_id).unwrap();
+        assert_eq!(loaded.ruleset_id, game.ruleset_id);
+        assert_eq!(loaded.ruleset_version, game.ruleset_version);
     }
 
     #[test]

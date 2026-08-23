@@ -88,8 +88,13 @@ FPL-based careers now load the bundled England 2026/27 rules pack at creation,
 apply its top-flight substitution settings to the generated English competition,
 and retain the selected ruleset id/version in the live game state. The ruleset
 files are included in the desktop bundle; a focused startup regression protects
-the mapping.
+the mapping. Per-career SQLite metadata now persists that ruleset identity via
+an append-only v044 migration. Save creation, regular saves, and saves with
+stats also write the matching `career_versions` contract; loading a pinned
+career validates it against the runtime and backfills the contract for older
+pinned saves. Random and legacy careers remain usable without an invented
+ruleset.
 
-Next: persist the live ruleset selection through the per-career save metadata
-and connect it to the existing `career_versions` repository contract. Phase 2
-has begun with the append-only `career_versions` migration.
+Next: use the pinned ruleset as the source for competition registration and
+transfer-window enforcement, rather than only its substitution limits. Phase 2
+continues with relational save coverage for the remaining competition state.

@@ -492,6 +492,8 @@ mod tests {
                 active_competition_ids_json: "[]".to_string(),
                 extra_translations_json: "{}".to_string(),
                 package_lockfile_json: "[]".to_string(),
+                ruleset_id: None,
+                ruleset_version: None,
             },
         )
         .unwrap();
@@ -615,6 +617,8 @@ mod tests {
                 active_competition_ids_json: "[]".to_string(),
                 extra_translations_json: "{}".to_string(),
                 package_lockfile_json: "[]".to_string(),
+                ruleset_id: None,
+                ruleset_version: None,
             },
         )
         .unwrap();

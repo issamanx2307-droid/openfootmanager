@@ -131,6 +131,8 @@ fn write_game_to_connection(
                 .map_err(|_| game_persistence_write_error())?,
             extra_translations_json,
             package_lockfile_json,
+            ruleset_id: game.ruleset_id.clone(),
+            ruleset_version: game.ruleset_version,
         },
     )?;
 
@@ -340,8 +342,8 @@ impl GamePersistenceReader {
                 serde_json::from_str(&meta.package_lockfile_json)
                     .map_err(|_| "be.error.gamePersistence.loadFailed".to_string())?
             },
-            ruleset_id: None,
-            ruleset_version: None,
+            ruleset_id: meta.ruleset_id,
+            ruleset_version: meta.ruleset_version,
         };
         game.promote_legacy_league();
         ofm_core::season_context::refresh_game_context(&mut game);
@@ -388,6 +390,8 @@ mod tests {
             active_competition_ids_json: "[]".to_string(),
             extra_translations_json: "{}".to_string(),
             package_lockfile_json: "[]".to_string(),
+            ruleset_id: None,
+            ruleset_version: None,
         }
     }
 
@@ -540,6 +544,20 @@ mod tests {
 
         let loaded = GamePersistenceReader::read_game(&db).unwrap();
         assert_eq!(loaded.world_history, game.world_history);
+    }
+
+    #[test]
+    fn write_and_read_game_preserves_pinned_ruleset() {
+        let db = GameDatabase::open_in_memory().unwrap();
+        let mut game = sample_game_with_clock(2032, 18);
+        game.ruleset_id = Some("england-2026-27-v1".to_string());
+        game.ruleset_version = Some(1);
+
+        GamePersistenceWriter::write_game(&db, &game, "save-1", "Career").unwrap();
+
+        let loaded = GamePersistenceReader::read_game(&db).unwrap();
+        assert_eq!(loaded.ruleset_id, game.ruleset_id);
+        assert_eq!(loaded.ruleset_version, game.ruleset_version);
     }
 
     #[test]
