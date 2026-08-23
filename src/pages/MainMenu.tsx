@@ -322,6 +322,7 @@ export default function MainMenu() {
 
   // Installed packages state
   const [installedPackages, setInstalledPackages] = useState<PackageInfo[]>([]);
+  const [fplWorldSource, setFplWorldSource] = useState<string | null>(null);
   const [activePackageIds, setActivePackageIds] = useState<string[]>([]);
   const [isInstallingPackage, setIsInstallingPackage] = useState(false);
   const [packageStackErrors, setPackageStackErrors] = useState<PackageIssue[]>([]);
@@ -490,6 +491,13 @@ export default function MainMenu() {
     }
   }, [menuState]);
 
+  useEffect(() => {
+    void invoke<{ worldDatabasePath?: string | null }>(
+      "get_fpl_data_source_status",
+    ).then((status) => setFplWorldSource(status.worldDatabasePath ?? null))
+      .catch(() => setFplWorldSource(null));
+  }, []);
+
   const handleInstallPackage = async () => {
     const selected = await open({
       filters: [{ name: "OFM Package", extensions: ["ofm"] }],
@@ -547,6 +555,7 @@ export default function MainMenu() {
         dob: formData.dob,
         nationality: formData.nationality,
         startupOptions,
+        worldSource: activePackageIds.length === 0 ? fplWorldSource ?? undefined : undefined,
         packageIds: activePackageIds.length > 0 ? activePackageIds : undefined,
       });
       applyExtraTranslations(game.extra_translations);
