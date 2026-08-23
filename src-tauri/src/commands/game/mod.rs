@@ -2240,6 +2240,34 @@ mod tests {
     }
 
     #[test]
+    fn england_ruleset_maps_equal_sized_divisions_by_priority() {
+        let mut game = Game::new(
+            GameClock::new(start_date_for_year(2026).unwrap()),
+            manager_for("eng-team-1"),
+            vec![], vec![], vec![], vec![],
+        );
+        let team_ids = (1..=20).map(|number| format!("eng-team-{number}")).collect::<Vec<_>>();
+        let mut premier = League::new("eng-d1".to_string(), "Premier League".to_string(), 2026, &team_ids);
+        premier.country_id = Some("ENG".to_string());
+        premier.priority = 0;
+        let mut championship = League::new("eng-d2".to_string(), "Championship".to_string(), 2026, &team_ids);
+        championship.country_id = Some("ENG".to_string());
+        championship.priority = 1;
+        game.competitions = vec![premier, championship];
+        let ruleset = albion_rules::load_from_yaml_str(
+            "ruleset_id: england-test\nruleset_version: 1\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    tier: 1\n    participant_clubs: 20\n    relegation:\n      automatic_slots: 3\n      target_competition_id: championship\n    substitutions:\n      max_substitutes: 5\n      max_windows: 3\n  - id: championship\n    name: Championship\n    format: league\n    tier: 2\n    participant_clubs: 20\n    promotion:\n      automatic_slots: 2\n      playoff_slots: 4\n      target_competition_id: premier-league\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n",
+        ).expect("test ruleset should parse");
+
+        apply_england_ruleset(&mut game, &ruleset);
+
+        assert_eq!(game.competitions[0].rules.relegation_automatic_slots, 3);
+        assert_eq!(game.competitions[0].rules.max_substitutes, 5);
+        assert_eq!(game.competitions[1].rules.promotion_automatic_slots, 2);
+        assert_eq!(game.competitions[1].rules.promotion_playoff_slots, 4);
+        assert_eq!(game.competitions[1].rules.max_substitutes, 4);
+    }
+
+    #[test]
     fn england_foundation_uses_the_fa_cup_identity() {
         let teams = (0..8)
             .map(|index| nation_team(&format!("eng-{index}"), "ENG", 500 - index))
