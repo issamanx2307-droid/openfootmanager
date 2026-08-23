@@ -65,7 +65,7 @@ focused regression test now passes. Run the full workspace suite before a PR.
 | 1 | Versions, protocol, rules foundation | DONE |
 | 2 | Relational per-career save | DONE |
 | 3 | Snapshot/data pipeline | DONE |
-| 4 | Competition/calendar | NOT STARTED |
+| 4 | Competition/calendar | IN PROGRESS |
 | 5 | Core management systems | NOT STARTED |
 | 6 | Albion match engine v1 | NOT STARTED |
 | 7 | AI managers | NOT STARTED |
@@ -136,4 +136,6 @@ Snapshot A/B import flow: B carries the transfer into a new playable world
 while A remains unchanged. Phase 2's save close/reopen and backup coverage
 continues to protect the resulting per-career state.
 
-Next: begin Phase 4 competition/calendar implementation.
+Phase 4 started: audit the existing generic league, fixture generation,
+promotion/relegation and season rollover paths; add the structural multi-season
+regression coverage before extending any missing competition formats.

@@ -80,6 +80,7 @@ pub fn apply_promotion_relegation(divisions: &mut [League]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{TimeZone, Utc};
     use domain::league::{League, StandingEntry};
 
     fn division(id: &str, priority: u32, standings: &[(&str, u32)]) -> League {
@@ -179,5 +180,75 @@ mod tests {
             divisions[1].participant_ids,
             vec!["s1".to_string(), "s2".to_string()]
         );
+    }
+
+    #[test]
+    fn twenty_structural_seasons_preserve_pyramid_membership_and_schedules() {
+        let mut divisions = vec![
+            division("tier-1", 0, &[("a", 40), ("b", 30), ("c", 20), ("d", 10)]),
+            division("tier-2", 1, &[("e", 40), ("f", 30), ("g", 20), ("h", 10)]),
+            division("tier-3", 2, &[("i", 40), ("j", 30), ("k", 20), ("l", 10)]),
+        ];
+        let all_clubs = divisions
+            .iter()
+            .flat_map(|division| division.participant_ids.iter().cloned())
+            .collect::<HashSet<_>>();
+
+        for season in 2027..=2046 {
+            // Produce a deterministic complete table for every tier, rotating
+            // the leader each year to exercise both directions of each boundary.
+            for (tier, division) in divisions.iter_mut().enumerate() {
+                let club_count = division.participant_ids.len();
+                division
+                    .participant_ids
+                    .rotate_left((season as usize + tier) % club_count);
+                division.standings = division
+                    .participant_ids
+                    .iter()
+                    .enumerate()
+                    .map(|(rank, team_id)| {
+                        let mut entry = StandingEntry::new(team_id.clone());
+                        entry.played = 6;
+                        entry.won = (4usize.saturating_sub(rank)) as u32;
+                        entry.lost = rank as u32;
+                        entry.points = entry.won * 3;
+                        entry
+                    })
+                    .collect();
+            }
+
+            apply_promotion_relegation(&mut divisions);
+            let start = Utc
+                .with_ymd_and_hms(season, 8, 1, 12, 0, 0)
+                .single()
+                .expect("valid season date");
+            for division in &mut divisions {
+                crate::schedule::regenerate_league_for_season(division, season as u32, start);
+                assert_eq!(
+                    division.fixtures.len(),
+                    division.participant_ids.len() * (division.participant_ids.len() - 1)
+                );
+                for fixture in &division.fixtures {
+                    assert_ne!(
+                        fixture.home_team_id, fixture.away_team_id,
+                        "a club cannot play itself"
+                    );
+                    assert!(division.participant_ids.contains(&fixture.home_team_id));
+                    assert!(division.participant_ids.contains(&fixture.away_team_id));
+                }
+            }
+
+            let current_clubs = divisions
+                .iter()
+                .flat_map(|division| division.participant_ids.iter().cloned())
+                .collect::<Vec<_>>();
+            assert_eq!(current_clubs.len(), all_clubs.len());
+            assert_eq!(
+                current_clubs.iter().collect::<HashSet<_>>().len(),
+                all_clubs.len(),
+                "club belongs to exactly one tier"
+            );
+            assert_eq!(current_clubs.into_iter().collect::<HashSet<_>>(), all_clubs);
+        }
     }
 }
