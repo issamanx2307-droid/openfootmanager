@@ -88,6 +88,19 @@ fn load_world_data(
 const FPL_WORLD_ID: &str = "fpl-core-insights-2026-2027";
 const ALBION_SNAPSHOT_WORLD_FILENAME: &str = "albion-snapshot-world.json";
 
+fn snapshot_lockfile_entry(
+    world_source: Option<&str>,
+    metadata: &ofm_core::generator::WorldDataMetadata,
+) -> Option<ofm_core::generator::PackageLock> {
+    world_source
+        .filter(|source| source.contains(ALBION_SNAPSHOT_WORLD_FILENAME))
+        .map(|_| ofm_core::generator::PackageLock {
+            id: "albion-snapshot".to_string(),
+            version: metadata.snapshot_date.clone().unwrap_or_else(|| "unknown".to_string()),
+            hash: metadata.world_id.trim_start_matches("sha256:").to_string(),
+        })
+}
+
 /// FPL supplies the English top-flight roster, so its careers carry the
 /// season-specific England rules pack rather than inheriting generic world
 /// generation defaults.
@@ -1650,7 +1663,7 @@ pub async fn start_new_game(
         .map_err(|_| "be.error.createManager.invalidDobFormat".to_string())?;
 
     let startup_options = normalize_startup_options(startup_options)?;
-    let (mut world, package_lockfile) =
+    let (mut world, mut package_lockfile) =
         if let Some(ids) = package_ids.as_deref().filter(|ids| !ids.is_empty()) {
             let packages_dir = app_handle
                 .path()
@@ -1686,6 +1699,7 @@ pub async fn start_new_game(
         world.competition_definitions = Some(file);
     }
 
+    let snapshot_lockfile = snapshot_lockfile_entry(world_source.as_deref(), &world.metadata);
     let clock = game_clock_for_world(&startup_options, &world.metadata)?;
     let is_non_random = package_ids.as_deref().is_some_and(|ids| !ids.is_empty())
         || matches!(world_source.as_deref(), Some(source) if source != "random");
@@ -1740,6 +1754,9 @@ pub async fn start_new_game(
         apply_england_ruleset(&mut new_game, &ruleset);
     }
 
+    if let Some(lock) = snapshot_lockfile {
+        package_lockfile.push(lock);
+    }
     new_game.package_lockfile = package_lockfile;
 
     info!(
@@ -2053,7 +2070,7 @@ mod tests {
         build_game_from_world_data, create_new_save, ensure_international_windows,
         game_clock_for_world, load_world_data_from_path, package_folder_name,
         parse_competition_definitions, rebuild_competitions_for_management_date,
-        resolve_simulation_scope, select_continental_entrants, split_into_divisions,
+        resolve_simulation_scope, select_continental_entrants, snapshot_lockfile_entry, split_into_divisions,
         start_date_for_year, StartPhase, StartupOptions, DEFAULT_GENERATED_HISTORY_DEPTH_YEARS,
     };
     use chrono::{TimeZone, Utc};
@@ -2101,6 +2118,26 @@ mod tests {
         assert!(!game.competitions[0]
             .rules
             .half_time_does_not_count_as_substitution_window);
+    }
+
+    #[test]
+    fn snapshot_source_is_pinned_in_the_career_lockfile() {
+        let metadata = ofm_core::generator::WorldDataMetadata {
+            format_version: 2,
+            world_id: "sha256:abc123".to_string(),
+            kind: ofm_core::generator::WorldDataKind::RosterBaseline,
+            base_year: Some(2026),
+            snapshot_date: Some("2026/27".to_string()),
+        };
+        let lock = snapshot_lockfile_entry(
+            Some("C:/data/albion-snapshot-world.json"),
+            &metadata,
+        )
+        .expect("snapshot source should be retained");
+        assert_eq!(lock.id, "albion-snapshot");
+        assert_eq!(lock.version, "2026/27");
+        assert_eq!(lock.hash, "abc123");
+        assert!(snapshot_lockfile_entry(Some("random"), &metadata).is_none());
     }
 
     #[test]
