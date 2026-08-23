@@ -4,7 +4,9 @@ use domain::manager::{Manager, ManagerCareerEntry};
 use domain::staff::{Staff, StaffRole};
 
 const BASE_AI_MANAGER_SATISFACTION: i32 = 50;
-const AI_MANAGER_REPLACEMENT_DELAY_DAYS: u32 = 7;
+// AI clubs must not be left without a tactical decision-maker between turns.
+// A replacement is appointed in the same daily cycle as a dismissal.
+const AI_MANAGER_REPLACEMENT_DELAY_DAYS: u32 = 1;
 const USER_RIVALRY_SATISFACTION_PENALTY: i32 = 10;
 const USER_RIVALRY_LOOKBACK_DAYS: i64 = 14;
 
@@ -412,16 +414,15 @@ mod tests {
         staff
     }
 
-    /// Sack a club's manager, one day short of the replacement delay.
+    /// Sack a club's manager and prime the next vacancy processing cycle.
     ///
     /// Through the real firing path rather than by emptying `game.managers`: a
     /// sacked manager's record *stays*, unemployed, and that is what makes the
     /// club's next invented manager id collide and so be a different person.
     /// A fixture that deleted the record would hide the collision entirely.
     ///
-    /// `process_vacant_ai_clubs` does nothing until a club has been vacant for
-    /// `AI_MANAGER_REPLACEMENT_DELAY_DAYS`, and it counts the current day itself —
-    /// so priming the count is what makes a single call actually appoint someone.
+    /// `process_vacant_ai_clubs` counts the current day itself, so priming the
+    /// count makes a single call appoint the successor.
     fn vacate_club(game: &mut Game, team_id: &str) {
         let today = game.clock.current_date.format("%Y-%m-%d").to_string();
         assert!(
@@ -839,7 +840,7 @@ mod tests {
     }
 
     #[test]
-    fn process_vacant_ai_clubs_hires_replacement_after_delay() {
+    fn process_vacant_ai_clubs_hires_replacement_in_the_daily_cycle() {
         let mut game = make_game();
         seed_ai_managers(&mut game);
 
@@ -860,8 +861,6 @@ mod tests {
         {
             manager.fire("2026-07-15");
         }
-        game.vacant_team_days.insert("team2".to_string(), 6);
-
         process_vacant_ai_clubs(&mut game);
 
         let replacement_manager_id = game
@@ -869,7 +868,7 @@ mod tests {
             .iter()
             .find(|team| team.id == "team2")
             .and_then(|team| team.manager_id.clone())
-            .expect("vacant AI club should get a replacement manager after the delay");
+            .expect("vacant AI club should get a replacement manager in the daily cycle");
 
         assert_ne!(replacement_manager_id, previous_manager_id);
         assert!(

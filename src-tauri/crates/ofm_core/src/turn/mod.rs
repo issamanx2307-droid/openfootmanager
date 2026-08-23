@@ -210,6 +210,7 @@ where
     transfers::process_pending_transfer_registrations(game);
     transfers::process_pending_loan_registrations(game);
     transfers::generate_incoming_transfer_offers(game);
+    crate::ai_squad::ensure_ai_club_squads(game);
     crate::generator::process_available_staff_market(game);
     crate::ai_hiring::update_ai_manager_satisfaction(game);
 
@@ -249,6 +250,7 @@ pub fn finish_live_match_day(game: &mut Game) {
     transfers::process_pending_transfer_registrations(game);
     transfers::process_pending_loan_registrations(game);
     transfers::generate_incoming_transfer_offers(game);
+    crate::ai_squad::ensure_ai_club_squads(game);
     crate::generator::process_available_staff_market(game);
     crate::ai_hiring::update_ai_manager_satisfaction(game);
     news::generate_weekly_digest_news(game, &today);

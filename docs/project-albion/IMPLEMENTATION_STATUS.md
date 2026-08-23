@@ -89,7 +89,7 @@ its working tree untouched.
 | 4 | Competition/calendar | DONE |
 | 5 | Core management systems | DONE |
 | 6 | Albion match engine v1 | DONE |
-| 7 | AI managers | NOT STARTED |
+| 7 | AI managers | DONE |
 | 8 | Authoritative server | NOT STARTED |
 | 9 | Desktop client migration | NOT STARTED |
 | 10 | Thai + accessibility | NOT STARTED |
@@ -221,3 +221,19 @@ Focused verification passes: `cargo test -p engine --lib simulator::tests`
 `cargo test -p engine --test live_match_tests` (60 passed), and `cargo test -p
 ofm_core match_seed::tests` (1 passed). A 100,000-match calibration benchmark
 was executed with `cargo run -p sim-bench -- --games 100000 --seed 42 --bench`.
+
+Phase 7 completion evidence: existing persistent manager profiles, AI training,
+depth-chart recruitment, target scoring, transfers, loans and affordability
+guardrails were audited in `ofm_core`. The daily turn now includes a final
+AI-squad continuity guardrail: a non-user club that falls below a balanced
+16-player senior squad signs the best suitable non-retired free agent on a
+one-year contract only when the club's annual wage soft cap allows it. Every
+signing records the normal free-agent movement history; the user club is never
+changed by this path. AI manager vacancies are also filled in the same daily
+cycle as a firing, so tactical and lineup decisions never lose their manager
+between turns. `cargo test -p ofm_core --lib ai_hiring::tests` passes 14 tests,
+`cargo test -p ofm_core --lib ai_squad::tests` passes 1 test, and `cargo test
+-p ofm_core --test scenario_tests` passes 4 tests. The latter runs a compact,
+multi-season 737-day career and asserts each AI club retains a persistent
+manager, can field at least 11 healthy players, has finite finance and retains
+more than one tactical identity.

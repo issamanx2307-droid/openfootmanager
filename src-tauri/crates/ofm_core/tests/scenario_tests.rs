@@ -280,3 +280,67 @@ fn full_season_holds_invariants() {
         "a full season should have played some matches"
     );
 }
+
+/// AI clubs must remain operational over multiple seasons: every non-user club
+/// keeps a manager, enough players to field a side, finite finances, and its
+/// own tactical identity. This exercises the daily AI training, recruitment,
+/// manager-satisfaction and vacancy-replacement paths together.
+#[test]
+fn multi_season_ai_clubs_remain_operational_and_distinct() {
+    let mut game = make_scenario_game(17);
+    ofm_core::ai_hiring::seed_ai_managers(&mut game);
+    let user_team_id = game.manager.team_id.clone().expect("scenario user team");
+    let styles = [
+        domain::team::PlayStyle::Attacking,
+        domain::team::PlayStyle::Defensive,
+        domain::team::PlayStyle::Possession,
+        domain::team::PlayStyle::Counter,
+        domain::team::PlayStyle::HighPress,
+    ];
+    for (index, team) in game.teams.iter_mut().enumerate() {
+        if team.id != user_team_id {
+            team.play_style = styles[index % styles.len()].clone();
+        }
+    }
+
+    // Drive two full seasons plus a small rollover margin.
+    advance_days(&mut game, 737);
+    assert_game_invariants(&game);
+
+    let non_user_teams: Vec<_> = game
+        .teams
+        .iter()
+        .filter(|team| team.id != user_team_id)
+        .collect();
+    assert!(!non_user_teams.is_empty(), "scenario needs AI clubs");
+    for team in &non_user_teams {
+        assert!(team.manager_id.is_some(), "{} has no AI manager", team.id);
+        assert!(
+            game.managers
+                .iter()
+                .any(|manager| manager.id == *team.manager_id.as_ref().unwrap()
+                    && manager.team_id.as_deref() == Some(team.id.as_str())),
+            "{} manager record is not persistent",
+            team.id
+        );
+        let available = game
+            .players
+            .iter()
+            .filter(|player| {
+                player.team_id.as_deref() == Some(team.id.as_str()) && player.injury.is_none()
+            })
+            .count();
+        assert!(available >= 11, "{} cannot field a legal XI", team.id);
+        assert!(
+            team.finance.abs() < i64::MAX / 2,
+            "{} finance overflow",
+            team.id
+        );
+    }
+
+    let styles_after: HashSet<_> = non_user_teams
+        .iter()
+        .map(|team| format!("{:?}", team.play_style))
+        .collect();
+    assert!(styles_after.len() > 1, "AI tactical identities collapsed");
+}
