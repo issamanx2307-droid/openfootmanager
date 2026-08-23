@@ -266,6 +266,26 @@ fn overlay_snapshot_roster(
     Ok(())
 }
 
+fn build_snapshot_world(
+    snapshot: SnapshotDocument,
+) -> Result<ofm_core::generator::WorldData, String> {
+    let mut world = ofm_core::generator::generate_world_data(
+        &ofm_core::generator::DefinitionSources::embedded_only(),
+    );
+    overlay_snapshot_roster(&mut world, snapshot.clubs, snapshot.players)?;
+    world.name = format!("Albion Snapshot {}", snapshot.season);
+    world.description =
+        "Playable world generated from an immutable Albion data snapshot".to_string();
+    world.metadata = ofm_core::generator::WorldDataMetadata {
+        format_version: 2,
+        world_id: snapshot.content_hash,
+        kind: ofm_core::generator::WorldDataKind::RosterBaseline,
+        base_year: snapshot.season.get(0..4).and_then(|year| year.parse().ok()),
+        snapshot_date: Some(snapshot.season),
+    };
+    Ok(world)
+}
+
 #[tauri::command]
 pub fn get_albion_snapshot_status(app: AppHandle) -> Result<AlbionSnapshotStatus, String> {
     let path = snapshot_world_path(&app)?;
@@ -295,21 +315,7 @@ pub fn import_albion_snapshot(
         &std::fs::read_to_string(source_path).map_err(|_| SNAPSHOT_ERROR.to_string())?,
     )
     .map_err(|_| SNAPSHOT_ERROR.to_string())?;
-    let snapshot = verify_snapshot(&raw)?;
-    let mut world = ofm_core::generator::generate_world_data(
-        &ofm_core::generator::DefinitionSources::embedded_only(),
-    );
-    overlay_snapshot_roster(&mut world, snapshot.clubs, snapshot.players)?;
-    world.name = format!("Albion Snapshot {}", snapshot.season);
-    world.description =
-        "Playable world generated from an immutable Albion data snapshot".to_string();
-    world.metadata = ofm_core::generator::WorldDataMetadata {
-        format_version: 2,
-        world_id: snapshot.content_hash,
-        kind: ofm_core::generator::WorldDataKind::RosterBaseline,
-        base_year: snapshot.season.get(0..4).and_then(|year| year.parse().ok()),
-        snapshot_date: Some(snapshot.season),
-    };
+    let world = build_snapshot_world(verify_snapshot(&raw)?)?;
     let path = snapshot_world_path(&app)?;
     std::fs::create_dir_all(path.parent().ok_or_else(|| SNAPSHOT_ERROR.to_string())?)
         .map_err(|_| SNAPSHOT_ERROR.to_string())?;
@@ -325,6 +331,57 @@ pub fn import_albion_snapshot(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn fixture_snapshot(alex_club_id: &str, content_hash: &str) -> SnapshotDocument {
+        SnapshotDocument {
+            schema_version: 1,
+            season: "2026/27".to_string(),
+            clubs: vec![
+                SnapshotClub {
+                    id: "northbridge".to_string(),
+                    name: "Northbridge FC".to_string(),
+                    country: "ENG".to_string(),
+                },
+                SnapshotClub {
+                    id: "riverside".to_string(),
+                    name: "Riverside Town".to_string(),
+                    country: "ENG".to_string(),
+                },
+            ],
+            players: vec![
+                SnapshotPlayer {
+                    id: "alex".to_string(),
+                    name: "Alex Porter".to_string(),
+                    club_id: alex_club_id.to_string(),
+                    position: "ST".to_string(),
+                    rating: None,
+                },
+                SnapshotPlayer {
+                    id: "sam".to_string(),
+                    name: "Sam Reed".to_string(),
+                    club_id: "riverside".to_string(),
+                    position: "GK".to_string(),
+                    rating: None,
+                },
+            ],
+            content_hash: content_hash.to_string(),
+        }
+    }
+
+    fn player_team_name(world: &ofm_core::generator::WorldData, player_id: &str) -> String {
+        let player = world
+            .players
+            .iter()
+            .find(|player| player.id == player_id)
+            .expect("player exists");
+        world
+            .teams
+            .iter()
+            .find(|team| Some(&team.id) == player.team_id.as_ref())
+            .expect("player team exists")
+            .name
+            .clone()
+    }
 
     #[test]
     fn accepts_the_node_pipeline_hash_format() {
@@ -406,5 +463,29 @@ mod tests {
             .expect("rated player should be imported");
         assert_eq!(player.attributes.shooting, 67);
         assert_eq!(player.potential, 79);
+    }
+
+    #[test]
+    fn snapshot_b_creates_a_new_world_without_mutating_snapshot_a_career_seed() {
+        let snapshot_a_world =
+            build_snapshot_world(fixture_snapshot("northbridge", "sha256:snapshot-a"))
+                .expect("snapshot A builds a playable world");
+        let snapshot_b_world =
+            build_snapshot_world(fixture_snapshot("riverside", "sha256:snapshot-b"))
+                .expect("snapshot B builds a playable world");
+        assert_eq!(snapshot_a_world.metadata.world_id, "sha256:snapshot-a");
+        assert_eq!(snapshot_b_world.metadata.world_id, "sha256:snapshot-b");
+        assert_eq!(
+            player_team_name(&snapshot_a_world, "snapshot-alex"),
+            "Northbridge FC"
+        );
+        assert_eq!(
+            player_team_name(&snapshot_b_world, "snapshot-alex"),
+            "Riverside Town"
+        );
+        assert_eq!(
+            player_team_name(&snapshot_a_world, "snapshot-alex"),
+            "Northbridge FC"
+        );
     }
 }

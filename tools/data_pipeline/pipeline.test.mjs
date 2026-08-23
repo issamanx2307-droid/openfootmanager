@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { CsvSnapshotProvider, JsonSnapshotProvider, RATING_MODEL_VERSION, SnapshotValidationError, contentHash, createCareerSeed, createSnapshotDiff, diffSnapshots, formatDiffReport, normalizeSnapshot, ratePlayer, verifySnapshot } from "./pipeline.mjs";
+import { CsvSnapshotProvider, JsonSnapshotProvider, RATING_MODEL_VERSION, SnapshotValidationError, assertPublishableSnapshot, contentHash, createCareerSeed, createSnapshotDiff, diffSnapshots, formatDiffReport, normalizeSnapshot, ratePlayer, verifySnapshot } from "./pipeline.mjs";
 
 const provider = new JsonSnapshotProvider("tools/data_pipeline/fixtures/snapshot-a.json");
 const rawA = await provider.load();
@@ -22,6 +22,19 @@ assert.match(formatDiffReport(diff), /alex-porter: northbridge-fc -> riverside-t
 assert.equal(createCareerSeed(snapshotB).sourceSnapshotHash, snapshotB.contentHash);
 assert.throws(() => normalizeSnapshot({ season: "2026/27", clubs: [{ id: "club", name: "Club" }], players: [{ id: "player", name: "Player", clubId: "missing", position: "ST" }] }), SnapshotValidationError);
 assert.throws(() => verifySnapshot({ ...snapshotA, contentHash: "sha256:invalid" }), SnapshotValidationError);
+const ambiguous = normalizeSnapshot({
+  season: "2026/27",
+  clubs: rawA.clubs,
+  players: [{ id: "new-alex", name: "Alex Porter", clubId: "northbridge-fc", position: "ST" }],
+});
+assert.throws(() => assertPublishableSnapshot(ambiguous, snapshotA), SnapshotValidationError);
+const reviewed = normalizeSnapshot({
+  season: "2026/27",
+  clubs: rawA.clubs,
+  players: [{ id: "new-alex", name: "Alex Porter", clubId: "northbridge-fc", position: "ST" }],
+  identityReviews: [{ previousId: "alex-porter", incomingId: "new-alex", resolution: "distinct" }],
+});
+assert.equal(assertPublishableSnapshot(reviewed, snapshotA).identityConflicts.length, 0);
 const csv = await new CsvSnapshotProvider("tools/data_pipeline/fixtures/snapshot-a.csv").load();
 assert.equal(normalizeSnapshot(csv).players[0].id, "alex-porter");
 console.log("data pipeline fixtures passed");

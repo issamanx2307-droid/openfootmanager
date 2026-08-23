@@ -103,6 +103,7 @@ export class CsvSnapshotProvider {
 }
 
 const stringField = (value) => typeof value === "string" && value.trim().length > 0;
+const normalizedName = (value) => value.normalize("NFKD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
 export function validateSnapshot(input) {
   const errors = [];
@@ -123,6 +124,11 @@ export function validateSnapshot(input) {
   }
   if ((input.clubs ?? []).length === 0) errors.push("at least one club is required");
   if ((input.players ?? []).length === 0) warnings.push("snapshot has no players");
+  for (const review of input.identityReviews ?? []) {
+    if (!stringField(review.previousId) || !stringField(review.incomingId) || !["distinct", "same-person-remapped"].includes(review.resolution)) {
+      errors.push("each identity review requires previousId, incomingId, and a valid resolution");
+    }
+  }
   return { errors, warnings };
 }
 
@@ -143,12 +149,16 @@ export function normalizeSnapshot(input) {
   const players = [...input.players]
     .map(({ id, name, clubId, position }) => ({ id, name, clubId, position, rating: ratePlayer({ id }) }))
     .sort((a, b) => a.id.localeCompare(b.id));
+  const identityReviews = [...(input.identityReviews ?? [])]
+    .map(({ previousId, incomingId, resolution }) => ({ previousId, incomingId, resolution }))
+    .sort((a, b) => `${a.previousId}:${a.incomingId}`.localeCompare(`${b.previousId}:${b.incomingId}`));
   const snapshot = {
     schemaVersion: 1,
     season: input.season,
     ratingModelVersion: RATING_MODEL_VERSION,
     clubs,
     players,
+    identityReviews,
     provenance: normalizedProvenance(input.provenance),
   };
   return { ...snapshot, contentHash: contentHash(snapshot) };
@@ -174,13 +184,34 @@ export function diffSnapshots(before, after) {
 export function createSnapshotDiff(before, after) {
   const beforePlayers = new Map(before.players.map((player) => [player.id, player]));
   const afterPlayers = new Map(after.players.map((player) => [player.id, player]));
+  const approvedReviews = new Set((after.identityReviews ?? []).map((review) => `${review.previousId}:${review.incomingId}`));
+  const playersByName = new Map();
+  for (const player of before.players) {
+    const key = normalizedName(player.name);
+    playersByName.set(key, [...(playersByName.get(key) ?? []), player]);
+  }
+  const identityConflicts = after.players.flatMap((player) => {
+    if (beforePlayers.has(player.id)) return [];
+    return (playersByName.get(normalizedName(player.name)) ?? [])
+      .filter((previous) => previous.id !== player.id && !approvedReviews.has(`${previous.id}:${player.id}`))
+      .map((previous) => ({ previousId: previous.id, incomingId: player.id, normalizedName: normalizedName(player.name) }));
+  });
   return {
     playersAdded: [...afterPlayers.keys()].filter((id) => !beforePlayers.has(id)),
     playersRemoved: [...beforePlayers.keys()].filter((id) => !afterPlayers.has(id)),
     rosterMoves: diffSnapshots(before, after),
-    identityConflicts: [],
+    identityConflicts,
     warnings: validateSnapshot(after).warnings,
   };
+}
+
+export function assertPublishableSnapshot(snapshot, previous) {
+  verifySnapshot(snapshot);
+  const diff = previous ? createSnapshotDiff(previous, snapshot) : null;
+  if (diff?.identityConflicts.length) {
+    throw new SnapshotValidationError(["ambiguous identity requires an identityReviews decision before publication"]);
+  }
+  return diff;
 }
 
 export function createCareerSeed(snapshot) {
@@ -202,8 +233,7 @@ if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {
   await writeFile(resolve(outputPath), `${JSON.stringify(snapshot, null, 2)}\n`);
   if (previousPath) {
     const previous = JSON.parse(await readFile(resolve(previousPath), "utf8"));
-    verifySnapshot(previous);
-    const diff = createSnapshotDiff(previous, snapshot);
+    const diff = assertPublishableSnapshot(snapshot, previous);
     console.log(JSON.stringify(diff, null, 2));
     console.log(formatDiffReport(diff));
   }
