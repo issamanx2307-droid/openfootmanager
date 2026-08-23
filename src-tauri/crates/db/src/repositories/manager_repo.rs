@@ -10,11 +10,15 @@ pub fn upsert_manager(conn: &Connection, m: &Manager) -> Result<(), String> {
         .map_err(|_| GAME_PERSISTENCE_WRITE_ERROR.to_string())?;
     let career_history_json = serde_json::to_string(&m.career_history)
         .map_err(|_| GAME_PERSISTENCE_WRITE_ERROR.to_string())?;
+    let scouted_player_ids_json = serde_json::to_string(&m.scouted_player_ids)
+        .map_err(|_| GAME_PERSISTENCE_WRITE_ERROR.to_string())?;
+    let shortlisted_player_ids_json = serde_json::to_string(&m.shortlisted_player_ids)
+        .map_err(|_| GAME_PERSISTENCE_WRITE_ERROR.to_string())?;
 
     conn.execute(
         "INSERT OR REPLACE INTO managers
-         (id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, reputation, satisfaction, fan_approval, team_id, warning_stage, career_stats, career_history)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+         (id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, reputation, satisfaction, fan_approval, team_id, warning_stage, career_stats, career_history, scouted_player_ids, shortlisted_player_ids)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
         params![
             m.id,
             m.first_name,
@@ -30,6 +34,8 @@ pub fn upsert_manager(conn: &Connection, m: &Manager) -> Result<(), String> {
             m.warning_stage,
             career_stats_json,
             career_history_json,
+            scouted_player_ids_json,
+            shortlisted_player_ids_json,
         ],
     )
     .map_err(|_| GAME_PERSISTENCE_WRITE_ERROR.to_string())?;
@@ -40,7 +46,7 @@ pub fn upsert_manager(conn: &Connection, m: &Manager) -> Result<(), String> {
 pub fn load_manager(conn: &Connection, id: &str) -> Result<Option<Manager>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, reputation, satisfaction, fan_approval, team_id, warning_stage, career_stats, career_history
+            "SELECT id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, reputation, satisfaction, fan_approval, team_id, warning_stage, career_stats, career_history, scouted_player_ids, shortlisted_player_ids
              FROM managers WHERE id = ?1",
         )
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
@@ -64,6 +70,8 @@ pub fn load_manager(conn: &Connection, id: &str) -> Result<Option<Manager>, Stri
                 row.get::<_, u8>(11)?,
                 career_stats_json,
                 career_history_json,
+                row.get::<_, String>(14)?,
+                row.get::<_, String>(15)?,
             ))
         })
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
@@ -84,11 +92,18 @@ pub fn load_manager(conn: &Connection, id: &str) -> Result<Option<Manager>, Stri
             warning_stage,
             stats_json,
             history_json,
+            scouted_player_ids_json,
+            shortlisted_player_ids_json,
         ))) => {
             let career_stats: ManagerCareerStats = serde_json::from_str(&stats_json)
                 .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
             let career_history: Vec<ManagerCareerEntry> = serde_json::from_str(&history_json)
                 .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
+            let scouted_player_ids: Vec<String> = serde_json::from_str(&scouted_player_ids_json)
+                .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
+            let shortlisted_player_ids: Vec<String> =
+                serde_json::from_str(&shortlisted_player_ids_json)
+                    .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
 
             Ok(Some(Manager {
                 id,
@@ -105,6 +120,8 @@ pub fn load_manager(conn: &Connection, id: &str) -> Result<Option<Manager>, Stri
                 warning_stage,
                 career_stats,
                 career_history,
+                scouted_player_ids,
+                shortlisted_player_ids,
             }))
         }
         Some(Err(_)) => Err(GAME_PERSISTENCE_LOAD_ERROR.to_string()),
@@ -116,7 +133,7 @@ pub fn load_manager(conn: &Connection, id: &str) -> Result<Option<Manager>, Stri
 pub fn load_all_managers(conn: &Connection) -> Result<Vec<Manager>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, reputation, satisfaction, fan_approval, team_id, warning_stage, career_stats, career_history
+            "SELECT id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, reputation, satisfaction, fan_approval, team_id, warning_stage, career_stats, career_history, scouted_player_ids, shortlisted_player_ids
              FROM managers",
         )
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
@@ -138,6 +155,8 @@ pub fn load_all_managers(conn: &Connection) -> Result<Vec<Manager>, String> {
                 row.get::<_, u8>(11)?,
                 row.get::<_, String>(12)?,
                 row.get::<_, String>(13)?,
+                row.get::<_, String>(14)?,
+                row.get::<_, String>(15)?,
             ))
         })
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
@@ -159,11 +178,18 @@ pub fn load_all_managers(conn: &Connection) -> Result<Vec<Manager>, String> {
             warning_stage,
             stats_json,
             history_json,
+            scouted_player_ids_json,
+            shortlisted_player_ids_json,
         ) = row.map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
         let career_stats: ManagerCareerStats = serde_json::from_str(&stats_json)
             .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
         let career_history: Vec<ManagerCareerEntry> = serde_json::from_str(&history_json)
             .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
+        let scouted_player_ids: Vec<String> = serde_json::from_str(&scouted_player_ids_json)
+            .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
+        let shortlisted_player_ids: Vec<String> =
+            serde_json::from_str(&shortlisted_player_ids_json)
+                .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
         managers.push(Manager {
             id,
             first_name,
@@ -179,6 +205,8 @@ pub fn load_all_managers(conn: &Connection) -> Result<Vec<Manager>, String> {
             warning_stage,
             career_stats,
             career_history,
+            scouted_player_ids,
+            shortlisted_player_ids,
         });
     }
     Ok(managers)
@@ -223,6 +251,22 @@ mod tests {
         assert_eq!(loaded.fan_approval, 50);
         assert_eq!(loaded.football_nation, "GB");
         assert_eq!(loaded.birth_country, None);
+        assert!(loaded.scouted_player_ids.is_empty());
+        assert!(loaded.shortlisted_player_ids.is_empty());
+    }
+
+    #[test]
+    fn test_scouting_knowledge_roundtrip() {
+        let db = test_db();
+        let mut manager = sample_manager();
+        manager.scouted_player_ids = vec!["p-1".to_string(), "p-2".to_string()];
+        manager.shortlisted_player_ids = vec!["p-2".to_string()];
+
+        upsert_manager(db.conn(), &manager).unwrap();
+        let loaded = load_manager(db.conn(), "mgr_user").unwrap().unwrap();
+
+        assert_eq!(loaded.scouted_player_ids, vec!["p-1", "p-2"]);
+        assert_eq!(loaded.shortlisted_player_ids, vec!["p-2"]);
     }
 
     #[test]

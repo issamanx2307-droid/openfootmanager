@@ -510,6 +510,8 @@ export interface ManagerData {
   warning_stage?: number;
   career_stats: ManagerCareerStats;
   career_history: ManagerCareerEntry[];
+  scouted_player_ids?: string[];
+  shortlisted_player_ids?: string[];
 }
 
 export interface FixtureData {

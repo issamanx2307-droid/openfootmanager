@@ -2251,6 +2251,23 @@ mod tests {
     }
 
     #[test]
+    fn test_game_with_scouting_knowledge_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let saves_dir = dir.path().join("saves");
+        let mut sm = SaveManager::init(&saves_dir).unwrap();
+        let mut game = sample_game();
+        game.manager.scouted_player_ids = vec!["p-001".to_string()];
+        game.manager.shortlisted_player_ids = vec!["p-001".to_string()];
+        game.sync_user_manager_record();
+
+        let save_id = sm.create_save(&game, "With Scouting Knowledge").unwrap();
+        let loaded = sm.load_game(&save_id).unwrap();
+
+        assert_eq!(loaded.manager.scouted_player_ids, vec!["p-001"]);
+        assert_eq!(loaded.manager.shortlisted_player_ids, vec!["p-001"]);
+    }
+
+    #[test]
     fn test_new_game_from_save_strips_session_data() {
         let dir = tempfile::tempdir().unwrap();
         let saves_dir = dir.path().join("saves");

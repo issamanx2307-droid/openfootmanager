@@ -16,6 +16,7 @@ const ERR_PLAYER_ALREADY_SCOUTED: &str = "be.error.scouting.playerAlreadyScouted
 const ERR_YOUTH_SEARCH_ALREADY_ACTIVE: &str = "be.error.scouting.youthSearchAlreadyActive";
 const ERR_YOUTH_ASSIGNMENT_NOT_FOUND: &str = "be.error.scouting.youthAssignmentNotFound";
 const ERR_SCOUT_ALREADY_ASSIGNED_TO_SEARCH: &str = "be.error.scouting.scoutAlreadyAssignedToSearch";
+const ERR_PLAYER_NOT_KNOWN: &str = "be.error.scouting.playerNotKnown";
 
 fn scouting_error_with_params(key: &str, params: &[(&str, String)]) -> String {
     if params.is_empty() {
@@ -175,6 +176,40 @@ pub fn send_scout(game: &mut Game, scout_id: &str, player_id: &str) -> Result<()
     Ok(())
 }
 
+/// Add or remove a player from the human manager's shortlist. A shortlist is
+/// intentionally limited to completed reports so it represents actionable,
+/// manager-specific knowledge rather than a second global player search.
+pub fn toggle_shortlist(game: &mut Game, player_id: &str) -> Result<bool, String> {
+    if !game.players.iter().any(|player| player.id == player_id) {
+        return Err("be.error.playerNotFound".to_string());
+    }
+    if !game
+        .manager
+        .scouted_player_ids
+        .iter()
+        .any(|id| id == player_id)
+    {
+        return Err(ERR_PLAYER_NOT_KNOWN.to_string());
+    }
+
+    let shortlisted = if let Some(index) = game
+        .manager
+        .shortlisted_player_ids
+        .iter()
+        .position(|id| id == player_id)
+    {
+        game.manager.shortlisted_player_ids.remove(index);
+        false
+    } else {
+        game.manager
+            .shortlisted_player_ids
+            .push(player_id.to_string());
+        true
+    };
+    game.sync_user_manager_record();
+    Ok(shortlisted)
+}
+
 pub fn start_youth_scouting(
     game: &mut Game,
     scout_id: &str,
@@ -330,6 +365,35 @@ pub fn process_scouting(game: &mut Game) {
             );
             game.messages.push(msg);
         }
+    }
+
+    let newly_known: Vec<String> = completed
+        .iter()
+        .filter(|assignment| {
+            game.staff
+                .iter()
+                .any(|scout| scout.id == assignment.scout_id)
+                && game
+                    .players
+                    .iter()
+                    .any(|player| player.id == assignment.player_id)
+        })
+        .map(|assignment| assignment.player_id.clone())
+        .collect();
+    let mut knowledge_changed = false;
+    for player_id in newly_known {
+        if !game
+            .manager
+            .scouted_player_ids
+            .iter()
+            .any(|id| id == &player_id)
+        {
+            game.manager.scouted_player_ids.push(player_id);
+            knowledge_changed = true;
+        }
+    }
+    if knowledge_changed {
+        game.sync_user_manager_record();
     }
 
     for assignment in &completed_youth {

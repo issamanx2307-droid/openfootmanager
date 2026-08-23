@@ -31,6 +31,15 @@ pub struct Manager {
 
     // Employment history
     pub career_history: Vec<ManagerCareerEntry>,
+
+    /// Players for whom this manager has received a completed scouting report.
+    /// This is deliberately manager-owned rather than global: a report belongs
+    /// to the career that commissioned it.
+    #[serde(default)]
+    pub scouted_player_ids: Vec<String>,
+    /// A manager-maintained subset of known players for later transfer work.
+    #[serde(default)]
+    pub shortlisted_player_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -97,6 +106,8 @@ impl Manager {
             warning_stage: 0,
             career_stats: ManagerCareerStats::default(),
             career_history: Vec::new(),
+            scouted_player_ids: Vec::new(),
+            shortlisted_player_ids: Vec::new(),
         }
     }
 

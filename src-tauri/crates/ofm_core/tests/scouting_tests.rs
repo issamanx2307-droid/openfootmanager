@@ -8,7 +8,7 @@ use ofm_core::clock::GameClock;
 use ofm_core::game::{Game, YouthScoutingObjective, YouthScoutingRegion};
 use ofm_core::scouting::{
     apply_youth_recruitment_response, process_scouting, scout_max_assignments, send_scout,
-    start_youth_scouting,
+    start_youth_scouting, toggle_shortlist,
 };
 
 // ---------------------------------------------------------------------------
@@ -334,6 +334,28 @@ fn report_has_scout_report_data() {
     assert_eq!(report.nationality, "BR");
     assert!(report.team_name.is_some(), "Should have team name");
     assert_eq!(report.team_name.as_deref(), Some("Rival FC"));
+}
+
+#[test]
+fn completed_report_records_manager_knowledge_and_allows_shortlisting() {
+    let mut game = make_game();
+    send_scout(&mut game, "scout1", "p2").unwrap();
+    complete_scouting(&mut game);
+
+    assert_eq!(game.manager.scouted_player_ids, vec!["p2"]);
+    assert!(toggle_shortlist(&mut game, "p2").unwrap());
+    assert_eq!(game.manager.shortlisted_player_ids, vec!["p2"]);
+    assert!(!toggle_shortlist(&mut game, "p2").unwrap());
+    assert!(game.manager.shortlisted_player_ids.is_empty());
+}
+
+#[test]
+fn shortlist_rejects_player_without_a_completed_report() {
+    let mut game = make_game();
+    assert_eq!(
+        toggle_shortlist(&mut game, "p2").unwrap_err(),
+        "be.error.scouting.playerNotKnown"
+    );
 }
 
 #[test]

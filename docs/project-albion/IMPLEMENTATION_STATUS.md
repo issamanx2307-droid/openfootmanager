@@ -87,7 +87,7 @@ its working tree untouched.
 | 2 | Relational per-career save | DONE |
 | 3 | Snapshot/data pipeline | DONE |
 | 4 | Competition/calendar | DONE |
-| 5 | Core management systems | NOT STARTED |
+| 5 | Core management systems | DONE |
 | 6 | Albion match engine v1 | NOT STARTED |
 | 7 | AI managers | NOT STARTED |
 | 8 | Authoritative server | NOT STARTED |
@@ -186,3 +186,22 @@ qualification, cup, history and rollover integrations. `cargo test -p
 openfootmanager --lib --quiet` passes 226 tests (1 ignored), including England
 foundation, five-tier feeder, FA Cup/EFL Cup/Community Shield and tier-specific
 ruleset mapping coverage.
+
+Phase 5 completion evidence: the existing domain and persistence layers cover
+squad position/role and lineup validation, registration and automatic selection;
+transfer search/listing, bids/counters, installments, add-ons, loans, transfer
+windows and AI competition; contract terms, bonuses, negotiation, expiry and
+free agents; finance ledger/budgets/commitments/revenue/costs with financial
+rule hooks; medical condition/fatigue/sharpness/injury/suspension state; and
+weekly/individual training with age, potential and gradual development. Scouting
+now also records completed reports as manager-specific knowledge and exposes a
+durable shortlist: migration `v046` persists both collections with the manager,
+and the desktop `toggle_shortlist` command updates the active career state.
+
+Focused verification passes: `cargo test -p ofm_core --test scouting_tests`
+(28 passed), `cargo test -p db scouting_knowledge` (2 passed, covering
+repository and full save/load round trips), `cargo test -p openfootmanager
+toggle_shortlist_internal_updates_known_player_state` (1 passed), and `cargo
+test -p ofm_core --test scenario_tests full_season_holds_invariants` (1 passed).
+The scenario test drives a human-controlled club through 365 daily turns and
+asserts gameplay invariants throughout the full season without database edits.

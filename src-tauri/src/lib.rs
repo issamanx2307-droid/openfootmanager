@@ -260,6 +260,7 @@ pub fn run() {
             auto_select_set_pieces,
             toggle_transfer_list,
             toggle_loan_list,
+            toggle_shortlist,
             make_transfer_bid,
             make_loan_offer,
             exercise_loan_buy_option,

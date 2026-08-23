@@ -115,6 +115,22 @@ pub fn toggle_loan_list_internal(state: &StateManager, player_id: &str) -> Resul
 }
 
 #[tauri::command]
+pub fn toggle_shortlist(
+    state: State<'_, Arc<StateManager>>,
+    player_id: String,
+) -> Result<Game, String> {
+    toggle_shortlist_internal(&state, &player_id)
+}
+
+pub fn toggle_shortlist_internal(state: &StateManager, player_id: &str) -> Result<Game, String> {
+    info!("[cmd] toggle_shortlist: player_id={}", player_id);
+    mutate_active_game(state, |game| {
+        ofm_core::scouting::toggle_shortlist(game, player_id)?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
 pub fn make_transfer_bid(
     state: State<'_, Arc<StateManager>>,
     player_id: String,
@@ -503,6 +519,7 @@ mod tests {
         make_loan_offer_internal, make_transfer_bid_internal,
         preview_transfer_bid_financial_impact_internal, respond_to_loan_offer_internal,
         respond_to_offer_internal, toggle_loan_list_internal, toggle_transfer_list_internal,
+        toggle_shortlist_internal,
     };
     use chrono::{TimeZone, Utc};
     use domain::manager::Manager;
@@ -1026,6 +1043,21 @@ mod tests {
             .find(|player| player.id == "player-1")
             .expect("stored player should exist");
         assert!(stored_player.loan_listed);
+    }
+
+    #[test]
+    fn toggle_shortlist_internal_updates_known_player_state() {
+        let state = StateManager::new();
+        let mut game = make_game();
+        game.manager.scouted_player_ids.push("player-1".to_string());
+        game.sync_user_manager_record();
+        state.set_game(game);
+
+        let response = toggle_shortlist_internal(&state, "player-1").expect("response");
+        assert_eq!(response.manager.shortlisted_player_ids, vec!["player-1"]);
+
+        let stored_game = state.get_game(|game| game.clone()).expect("stored game");
+        assert_eq!(stored_game.manager.shortlisted_player_ids, vec!["player-1"]);
     }
 
     #[test]
