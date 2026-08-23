@@ -805,8 +805,13 @@ mod tests {
                 path.display()
             )
         });
+        // Normalize line endings before comparing: a Windows checkout with
+        // core.autocrlf=true rewrites the fixture's LF to CRLF, which is a
+        // checkout artifact, not a schema change. serde_json's pretty printer
+        // always emits LF regardless of platform, so only `on_disk` needs it.
+        let on_disk_normalized = on_disk.replace("\r\n", "\n");
         assert_eq!(
-            on_disk.trim(),
+            on_disk_normalized.trim(),
             rendered.trim(),
             "the package schema changed but {} is stale. Regenerate with \
              OFM_UPDATE_SCHEMA_FIXTURE=1 cargo test -p ofm_core --lib the_frontend_fixture, \

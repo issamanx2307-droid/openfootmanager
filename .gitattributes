@@ -1,0 +1,12 @@
+# Force LF for text/source files regardless of platform checkout settings.
+# Prevents Windows core.autocrlf from turning generated-fixture comparisons
+# (e.g. schemaFields.generated.json) into false test failures.
+* text=auto eol=lf
+
+*.json text eol=lf
+*.rs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
