@@ -13,6 +13,7 @@ default = []
 save-snapshots = []
 
 [dependencies]
+albion_protocol = { path = "../albion_protocol" }
 chrono = { version = "0.4.44", features = ["serde"] }
 domain = { version = "0.3.0", path = "../domain" }
 log = "0.4"

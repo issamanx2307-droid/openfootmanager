@@ -1,3 +1,4 @@
+use albion_protocol::{RulesetVersion, VersionSet};
 use rusqlite::{Connection, params};
 
 const CAREER_VERSION_LOAD_ERROR: &str = "be.error.careerVersions.loadFailed";
@@ -17,6 +18,47 @@ pub struct CareerVersions {
     pub ruleset_id: String,
     pub ruleset_version: u32,
     pub rating_model_version: String,
+}
+
+impl CareerVersions {
+    /// Convert the protocol compatibility contract into the relational form
+    /// stored with a career. A running server may be unbound, but a career
+    /// must always pin the ruleset that governs it.
+    pub fn from_version_set(versions: &VersionSet) -> Result<Self, String> {
+        let ruleset = versions
+            .ruleset
+            .as_ref()
+            .ok_or_else(|| "be.error.careerVersions.rulesetRequired".to_string())?;
+
+        Ok(Self {
+            app_version: versions.app_version.clone(),
+            protocol_version: versions.protocol_version,
+            save_schema_version: versions.save_schema_version,
+            snapshot_schema_version: versions.snapshot_schema_version,
+            match_engine_version: versions.match_engine_version.clone(),
+            ruleset_id: ruleset.ruleset_id.clone(),
+            ruleset_version: ruleset.ruleset_version,
+            rating_model_version: versions.rating_model_version.clone(),
+        })
+    }
+
+    /// Recreate the protocol value used by compatibility checks after loading
+    /// a career. The ruleset is always present because the DB schema requires
+    /// it to be non-null.
+    pub fn to_version_set(&self) -> VersionSet {
+        VersionSet {
+            app_version: self.app_version.clone(),
+            protocol_version: self.protocol_version,
+            save_schema_version: self.save_schema_version,
+            snapshot_schema_version: self.snapshot_schema_version,
+            match_engine_version: self.match_engine_version.clone(),
+            rating_model_version: self.rating_model_version.clone(),
+            ruleset: Some(RulesetVersion {
+                ruleset_id: self.ruleset_id.clone(),
+                ruleset_version: self.ruleset_version,
+            }),
+        }
+    }
 }
 
 /// Persist the singleton career compatibility contract.
@@ -89,6 +131,7 @@ pub fn load_career_versions(conn: &Connection) -> Result<Option<CareerVersions>,
 mod tests {
     use super::*;
     use crate::game_database::GameDatabase;
+    use albion_protocol::{CURRENT_VERSIONS, RulesetVersion};
 
     fn versions() -> CareerVersions {
         CareerVersions {
@@ -122,5 +165,22 @@ mod tests {
             load_career_versions(database.conn()).unwrap(),
             Some(updated)
         );
+    }
+
+    #[test]
+    fn version_set_conversion_requires_a_pinned_ruleset() {
+        assert_eq!(
+            CareerVersions::from_version_set(&CURRENT_VERSIONS.to_owned_set()).unwrap_err(),
+            "be.error.careerVersions.rulesetRequired"
+        );
+
+        let version_set = CURRENT_VERSIONS
+            .to_owned_set()
+            .with_ruleset(RulesetVersion {
+                ruleset_id: "england-2026-27-v1".into(),
+                ruleset_version: 1,
+            });
+        let stored = CareerVersions::from_version_set(&version_set).unwrap();
+        assert_eq!(stored.to_version_set(), version_set);
     }
 }
