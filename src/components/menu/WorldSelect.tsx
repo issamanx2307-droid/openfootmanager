@@ -255,7 +255,7 @@ export default function GenerationStep({
                   <span className="block font-heading font-bold uppercase tracking-wide">
                     {historyDepthOptionLabel(t, value)}
                   </span>
-                  {value === 12 && (
+                  {value === 0 && (
                     <span className="block text-[10px] font-heading font-bold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300 mt-0.5">
                       {t("worldSelect.historyDepth.recommended")}
                     </span>

@@ -80,7 +80,10 @@ const MANAGER_MINIMUM_AGE = 30;
  * sane calendar range. Must match `MIN_START_YEAR` in `commands/game.rs`.
  */
 const MIN_CAREER_START_YEAR = 1900;
-const DEFAULT_GENERATED_HISTORY_DEPTH_YEARS = 12;
+// Starting from the opening season avoids simulating a dozen seasons before
+// the player reaches team selection. Longer histories remain available in
+// the generation step for players who want deeper world context.
+const DEFAULT_GENERATED_HISTORY_DEPTH_YEARS = 0;
 const MAX_GENERATED_HISTORY_DEPTH_YEARS = 24;
 const GENERATED_HISTORY_DEPTH_STORAGE_KEY = "ofm-generated-history-depth-years";
 

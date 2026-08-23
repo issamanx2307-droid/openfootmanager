@@ -381,7 +381,7 @@ describe("MainMenu", () => {
             startupOptions: expect.objectContaining({
               startYear: 2028,
               startPhase: "midSeason",
-              historyDepthYears: 12,
+              historyDepthYears: 0,
             }),
           }),
         );
@@ -481,7 +481,7 @@ describe("MainMenu", () => {
         expect.objectContaining({
           nationality: "AT",
           startupOptions: expect.objectContaining({
-            historyDepthYears: 12,
+            historyDepthYears: 0,
           }),
         }),
       );
@@ -813,7 +813,7 @@ describe("MainMenu", () => {
 
     await advanceThroughPackages();
 
-    fireEvent.click(screen.getByText("set-history-depth-24:12"));
+    fireEvent.click(screen.getByText("set-history-depth-24:0"));
     fireEvent.click(screen.getByText("start-world"));
 
     await waitFor(() => {
@@ -839,9 +839,9 @@ describe("MainMenu", () => {
 
     await advanceThroughPackages();
 
-    expect(localStorage.getItem("ofm-generated-history-depth-years")).toBe("12");
+    expect(localStorage.getItem("ofm-generated-history-depth-years")).toBe("0");
 
-    fireEvent.click(screen.getByText("set-history-depth-24:12"));
+    fireEvent.click(screen.getByText("set-history-depth-24:0"));
 
     expect(localStorage.getItem("ofm-generated-history-depth-years")).toBe("24");
   });
@@ -876,9 +876,9 @@ describe("MainMenu", () => {
     await advanceThroughPackages();
 
     await waitFor(() => {
-      expect(screen.getByText("set-history-depth-24:12")).toBeInTheDocument();
+      expect(screen.getByText("set-history-depth-24:0")).toBeInTheDocument();
     });
-    expect(localStorage.getItem("ofm-generated-history-depth-years")).toBe("12");
+    expect(localStorage.getItem("ofm-generated-history-depth-years")).toBe("0");
   });
 
   it("opens the Discord invite in the system browser when the Discord link is clicked", async () => {
