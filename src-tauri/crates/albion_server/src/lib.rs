@@ -359,6 +359,9 @@ impl IntoResponse for ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
 
     fn session() -> CareerSession {
         CareerSession::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"))
@@ -409,5 +412,17 @@ mod tests {
         assert_eq!(second.applied_revision, 1);
         assert!(matches!(session.apply_command(manager, ready_envelope(&session, manager, command_id))[1], ServerEvent::ReadyStateChanged(_)));
         assert_eq!(session.revision, 1);
+    }
+
+    #[tokio::test]
+    async fn health_and_readiness_endpoints_are_available() {
+        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        for path in ["/healthz", "/readyz"] {
+            let response = router(state.clone())
+                .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NO_CONTENT, "{path}");
+        }
     }
 }
