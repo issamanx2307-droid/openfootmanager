@@ -181,6 +181,10 @@ where
     // before tomorrow so its bracket enters the same normal calendar loop as
     // every other competition.
     crate::end_of_season::stage_pending_league_playoffs(game);
+    // Knockout progression can add new future fixtures after the initial
+    // calendar build. Re-run the cross-competition check so a club never has
+    // two scheduled matches on the same date.
+    crate::schedule::deconflict_fixture_dates(&mut game.competitions);
 
     // National-team football: window friendlies and any running World Cup.
     // Both self-filter by date, so they are no-ops on other days.
@@ -228,6 +232,7 @@ pub fn finish_live_match_day(game: &mut Game) {
     transfers::process_loan_returns(game);
     generate_matchday_news(game, &today);
     crate::end_of_season::stage_pending_league_playoffs(game);
+    crate::schedule::deconflict_fixture_dates(&mut game.competitions);
 
     crate::contracts::process_contract_expiries(game);
     crate::finances::process_weekly_finances(game);

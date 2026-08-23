@@ -924,12 +924,17 @@ mod community_shield_tests {
             fixture.status = FixtureStatus::Completed;
         }
         game.competitions.push(league);
+        game.competitions[1].fixtures[0].date = "2026-05-21".to_string();
+        game.competitions[1].fixtures[0].status = FixtureStatus::Scheduled;
+        game.competitions[1].fixtures[0].home_team_id = "three".to_string();
 
         assert!(!is_season_complete(&game), "an unstaged playoff blocks rollover");
         assert!(league_playoff_ids(&game.competitions).contains("playoff-league-playoff-3-4"));
         assert_eq!(stage_pending_league_playoffs(&mut game), 1);
+        crate::schedule::deconflict_fixture_dates(&mut game.competitions);
         let playoff = game.competitions.iter().find(|competition| competition.id == "playoff-league-playoff-3-4").unwrap();
         assert_eq!(playoff.participant_ids, teams[2..].to_vec());
+        assert_ne!(playoff.fixtures[0].date, "2026-05-21", "the playoff cannot overlap the cup fixture");
         assert!(!is_season_complete(&game), "a pending playoff blocks rollover");
         assert_eq!(stage_pending_league_playoffs(&mut game), 0);
     }
