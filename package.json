@@ -12,6 +12,7 @@
     "lint:fix": "biome lint --write",
     "format:check": "biome format",
     "test": "vitest run",
+    "test:data-pipeline": "node tools/data_pipeline/pipeline.test.mjs",
     "test:watch": "vitest",
     "tauri": "tauri"
   },
