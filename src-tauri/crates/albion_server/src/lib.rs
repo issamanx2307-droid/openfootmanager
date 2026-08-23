@@ -6,6 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 mod canonical;
 mod store;
@@ -185,25 +186,33 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
         return;
     }
 
-    while let Some(Ok(message)) = socket.recv().await {
-        let Message::Text(text) = message else {
-            continue;
-        };
-        let events = match serde_json::from_str::<Envelope>(&text) {
-            Ok(envelope) => state
-                .0
-                .lock()
-                .expect("career session lock poisoned")
-                .apply_command(manager_id, envelope),
-            Err(_) => vec![ServerEvent::CommandRejected(CommandRejectedBody {
-                command_id: Uuid::nil(),
-                current_revision: state.0.lock().expect("career session lock poisoned").revision,
-                error: ProtocolError::new(ErrorCode::ProtocolIncompatible),
-            })],
-        };
-        for event in events {
-            if send_event(&mut socket, event).await.is_err() {
-                return;
+    let mut live_tick = tokio::time::interval(Duration::from_millis(500));
+    loop {
+        tokio::select! {
+            incoming = socket.recv() => {
+                let Some(Ok(message)) = incoming else { return; };
+                let Message::Text(text) = message else { continue; };
+                let events = match serde_json::from_str::<Envelope>(&text) {
+                    Ok(envelope) => state
+                        .0
+                        .lock()
+                        .expect("career session lock poisoned")
+                        .apply_command(manager_id, envelope),
+                    Err(_) => vec![ServerEvent::CommandRejected(CommandRejectedBody {
+                        command_id: Uuid::nil(),
+                        current_revision: state.0.lock().expect("career session lock poisoned").revision,
+                        error: ProtocolError::new(ErrorCode::ProtocolIncompatible),
+                    })],
+                };
+                for event in events {
+                    if send_event(&mut socket, event).await.is_err() { return; }
+                }
+            }
+            _ = live_tick.tick() => {
+                let events = state.0.lock().expect("career session lock poisoned").tick_live_matches();
+                for event in events {
+                    if send_event(&mut socket, event).await.is_err() { return; }
+                }
             }
         }
     }
@@ -224,7 +233,13 @@ struct CareerSession {
     ready_managers: HashSet<Uuid>,
     career: Option<CanonicalCareer>,
     store: Option<SqliteCareerStore>,
-    live_matches: HashMap<Uuid, LiveMatchSession>,
+    live_matches: HashMap<Uuid, ActiveLiveMatch>,
+    last_live_tick: Instant,
+}
+
+struct ActiveLiveMatch {
+    session: LiveMatchSession,
+    next_event_sequence: u64,
 }
 
 impl CareerSession {
@@ -242,6 +257,7 @@ impl CareerSession {
             career,
             store,
             live_matches: HashMap::new(),
+            last_live_tick: Instant::now(),
         }
     }
 
@@ -442,9 +458,9 @@ impl CareerSession {
             .live_matches
             .get_mut(&body.match_id)
             .ok_or(ErrorCode::MatchCommandNotAllowed)?;
-        let side = if session.home_team_id == club_id.to_string() {
+        let side = if session.session.home_team_id == club_id.to_string() {
             engine::Side::Home
-        } else if session.away_team_id == club_id.to_string() {
+        } else if session.session.away_team_id == club_id.to_string() {
             engine::Side::Away
         } else {
             return Err(ErrorCode::AuthInvalid);
@@ -475,8 +491,8 @@ impl CareerSession {
                 }
             _ => return Err(ErrorCode::MatchCommandNotAllowed),
         };
-        session.apply_command(command).map_err(|_| ErrorCode::MatchCommandNotAllowed)?;
-        Ok(session.snapshot())
+        session.session.apply_command(command).map_err(|_| ErrorCode::MatchCommandNotAllowed)?;
+        Ok(session.session.snapshot())
     }
 
     fn advance_ready_barrier(&mut self) -> Vec<ServerEvent> {
@@ -517,7 +533,7 @@ impl CareerSession {
                 let match_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture_id.as_bytes());
                 match career.open_live_match(fixture_id, &controlled_clubs) {
                     Ok(session) => {
-                        self.live_matches.insert(match_id, session);
+                        self.live_matches.insert(match_id, ActiveLiveMatch { session, next_event_sequence: 1 });
                         vec![ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
                             match_id,
                             fixture_id,
@@ -532,6 +548,63 @@ impl CareerSession {
                 }
             }
         }
+    }
+
+    fn tick_live_matches(&mut self) -> Vec<ServerEvent> {
+        if self.live_matches.is_empty() || self.last_live_tick.elapsed() < Duration::from_millis(500) {
+            return Vec::new();
+        }
+        self.last_live_tick = Instant::now();
+        let match_ids: Vec<Uuid> = self.live_matches.keys().copied().collect();
+        let mut events = Vec::new();
+        for match_id in match_ids {
+            let Some(mut active) = self.live_matches.remove(&match_id) else { continue; };
+            let minute = active.session.step();
+            let snapshot = active.session.snapshot();
+            let event_count = minute.events.len() as u64;
+            if event_count > 0 {
+                let from_seq = active.next_event_sequence;
+                active.next_event_sequence += event_count;
+                events.push(ServerEvent::MatchEventBatch(albion_protocol::event::MatchEventBatchBody {
+                    match_id,
+                    from_seq,
+                    to_seq: active.next_event_sequence - 1,
+                    events: minute.events.iter().map(|event| serde_json::to_value(event).unwrap_or(serde_json::Value::Null)).collect(),
+                }));
+            }
+            events.push(ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
+                match_id,
+                phase: format!("{:?}", snapshot.phase),
+                match_second: u32::from(snapshot.current_minute) * 60,
+                home_score: snapshot.home_score,
+                away_score: snapshot.away_score,
+            }));
+            if minute.is_finished {
+                let Some(career) = self.career.as_mut() else { continue; };
+                let previous = career.clone();
+                match career.finish_live_match(active.session) {
+                    Ok(report) if !self.store.as_ref().is_some_and(|store| store.checkpoint(career.game()).is_err()) => {
+                        self.revision += 1;
+                        events.push(ServerEvent::MatchFinished(albion_protocol::event::MatchFinishedBody {
+                            match_id,
+                            home_score: snapshot.home_score,
+                            away_score: snapshot.away_score,
+                            report,
+                        }));
+                    }
+                    _ => {
+                        *career = previous;
+                        events.push(ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
+                            severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                            message_key: "server.liveMatchSaveFailed".into(),
+                        }));
+                    }
+                }
+            } else {
+                self.live_matches.insert(match_id, active);
+            }
+        }
+        events
     }
 }
 

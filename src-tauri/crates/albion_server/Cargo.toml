@@ -13,7 +13,7 @@ engine = { path = "../engine" }
 ofm_core = { path = "../ofm_core" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tokio = { version = "1", features = ["net", "rt-multi-thread", "macros", "signal"] }
+tokio = { version = "1", features = ["net", "rt-multi-thread", "macros", "signal", "time"] }
 uuid = { version = "1", features = ["v4", "v5", "serde"] }
 
 [dev-dependencies]
