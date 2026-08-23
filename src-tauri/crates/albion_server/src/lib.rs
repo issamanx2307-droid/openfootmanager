@@ -27,7 +27,7 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub use canonical::CanonicalCareer;
+pub use canonical::{Advancement, CanonicalCareer};
 pub use store::SqliteCareerStore;
 
 const MAX_MANAGER_SLOTS: usize = 2;
@@ -344,10 +344,14 @@ impl CareerSession {
             Command::MarkReady(MarkReadyBody {}) => {
                 self.ready_managers.insert(manager_id);
                 self.revision += 1;
-                vec![ServerEvent::CommandAck(CommandAckBody {
+                let mut events = vec![ServerEvent::CommandAck(CommandAckBody {
                     command_id,
                     applied_revision: self.revision,
-                }), self.ready_state_event(manager_id)]
+                }), self.ready_state_event(manager_id)];
+                if self.ready_managers.len() == self.slots.len() {
+                    events.extend(self.advance_ready_barrier());
+                }
+                events
             }
             command => {
                 let Some(expected_revision) = envelope.expected_revision else {
@@ -396,6 +400,51 @@ impl CareerSession {
             is_ready: self.ready_managers.contains(&manager_id),
             other_manager_ready,
         })
+    }
+
+    fn advance_ready_barrier(&mut self) -> Vec<ServerEvent> {
+        let controlled_clubs = self.claimed_clubs.keys().copied().collect();
+        let Some(career) = self.career.as_mut() else {
+            self.ready_managers.clear();
+            return Vec::new();
+        };
+        let previous = career.clone();
+        let outcome = career.advance_until_human_blocker(&controlled_clubs);
+        if self
+            .store
+            .as_ref()
+            .is_some_and(|store| store.checkpoint(career.game()).is_err())
+        {
+            *career = previous;
+            self.ready_managers.clear();
+            return vec![ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
+                severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                message_key: "server.saveFailed".into(),
+            })];
+        }
+        self.ready_managers.clear();
+        self.revision += 1;
+        match outcome {
+            Advancement::AdvancedThrough { date: _ } => vec![ServerEvent::GameTimeChanged(
+                albion_protocol::event::GameTimeChangedBody {
+                    career_year: career.game().clock.current_date.format("%Y").to_string().parse().unwrap_or_default(),
+                    career_month: career.game().clock.current_date.format("%-m").to_string().parse().unwrap_or_default(),
+                    career_day: career.game().clock.current_date.format("%-d").to_string().parse().unwrap_or_default(),
+                    revision: self.revision,
+                },
+            ), ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
+                severity: albion_protocol::event::ServerNoticeSeverity::Info,
+                message_key: "server.advancedThrough".into(),
+            })],
+            Advancement::HumanFixture { fixture_id, home_club_id, away_club_id } => vec![
+                ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
+                    match_id: Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture_id.as_bytes()),
+                    fixture_id,
+                    home_club_id,
+                    away_club_id,
+                }),
+            ],
+        }
     }
 }
 

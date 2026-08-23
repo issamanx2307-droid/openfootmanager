@@ -3,6 +3,7 @@
 use albion_protocol::command::{Command, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody};
 use albion_protocol::ErrorCode;
 use domain::team::{PlayStyle, TrainingFocus, TrainingIntensity};
+use domain::league::FixtureStatus;
 use ofm_core::game::Game;
 use ofm_core::player_rating::formation_slots;
 use serde_json::{json, Value};
@@ -12,6 +13,12 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct CanonicalCareer {
     game: Game,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Advancement {
+    AdvancedThrough { date: String },
+    HumanFixture { fixture_id: Uuid, home_club_id: Uuid, away_club_id: Uuid },
 }
 
 impl CanonicalCareer {
@@ -27,6 +34,31 @@ impl CanonicalCareer {
         self.controlled_team_id(manager_id)
             .ok()
             .is_some_and(|team_id| team_id == club_id.to_string())
+    }
+
+    /// Advance AI-only dates until a controlled club reaches a scheduled
+    /// fixture. The caller must create and coordinate that live match instead
+    /// of passing it through the instant simulator.
+    pub fn advance_until_human_blocker(&mut self, controlled_clubs: &HashSet<Uuid>) -> Advancement {
+        for _ in 0..366 {
+            let today = self.game.clock.current_date.format("%Y-%m-%d").to_string();
+            if let Some(fixture) = self.game.competitions.iter().flat_map(|competition| competition.fixtures.iter()).find(|fixture| {
+                fixture.status == FixtureStatus::Scheduled
+                    && fixture.date == today
+                    && (Uuid::parse_str(&fixture.home_team_id).ok().is_some_and(|id| controlled_clubs.contains(&id))
+                        || Uuid::parse_str(&fixture.away_team_id).ok().is_some_and(|id| controlled_clubs.contains(&id)))
+            }) {
+                return Advancement::HumanFixture {
+                    fixture_id: Uuid::parse_str(&fixture.id).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.id.as_bytes())),
+                    home_club_id: Uuid::parse_str(&fixture.home_team_id).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.home_team_id.as_bytes())),
+                    away_club_id: Uuid::parse_str(&fixture.away_team_id).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.away_team_id.as_bytes())),
+                };
+            }
+            ofm_core::turn::process_day(&mut self.game);
+        }
+        Advancement::AdvancedThrough {
+            date: self.game.clock.current_date.format("%Y-%m-%d").to_string(),
+        }
     }
 
     pub fn apply(&mut self, manager_id: Uuid, command: &Command) -> Result<Value, ErrorCode> {
@@ -159,6 +191,7 @@ fn parse_training_intensity(value: u8) -> Option<TrainingIntensity> {
 mod tests {
     use super::*;
     use chrono::{TimeZone, Utc};
+    use domain::league::{Fixture, FixtureCompetition, FixtureStatus, League};
     use domain::manager::Manager;
     use domain::team::Team;
     use ofm_core::clock::GameClock;
@@ -199,5 +232,29 @@ mod tests {
         assert_eq!(team.play_style, PlayStyle::HighPress);
         assert_eq!(team.training_intensity, TrainingIntensity::High);
         assert_eq!(team.training_focus, TrainingFocus::Attacking);
+    }
+
+    #[test]
+    fn ready_advancement_stops_before_a_controlled_clubs_fixture() {
+        let (mut career, _manager_id) = career();
+        let team_id = career.game().teams[0].id.clone();
+        let club_id = Uuid::parse_str(&team_id).unwrap();
+        let fixture_id = Uuid::new_v4();
+        let mut competition = League::default();
+        competition.fixtures.push(Fixture {
+            id: fixture_id.to_string(),
+            competition_id: "league".into(),
+            matchday: 1,
+            date: career.game().clock.current_date.format("%Y-%m-%d").to_string(),
+            home_team_id: team_id,
+            away_team_id: Uuid::new_v4().to_string(),
+            competition: FixtureCompetition::League,
+            status: FixtureStatus::Scheduled,
+            result: None,
+        });
+        career.game.competitions.push(competition);
+
+        let outcome = career.advance_until_human_blocker(&HashSet::from([club_id]));
+        assert!(matches!(outcome, Advancement::HumanFixture { fixture_id: actual, .. } if actual == fixture_id));
     }
 }

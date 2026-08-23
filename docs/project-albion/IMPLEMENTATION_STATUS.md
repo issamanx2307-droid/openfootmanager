@@ -249,3 +249,11 @@ The WebSocket sends typed `Hello`, `CommandAck`, `CommandRejected` and
 `ReadyStateChanged` events. This is deliberately only the transport/session
 foundation: canonical game persistence, command-to-game application, ready
 advancement and live-match coordination remain in progress.
+
+Phase 8 update: canonical `Game` mutation now covers tactics, starting XI and
+training commands under the same revision/idempotency lane. `ALBION_SAVE` opens
+an existing per-career SQLite database, checkpoints each accepted mutation, and
+rolls memory back if its checkpoint fails. The ready barrier advances AI-only
+dates until the next controlled-club fixture, then emits `MatchOpened` rather
+than instant-simulating it. Focused server tests cover canonical ownership,
+SQLite restart round-trips and the human-fixture stop condition.
