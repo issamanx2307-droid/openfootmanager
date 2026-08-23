@@ -1003,7 +1003,7 @@ fn finalize_brazil_state_competition(competition: &mut League) {
 fn build_foundation_competitions(game: &Game) -> Vec<League> {
     let game_start = game.clock.start_date;
     let season = preseason_league_year(&game.clock);
-    build_foundation_competition_plan(game, game_start)
+    let mut competitions = build_foundation_competition_plan(game, game_start)
         .iter()
         .filter_map(|(def, start)| {
             let mut competition =
@@ -1023,7 +1023,9 @@ fn build_foundation_competitions(game: &Game) -> Vec<League> {
             }
             Some(competition)
         })
-        .collect()
+        .collect::<Vec<_>>();
+    ofm_core::schedule::deconflict_fixture_dates(&mut competitions);
+    competitions
 }
 
 fn rebuild_competitions_for_management_date(game: &mut Game, management_date: DateTime<Utc>) {

@@ -1,9 +1,46 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use domain::league::{
     CompetitionFormat, CompetitionRules, CompetitionScope, CompetitionType, Fixture,
     FixtureCompetition, FixtureStatus, KnockoutRoundState, League, StandingEntry,
 };
 use uuid::Uuid;
+
+/// Move scheduled fixtures forward just enough to ensure a club never appears
+/// in two competitions on the same day.  This is deliberately applied after
+/// all foundation competitions are assembled: each competition keeps its own
+/// format and round structure, while the shared calendar resolves collisions.
+pub fn deconflict_fixture_dates(competitions: &mut [League]) {
+    let mut order = (0..competitions.len()).collect::<Vec<_>>();
+    order.sort_by(|left, right| {
+        competitions[*left]
+            .priority
+            .cmp(&competitions[*right].priority)
+            .then_with(|| competitions[*left].id.cmp(&competitions[*right].id))
+    });
+    let mut occupied = std::collections::HashSet::<(String, NaiveDate)>::new();
+    for competition_index in order {
+        let fixtures = &mut competitions[competition_index].fixtures;
+        fixtures.sort_by(|left, right| {
+            left.date
+                .cmp(&right.date)
+                .then(left.matchday.cmp(&right.matchday))
+                .then(left.id.cmp(&right.id))
+        });
+        for fixture in fixtures {
+            let Some(mut date) = NaiveDate::parse_from_str(&fixture.date, "%Y-%m-%d").ok() else {
+                continue;
+            };
+            while occupied.contains(&(fixture.home_team_id.clone(), date))
+                || occupied.contains(&(fixture.away_team_id.clone(), date))
+            {
+                date += Duration::days(1);
+            }
+            fixture.date = date.format("%Y-%m-%d").to_string();
+            occupied.insert((fixture.home_team_id.clone(), date));
+            occupied.insert((fixture.away_team_id.clone(), date));
+        }
+    }
+}
 
 /// Generate a full double round-robin schedule (home & away) for the given teams.
 /// Matchdays are spaced 7 days apart starting from `start_date`.
@@ -803,6 +840,37 @@ mod tests {
                 assert_eq!(count, 1, "{left} must host {right} exactly once");
             }
         }
+    }
+
+    #[test]
+    fn deconflict_fixture_dates_moves_cross_competition_clash() {
+        let fixture = |id: &str, competition_id: &str| Fixture {
+            id: id.to_string(),
+            competition_id: competition_id.to_string(),
+            matchday: 1,
+            date: "2026-08-01".to_string(),
+            home_team_id: "alpha".to_string(),
+            away_team_id: "beta".to_string(),
+            competition: FixtureCompetition::Cup,
+            status: FixtureStatus::Scheduled,
+            result: None,
+        };
+        let mut league = League::new("league".to_string(), "League".to_string(), 2026, &[]);
+        league.priority = 1;
+        league.fixtures = vec![fixture("league-fixture", "league")];
+        let mut cup = League::new("cup".to_string(), "Cup".to_string(), 2026, &[]);
+        cup.priority = 2;
+        cup.fixtures = vec![fixture("cup-fixture", "cup")];
+        let mut competitions = vec![cup, league];
+
+        deconflict_fixture_dates(&mut competitions);
+
+        let dates = competitions
+            .iter()
+            .map(|competition| (competition.id.as_str(), competition.fixtures[0].date.as_str()))
+            .collect::<std::collections::HashMap<_, _>>();
+        assert_eq!(dates["league"], "2026-08-01");
+        assert_eq!(dates["cup"], "2026-08-02");
     }
 
     #[test]
