@@ -517,6 +517,35 @@ fn split_into_divisions(sorted_team_ids: &[String], division_size: usize) -> Vec
     divisions
 }
 
+/// England's ruleset owns a five-tier ladder down to the National League.
+/// Spread the available generated/snapshot clubs evenly across as many of those
+/// tiers as can still field at least two clubs; this keeps small fixture worlds
+/// playable while a complete England dataset naturally reaches all five.
+fn split_england_into_divisions(sorted_team_ids: &[String]) -> Vec<Vec<String>> {
+    let tier_count = (sorted_team_ids.len() / 2).clamp(1, 5);
+    let base = sorted_team_ids.len() / tier_count;
+    let remainder = sorted_team_ids.len() % tier_count;
+    let mut offset = 0;
+    (0..tier_count)
+        .map(|tier| {
+            let size = base + usize::from(tier < remainder);
+            let division = sorted_team_ids[offset..offset + size].to_vec();
+            offset += size;
+            division
+        })
+        .collect()
+}
+
+fn england_division_name(tier: usize) -> &'static str {
+    match tier {
+        0 => "Premier League",
+        1 => "Championship",
+        2 => "League One",
+        3 => "League Two",
+        _ => "National League",
+    }
+}
+
 fn division_tier_name(tier: usize, division_count: usize) -> &'static str {
     if division_count <= 1 {
         "League"
@@ -691,7 +720,11 @@ fn build_foundation_competition_plan(
         );
 
         // One or two divisions depending on how many clubs the country has.
-        let divisions = split_into_divisions(&team_ids, TOP_DIVISION_SIZE);
+        let divisions = if country == "ENG" {
+            split_england_into_divisions(&team_ids)
+        } else {
+            split_into_divisions(&team_ids, TOP_DIVISION_SIZE)
+        };
         let division_count = divisions.len();
 
         if ofm_core::nations::is_split_season_country(&country) {
@@ -782,7 +815,11 @@ fn build_foundation_competition_plan(
                 planned.push((
                     CompetitionDefinition {
                         id: format!("{country_slug}-d{}", tier + 1),
-                        name: division_name(&country_label, tier, division_count),
+                        name: if country == "ENG" {
+                            england_division_name(tier).to_string()
+                        } else {
+                            division_name(&country_label, tier, division_count)
+                        },
                         r#type: CompetitionType::League,
                         scope: CompetitionScope::Domestic,
                         region_id: Some(region_id.clone()),
@@ -809,7 +846,8 @@ fn build_foundation_competition_plan(
                         } else {
                             1
                         }),
-                        name_key: Some(division_tier_name_key(tier, division_count).to_string()),
+                        name_key: (country != "ENG")
+                            .then(|| division_tier_name_key(tier, division_count).to_string()),
                         logo: None,
                     },
                     actual_start,
@@ -2144,7 +2182,8 @@ mod tests {
         build_game_from_world_data, create_new_save, ensure_international_windows,
         game_clock_for_world, load_world_data_from_path, package_folder_name,
         parse_competition_definitions, rebuild_competitions_for_management_date,
-        resolve_simulation_scope, select_continental_entrants, snapshot_lockfile_entry, split_into_divisions,
+        resolve_simulation_scope, select_continental_entrants, snapshot_lockfile_entry, split_england_into_divisions,
+        england_division_name, split_into_divisions,
         start_date_for_year, StartPhase, StartupOptions, DEFAULT_GENERATED_HISTORY_DEPTH_YEARS,
     };
     use chrono::{TimeZone, Utc};
@@ -2718,6 +2757,16 @@ competitions:
         // Strongest tier first; the second tier starts where the first ends.
         assert_eq!(divisions[0][0], "club-00");
         assert_eq!(divisions[1][0], "club-20");
+    }
+
+    #[test]
+    fn england_foundation_spreads_a_complete_ladder_across_five_tiers() {
+        let clubs: Vec<String> = (0..100).map(|i| format!("eng-{i:03}")).collect();
+        let divisions = split_england_into_divisions(&clubs);
+
+        assert_eq!(divisions.len(), 5);
+        assert!(divisions.iter().all(|division| division.len() == 20));
+        assert_eq!(england_division_name(4), "National League");
     }
 
     #[test]
