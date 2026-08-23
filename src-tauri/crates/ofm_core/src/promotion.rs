@@ -20,6 +20,16 @@ pub fn relegation_count(top_size: usize, bottom_size: usize) -> usize {
 /// Swaps are computed from each division's final standings before any club
 /// moves, so multi-tier pyramids resolve consistently.
 pub fn apply_promotion_relegation(divisions: &mut [League]) {
+    apply_promotion_relegation_with_playoff_winners(divisions, &std::collections::HashMap::new());
+}
+
+/// Apply promotion/relegation using ruleset-owned automatic slots and completed
+/// promotion-playoff winners where they exist. Legacy/generated pyramids with
+/// no explicit slots retain the generic scaled policy.
+pub fn apply_promotion_relegation_with_playoff_winners(
+    divisions: &mut [League],
+    playoff_winners: &std::collections::HashMap<String, String>,
+) {
     let tiers = divisions.len();
     if tiers < 2 {
         return;
@@ -30,26 +40,55 @@ pub fn apply_promotion_relegation(divisions: &mut [League]) {
     let mut promoted_at: Vec<Vec<String>> = vec![Vec::new(); tiers];
 
     for i in 0..tiers - 1 {
-        let upper = divisions[i].sorted_standings();
-        let lower = divisions[i + 1].sorted_standings();
-        if upper.is_empty() || lower.is_empty() {
+        let upper_standings = divisions[i].sorted_standings();
+        let lower_standings = divisions[i + 1].sorted_standings();
+        if upper_standings.is_empty() || lower_standings.is_empty() {
             continue;
         }
-        let count = relegation_count(
-            divisions[i].participant_ids.len(),
-            divisions[i + 1].participant_ids.len(),
-        );
-        relegated_at[i] = upper
+        let upper_division = &divisions[i];
+        let lower_division = &divisions[i + 1];
+        let configured_promotions = usize::from(lower_division.rules.promotion_automatic_slots)
+            + usize::from((lower_division.rules.promotion_playoff_slots >= 2) as u8);
+        let count = if upper_division.rules.relegation_automatic_slots > 0 {
+            usize::from(upper_division.rules.relegation_automatic_slots)
+        } else if configured_promotions > 0 {
+            configured_promotions
+        } else {
+            relegation_count(upper_division.participant_ids.len(), lower_division.participant_ids.len())
+        };
+        relegated_at[i] = upper_standings
             .iter()
             .rev()
             .take(count)
             .map(|entry| entry.team_id.clone())
             .collect();
-        promoted_at[i] = lower
-            .iter()
-            .take(count)
-            .map(|entry| entry.team_id.clone())
-            .collect();
+        let automatic = if lower_division.rules.promotion_automatic_slots > 0 {
+            usize::from(lower_division.rules.promotion_automatic_slots)
+        } else {
+            count
+        };
+        promoted_at[i] = lower_standings.iter().take(automatic).map(|entry| entry.team_id.clone()).collect();
+        if lower_division.rules.promotion_playoff_slots >= 2 {
+            let from = automatic as u32 + 1;
+            let to = from + u32::from(lower_division.rules.promotion_playoff_slots) - 1;
+            let playoff_id = format!("{}-playoff-{from}-{to}", divisions[i + 1].id);
+            if let Some(winner) = playoff_winners.get(&playoff_id)
+                && !promoted_at[i].contains(winner)
+            {
+                promoted_at[i].push(winner.clone());
+            }
+        }
+        // A caller should only roll over after a configured playoff settles,
+        // but keep the pyramid structurally sound for imported legacy saves.
+        for entry in lower_standings {
+            if promoted_at[i].len() >= count {
+                break;
+            }
+            if !promoted_at[i].contains(&entry.team_id) {
+                promoted_at[i].push(entry.team_id.clone());
+            }
+        }
+        promoted_at[i].truncate(count);
     }
 
     for i in 0..tiers {

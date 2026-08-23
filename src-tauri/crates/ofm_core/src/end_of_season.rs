@@ -222,7 +222,10 @@ fn division_standings_with_tiers(game: &Game) -> Vec<(Vec<StandingEntry>, u32)> 
 /// Apply promotion/relegation within each domestic pyramid. A pyramid is the
 /// set of league-table competitions sharing a country, ordered by `priority`
 /// (lowest priority = highest division).
-fn apply_pyramid_promotion_relegation(competitions: &mut [League]) {
+fn apply_pyramid_promotion_relegation(
+    competitions: &mut [League],
+    playoff_winners: &std::collections::HashMap<String, String>,
+) {
     use std::collections::BTreeMap;
 
     let mut tiers_by_country: BTreeMap<String, Vec<usize>> = BTreeMap::new();
@@ -251,7 +254,10 @@ fn apply_pyramid_promotion_relegation(competitions: &mut [League]) {
             .iter()
             .map(|&index| competitions[index].clone())
             .collect();
-        crate::promotion::apply_promotion_relegation(&mut divisions);
+        crate::promotion::apply_promotion_relegation_with_playoff_winners(
+            &mut divisions,
+            playoff_winners,
+        );
 
         for (slot, &index) in indices.iter().enumerate() {
             competitions[index].participant_ids = divisions[slot].participant_ids.clone();
@@ -632,7 +638,15 @@ fn regenerate_competitions_for_new_season(
     // season's entrants into a stale next-season competition.
     retire_league_playoffs(game);
 
-    apply_pyramid_promotion_relegation(&mut game.competitions);
+    let playoff_winners = game
+        .competitions
+        .iter()
+        .filter_map(|competition| {
+            crate::world_cup::world_cup_champion(competition)
+                .map(|winner| (competition.id.clone(), winner))
+        })
+        .collect();
+    apply_pyramid_promotion_relegation(&mut game.competitions, &playoff_winners);
 
     // Re-seed continental competitions with this season's qualified entrants
     // before regeneration resets their brackets. Done as a separate pass so
@@ -715,7 +729,7 @@ fn regenerate_competitions_for_new_season(
 /// A league that awards a playoff berth cannot roll into the next season until
 /// every required playoff has produced a final winner.
 fn league_playoffs_are_settled(game: &Game, league: &League) -> bool {
-    league.berths.iter().all(|berth| match &berth.rule {
+    let berth_playoffs_settled = league.berths.iter().all(|berth| match &berth.rule {
         BerthRule::PlayoffWinner { from, to } => game
             .competitions
             .iter()
@@ -723,7 +737,19 @@ fn league_playoffs_are_settled(game: &Game, league: &League) -> bool {
             .and_then(crate::world_cup::world_cup_champion)
             .is_some(),
         _ => true,
-    })
+    });
+    let configured_playoff_settled = if league.rules.promotion_playoff_slots >= 2 {
+        let from = u32::from(league.rules.promotion_automatic_slots) + 1;
+        let to = from + u32::from(league.rules.promotion_playoff_slots) - 1;
+        game.competitions
+            .iter()
+            .find(|competition| competition.id == format!("{}-playoff-{from}-{to}", league.id))
+            .and_then(crate::world_cup::world_cup_champion)
+            .is_some()
+    } else {
+        true
+    };
+    berth_playoffs_settled && configured_playoff_settled
 }
 
 /// Runtime ids of the ephemeral playoffs that domestic league berth rules
@@ -734,12 +760,18 @@ fn league_playoff_ids(competitions: &[League]) -> std::collections::HashSet<Stri
         .iter()
         .filter(|competition| competition.rules.format == CompetitionFormat::LeagueTable)
         .flat_map(|competition| {
-            competition.berths.iter().filter_map(move |berth| match &berth.rule {
+            let mut ids: Vec<String> = competition.berths.iter().filter_map(move |berth| match &berth.rule {
                 BerthRule::PlayoffWinner { from, to } => {
                     Some(format!("{}-playoff-{from}-{to}", competition.id))
                 }
                 _ => None,
-            })
+            }).collect();
+            if competition.rules.promotion_playoff_slots >= 2 {
+                let from = u32::from(competition.rules.promotion_automatic_slots) + 1;
+                let to = from + u32::from(competition.rules.promotion_playoff_slots) - 1;
+                ids.push(format!("{}-playoff-{from}-{to}", competition.id));
+            }
+            ids
         })
         .collect()
 }
@@ -777,10 +809,21 @@ pub fn stage_pending_league_playoffs(game: &mut Game) -> usize {
                 && is_league_complete(competition)
         })
         .flat_map(|competition| {
-            competition.berths.iter().filter_map(move |berth| match &berth.rule {
-                BerthRule::PlayoffWinner { from, to } => Some((competition.clone(), *from, *to)),
-                _ => None,
-            })
+            let mut ranges: Vec<(u32, u32)> = competition
+                .berths
+                .iter()
+                .filter_map(|berth| match &berth.rule {
+                    BerthRule::PlayoffWinner { from, to } => Some((*from, *to)),
+                    _ => None,
+                })
+                .collect();
+            if competition.rules.promotion_playoff_slots >= 2 {
+                let from = u32::from(competition.rules.promotion_automatic_slots) + 1;
+                ranges.push((from, from + u32::from(competition.rules.promotion_playoff_slots) - 1));
+            }
+            ranges
+                .into_iter()
+                .map(move |(from, to)| (competition.clone(), from, to))
         })
         .collect();
 
