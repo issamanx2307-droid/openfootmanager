@@ -57,6 +57,27 @@ The prior `ofm_core` fixture failure caused by Windows CRLF line endings was
 fixed in Phase 1 by normalizing the on-disk fixture before comparison. The
 focused regression test now passes. Run the full workspace suite before a PR.
 
+### Re-verification — 2026-08-23
+
+The current upstream `develop` commit was fetched and tested in an isolated
+worktree at `D:\fm26\ofm-upstream-baseline`, detached at
+`0b5ae8b223bc3cbb114aa34a47a655ed852ad8a6`. This leaves the Albion branch and
+its working tree untouched.
+
+- `npm ci` and `npm run build` passed.
+- `npm test` completed with 1,444 passed and 5 pre-existing failures across
+  `MainMenu.test.tsx` (one timeout), `TacticsTab.test.tsx` (three timeouts),
+  and `CountryForm.test.tsx` (the nation-picker option was unavailable).
+- `cargo fmt --check` failed on pre-existing formatting throughout the
+  upstream tree.
+- `cargo clippy --workspace --all-targets -- -D warnings` passed.
+- `cargo test --workspace --quiet` passed every crate except one upstream
+  `ofm_core` fixture assertion: it compares a CRLF-generated JSON string with
+  an LF fixture (`the_frontend_fixture_lists_every_field_every_definition_serializes`);
+  514 of 515 `ofm_core` tests passed.
+- `npm run tauri dev` launched the desktop window successfully as
+  `Openfoot Manager v0.3.0-dev · 0b5ae8b` (Vite on `http://localhost:1420`).
+
 ## Phase status
 
 | Phase | Title | Status |
