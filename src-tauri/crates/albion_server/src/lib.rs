@@ -632,8 +632,14 @@ impl IntoResponse for ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use albion_protocol::command::SetTacticsBody;
     use axum::body::Body;
     use axum::http::Request;
+    use chrono::{TimeZone, Utc};
+    use domain::manager::Manager;
+    use domain::team::Team;
+    use ofm_core::clock::GameClock;
+    use ofm_core::game::Game;
     use tower::ServiceExt;
 
     fn session() -> CareerSession {
@@ -658,6 +664,46 @@ mod tests {
             manager_id,
             expected_revision: None,
             payload: EnvelopePayload::Command(Command::MarkReady(MarkReadyBody {})),
+        }
+    }
+
+    fn two_manager_game() -> (Game, Uuid, Uuid, Uuid, Uuid) {
+        let manager_a_id = Uuid::new_v4();
+        let manager_b_id = Uuid::new_v4();
+        let club_a_id = Uuid::new_v4();
+        let club_b_id = Uuid::new_v4();
+        let mut manager_a = Manager::new(manager_a_id.to_string(), "Alex".into(), "Host".into(), "1980-01-01".into(), "ENG".into());
+        manager_a.hire(club_a_id.to_string());
+        let mut manager_b = Manager::new(manager_b_id.to_string(), "Bea".into(), "Guest".into(), "1981-01-01".into(), "ENG".into());
+        manager_b.hire(club_b_id.to_string());
+        let mut club_a = Team::new(club_a_id.to_string(), "Alpha".into(), "ALP".into(), "England".into(), "Alpha".into(), "Ground A".into(), 20_000);
+        club_a.manager_id = Some(manager_a_id.to_string());
+        let mut club_b = Team::new(club_b_id.to_string(), "Beta".into(), "BET".into(), "England".into(), "Beta".into(), "Ground B".into(), 20_000);
+        club_b.manager_id = Some(manager_b_id.to_string());
+        let mut game = Game::new(
+            GameClock::new(Utc.with_ymd_and_hms(2026, 7, 1, 12, 0, 0).unwrap()),
+            manager_a,
+            vec![club_a, club_b],
+            vec![],
+            vec![],
+            vec![],
+        );
+        game.managers.push(manager_b);
+        (game, manager_a_id, manager_b_id, club_a_id, club_b_id)
+    }
+
+    fn tactics_envelope(session: &CareerSession, manager_id: Uuid, expected_revision: u64) -> Envelope {
+        Envelope {
+            protocol_version: session.config.versions.protocol_version,
+            message_id: Uuid::new_v4(),
+            kind: MessageKind::Command,
+            career_id: session.config.career_id,
+            manager_id,
+            expected_revision: Some(expected_revision),
+            payload: EnvelopePayload::Command(Command::SetTactics(SetTacticsBody {
+                formation: "4-3-3".into(),
+                mentality: "high_press".into(),
+            })),
         }
     }
 
@@ -697,5 +743,24 @@ mod tests {
                 .unwrap();
             assert_eq!(response.status(), StatusCode::NO_CONTENT, "{path}");
         }
+    }
+
+    #[test]
+    fn conflicting_two_manager_commands_commit_once_at_one_revision() {
+        let (game, manager_a, manager_b, club_a, club_b) = two_manager_game();
+        let mut session = CareerSession::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        session.join(join_request(manager_a, club_a)).unwrap();
+        session.join(join_request(manager_b, club_b)).unwrap();
+
+        let first = session.apply_command(manager_a, tactics_envelope(&session, manager_a, 0));
+        let second = session.apply_command(manager_b, tactics_envelope(&session, manager_b, 0));
+
+        assert!(matches!(first[0], ServerEvent::CommandAck(CommandAckBody { applied_revision: 1, .. })));
+        assert!(matches!(second[0], ServerEvent::CommandRejected(CommandRejectedBody { error: ProtocolError { code: ErrorCode::StaleRevision, .. }, .. })));
+        assert_eq!(session.revision, 1);
+        assert_eq!(session.career.as_ref().unwrap().game().teams[0].formation, "4-3-3");
+        assert_eq!(session.career.as_ref().unwrap().game().teams[1].formation, "4-4-2");
     }
 }

@@ -257,3 +257,10 @@ rolls memory back if its checkpoint fails. The ready barrier advances AI-only
 dates until the next controlled-club fixture, then emits `MatchOpened` rather
 than instant-simulating it. Focused server tests cover canonical ownership,
 SQLite restart round-trips and the human-fixture stop condition.
+
+Phase 8 update: the live coordinator now owns one live session per fixture,
+marks both human sides as non-AI, validates tactical commands against the
+sender's match side, and advances matches through a mutex-gated server clock.
+It emits event batches/state snapshots and checkpoints the finished report
+before `MatchFinished`. The two-manager command-lane regression proves that
+competing mutations at one revision commit once and reject the stale command.
