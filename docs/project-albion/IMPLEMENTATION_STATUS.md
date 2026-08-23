@@ -62,7 +62,7 @@ focused regression test now passes. Run the full workspace suite before a PR.
 | Phase | Title | Status |
 |---|---|---|
 | 0 | Baseline audit | DONE |
-| 1 | Versions, protocol, rules foundation | IN PROGRESS |
+| 1 | Versions, protocol, rules foundation | DONE |
 | 2 | Relational per-career save | IN PROGRESS |
 | 3 | Snapshot/data pipeline | NOT STARTED |
 | 4 | Competition/calendar | NOT STARTED |
@@ -99,9 +99,11 @@ Next: use the pinned ruleset as the source for competition registration and
 transfer-window enforcement, rather than only its substitution limits. Phase 2
 continues with relational save coverage for the remaining competition state.
 
-Latest Phase 1 evidence: `cargo test -p albion_rules` passes 13 validation and
+Phase 1 completion evidence: `cargo test -p albion_rules` passes 13 validation and
 round-trip tests; `cargo test -p albion_protocol` passes 6 envelope and exact
 compatibility tests. Ruleset-owned substitution, transfer-calendar, and squad
 registration constraints are now copied into the playable career and persisted
-with it. The remaining Phase 1 audit is to identify any active core path still
-using a season-specific rule constant instead of the pinned ruleset.
+with it. The active England/FPL path has no season-specific football rule
+constant outside the selected ruleset; remaining engine and season-context
+defaults are intentionally retained only for simulations and legacy careers
+without a pinned ruleset.
