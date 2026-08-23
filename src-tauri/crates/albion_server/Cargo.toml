@@ -8,12 +8,14 @@ description = "Project Albion authoritative private-career server."
 albion_protocol = { path = "../albion_protocol" }
 axum = { version = "0.8", features = ["ws"] }
 domain = { path = "../domain" }
+db = { path = "../db" }
 ofm_core = { path = "../ofm_core" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 tokio = { version = "1", features = ["net", "rt-multi-thread", "macros", "signal"] }
-uuid = { version = "1", features = ["v4", "serde"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
 
 [dev-dependencies]
 chrono = "0.4.45"
+tempfile = "3"
 tower = { version = "0.5", features = ["util"] }

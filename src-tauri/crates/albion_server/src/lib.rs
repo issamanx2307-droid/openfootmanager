@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 mod canonical;
+mod store;
 
 use albion_protocol::command::{Command, MarkReadyBody};
 use albion_protocol::event::{
@@ -27,6 +28,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub use canonical::CanonicalCareer;
+pub use store::SqliteCareerStore;
 
 const MAX_MANAGER_SLOTS: usize = 2;
 
@@ -36,6 +38,7 @@ pub struct ServerConfig {
     pub join_secret: String,
     pub versions: VersionSet,
     pub game: Option<ofm_core::game::Game>,
+    store: Option<SqliteCareerStore>,
 }
 
 impl ServerConfig {
@@ -45,7 +48,19 @@ impl ServerConfig {
             join_secret: join_secret.into(),
             versions: CURRENT_VERSIONS.to_owned_set(),
             game: None,
+            store: None,
         }
+    }
+
+    pub fn open_save(path: impl AsRef<std::path::Path>, join_secret: impl Into<String>) -> Result<Self, String> {
+        let (store, game, career_id) = SqliteCareerStore::open(path)?;
+        Ok(Self {
+            career_id,
+            join_secret: join_secret.into(),
+            versions: CURRENT_VERSIONS.to_owned_set(),
+            game: Some(game),
+            store: Some(store),
+        })
     }
 
     pub fn with_canonical_game(mut self, game: ofm_core::game::Game) -> Self {
@@ -208,11 +223,13 @@ struct CareerSession {
     completed_commands: HashMap<Uuid, Vec<ServerEvent>>,
     ready_managers: HashSet<Uuid>,
     career: Option<CanonicalCareer>,
+    store: Option<SqliteCareerStore>,
 }
 
 impl CareerSession {
     fn new(mut config: ServerConfig) -> Self {
         let career = config.game.take().map(CanonicalCareer::new);
+        let store = config.store.take();
         Self {
             config,
             revision: 0,
@@ -222,6 +239,7 @@ impl CareerSession {
             completed_commands: HashMap::new(),
             ready_managers: HashSet::new(),
             career,
+            store,
         }
     }
 
@@ -341,10 +359,19 @@ impl CareerSession {
                 let Some(career) = self.career.as_mut() else {
                     return vec![reject(ErrorCode::MatchCommandNotAllowed)];
                 };
+                let previous = career.clone();
                 let changes = match career.apply(manager_id, command) {
                     Ok(changes) => changes,
                     Err(error) => return vec![reject(error)],
                 };
+                if self
+                    .store
+                    .as_ref()
+                    .is_some_and(|store| store.checkpoint(career.game()).is_err())
+                {
+                    *career = previous;
+                    return vec![reject(ErrorCode::SaveCorrupt)];
+                }
                 let from_revision = self.revision;
                 self.revision += 1;
                 vec![
