@@ -117,11 +117,14 @@ playable world database, and only uses it for subsequently-created careers.
 The Settings screen exposes the import action; New Game prefers the imported
 snapshot over the FPL baseline and binds the existing England rules pack. Each
 new snapshot career also pins its published content hash in the career lockfile.
+`albion-rating-v1` now creates a deterministic, explicitly low-confidence
+fallback estimate from the stable player ID; the importer applies that estimate
+to the new career's playable attribute and potential baseline.
 
 Evidence: `npm run test:data-pipeline`; `cargo test -p openfootmanager
 snapshot_data --lib`; `npm run build`. The Rust test verifies the exact content
 hash emitted by the Node fixture, so the import boundary is covered rather than
 only each implementation in isolation.
 
-Next: add the rating-model and identity-review layers, then cover Snapshot A/B
-career creation end-to-end (including proof that an existing career is unchanged).
+Next: add the identity-review layer, then cover Snapshot A/B career creation
+end-to-end (including proof that an existing career is unchanged).
