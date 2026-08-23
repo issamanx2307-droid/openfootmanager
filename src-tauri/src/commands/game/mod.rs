@@ -86,6 +86,7 @@ fn load_world_data(
 }
 
 const FPL_WORLD_ID: &str = "fpl-core-insights-2026-2027";
+const ALBION_SNAPSHOT_WORLD_FILENAME: &str = "albion-snapshot-world.json";
 
 /// FPL supplies the English top-flight roster, so its careers carry the
 /// season-specific England rules pack rather than inheriting generic world
@@ -1731,9 +1732,9 @@ pub async fn start_new_game(
             .competitions
             .iter()
             .any(|competition| competition.country_id.as_deref() == Some("ENG"))
-        && world_source
-            .as_deref()
-            .is_some_and(|source| source.contains(FPL_WORLD_ID))
+        && world_source.as_deref().is_some_and(|source| {
+            source.contains(FPL_WORLD_ID) || source.contains(ALBION_SNAPSHOT_WORLD_FILENAME)
+        })
     {
         let ruleset = load_england_ruleset(&app_handle)?;
         apply_england_ruleset(&mut new_game, &ruleset);

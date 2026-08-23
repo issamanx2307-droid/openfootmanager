@@ -198,6 +198,8 @@ pub fn run() {
             get_nations,
             get_fpl_data_source_status,
             update_fpl_data_source,
+            get_albion_snapshot_status,
+            import_albion_snapshot,
             start_new_game,
             validate_competition_definitions,
             validate_world_package,

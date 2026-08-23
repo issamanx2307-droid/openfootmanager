@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore, AppSettings } from "../store/settingsStore";
 import { useTheme } from "../context/ThemeContext";
 import { ThemeToggle, Select } from "../components/ui";
 import { SUPPORTED_LANGUAGES, changeAppLanguage } from "../i18n";
 import { formatAppVersion } from "../lib/appVersion";
+import { resolveBackendError } from "../utils/backendI18n";
 import {
   ArrowLeft,
   Monitor,
@@ -17,6 +19,7 @@ import {
   Zap,
   Trash2,
   Download,
+  Upload,
   Globe,
   Type,
   Maximize,
@@ -48,6 +51,8 @@ export default function Settings() {
     updatedAt: string | null;
   } | null>(null);
   const [isUpdatingFplData, setIsUpdatingFplData] = useState(false);
+  const [isImportingSnapshot, setIsImportingSnapshot] = useState(false);
+  const [snapshotStatus, setSnapshotStatus] = useState<{ season?: string | null } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(
     !!document.fullscreenElement,
   );
@@ -142,6 +147,25 @@ export default function Settings() {
       console.error("Failed to update FPL Core Insights data:", error);
     } finally {
       setIsUpdatingFplData(false);
+    }
+  };
+
+  const handleImportSnapshot = async () => {
+    const path = await open({
+      filters: [{ name: "Albion snapshot", extensions: ["json"] }],
+      multiple: false,
+      title: "Import published Albion snapshot",
+    });
+    if (typeof path !== "string") return;
+    setIsImportingSnapshot(true);
+    try {
+      const status = await invoke<{ season?: string | null }>("import_albion_snapshot", { sourcePath: path });
+      setSnapshotStatus(status);
+    } catch (error) {
+      console.error("Failed to import Albion snapshot:", error);
+      alert(resolveBackendError(error));
+    } finally {
+      setIsImportingSnapshot(false);
     }
   };
 
@@ -417,6 +441,24 @@ export default function Settings() {
             <p className="-mt-2 ml-1 text-xs text-primary-500">
               {fplDataStatus.updatedAt}
             </p>
+          )}
+
+          <SettingRow
+            label="Albion data snapshot"
+            description="Import a published JSON snapshot. It becomes the baseline for new careers only."
+          >
+            <button
+              type="button"
+              onClick={() => void handleImportSnapshot()}
+              disabled={isImportingSnapshot}
+              className="flex items-center gap-2 rounded-lg bg-primary-500/10 px-4 py-2 text-sm font-heading font-bold uppercase tracking-wider text-primary-600 transition-colors hover:bg-primary-500/20 disabled:cursor-wait disabled:opacity-70 dark:text-primary-400"
+            >
+              <Upload className={isImportingSnapshot ? "h-4 w-4 animate-bounce" : "h-4 w-4"} />
+              Import snapshot
+            </button>
+          </SettingRow>
+          {snapshotStatus?.season && (
+            <p className="-mt-2 ml-1 text-xs text-primary-500">Snapshot ready: {snapshotStatus.season}</p>
           )}
 
           <div className="border-t border-gray-200 dark:border-navy-600 pt-4 mt-2">

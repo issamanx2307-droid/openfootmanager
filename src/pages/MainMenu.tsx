@@ -323,6 +323,7 @@ export default function MainMenu() {
   // Installed packages state
   const [installedPackages, setInstalledPackages] = useState<PackageInfo[]>([]);
   const [fplWorldSource, setFplWorldSource] = useState<string | null>(null);
+  const [snapshotWorldSource, setSnapshotWorldSource] = useState<string | null>(null);
   const [activePackageIds, setActivePackageIds] = useState<string[]>([]);
   const [isInstallingPackage, setIsInstallingPackage] = useState(false);
   const [packageStackErrors, setPackageStackErrors] = useState<PackageIssue[]>([]);
@@ -498,6 +499,13 @@ export default function MainMenu() {
       .catch(() => setFplWorldSource(null));
   }, []);
 
+  useEffect(() => {
+    void invoke<{ worldDatabasePath?: string | null }>(
+      "get_albion_snapshot_status",
+    ).then((status) => setSnapshotWorldSource(status.worldDatabasePath ?? null))
+      .catch(() => setSnapshotWorldSource(null));
+  }, []);
+
   const handleInstallPackage = async () => {
     const selected = await open({
       filters: [{ name: "OFM Package", extensions: ["ofm"] }],
@@ -555,7 +563,9 @@ export default function MainMenu() {
         dob: formData.dob,
         nationality: formData.nationality,
         startupOptions,
-        worldSource: activePackageIds.length === 0 ? fplWorldSource ?? undefined : undefined,
+        worldSource: activePackageIds.length === 0
+          ? snapshotWorldSource ?? fplWorldSource ?? undefined
+          : undefined,
         packageIds: activePackageIds.length > 0 ? activePackageIds : undefined,
       });
       applyExtraTranslations(game.extra_translations);
@@ -877,7 +887,7 @@ export default function MainMenu() {
                 onBack={() => setMenuState("packages")}
                 onClose={() => setMenuState("main")}
                 activePackages={installedPackages.filter((p) => activePackageIds.includes(p.id))}
-                usingFplData={fplWorldSource !== null && activePackageIds.length === 0}
+                usingFplData={(snapshotWorldSource !== null || fplWorldSource !== null) && activePackageIds.length === 0}
               />
             </Suspense>
           )}
