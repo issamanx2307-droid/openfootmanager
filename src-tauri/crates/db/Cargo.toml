@@ -4,7 +4,7 @@ version = "0.3.0"
 edition = "2024"
 
 [features]
-default = []
+default = ["save-snapshots"]
 # Dev-only: snapshot each save's `.db` file before every overwrite into a
 # date-stamped sibling (`<uuid>.db.snap-YYYYMMDD-HHMMSS.fff`). The 20 most
 # recent snapshots per save are kept; older ones are pruned automatically.
