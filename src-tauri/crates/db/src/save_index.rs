@@ -494,6 +494,7 @@ mod tests {
                 package_lockfile_json: "[]".to_string(),
                 ruleset_id: None,
                 ruleset_version: None,
+                transfer_windows_json: "[]".to_string(),
             },
         )
         .unwrap();
@@ -619,6 +620,7 @@ mod tests {
                 package_lockfile_json: "[]".to_string(),
                 ruleset_id: None,
                 ruleset_version: None,
+                transfer_windows_json: "[]".to_string(),
             },
         )
         .unwrap();

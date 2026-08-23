@@ -1,5 +1,5 @@
 use crate::end_of_season::is_league_complete;
-use crate::game::Game;
+use crate::game::{Game, TransferWindowRule};
 use chrono::{Datelike, Duration, NaiveDate};
 use domain::league::League;
 use domain::season::{SeasonContext, SeasonPhase, TransferWindowContext, TransferWindowStatus};
@@ -33,7 +33,11 @@ pub fn derive_season_context(game: &Game) -> SeasonContext {
         (days >= 0).then_some(days)
     });
 
-    let transfer_window = derive_transfer_window_context(current_date, season_start);
+    let transfer_window = if game.transfer_windows.is_empty() {
+        derive_transfer_window_context(current_date, season_start)
+    } else {
+        derive_configured_transfer_window_context(current_date, &game.transfer_windows)
+    };
 
     SeasonContext {
         phase,
@@ -114,6 +118,40 @@ fn derive_transfer_window_context(
     }
 }
 
+fn derive_configured_transfer_window_context(
+    current_date: NaiveDate,
+    windows: &[TransferWindowRule],
+) -> TransferWindowContext {
+    let mut active = None;
+    let mut next = None;
+    for year in [current_date.year() - 1, current_date.year(), current_date.year() + 1] {
+        for window in windows {
+            let Some(opens_on) = NaiveDate::from_ymd_opt(year, window.start_month.into(), window.start_day.into()) else { continue; };
+            let end_year = if (window.end_month, window.end_day) < (window.start_month, window.start_day) { year + 1 } else { year };
+            let Some(closes_on) = NaiveDate::from_ymd_opt(end_year, window.end_month.into(), window.end_day.into()) else { continue; };
+            if current_date >= opens_on && current_date <= closes_on {
+                active = Some((opens_on, closes_on));
+            } else if opens_on > current_date && next.is_none_or(|(candidate, _)| opens_on < candidate) {
+                next = Some((opens_on, closes_on));
+            }
+        }
+    }
+    let (opens_on, closes_on, status) = if let Some((opens_on, closes_on)) = active {
+        (opens_on, closes_on, if current_date == closes_on { TransferWindowStatus::DeadlineDay } else { TransferWindowStatus::Open })
+    } else if let Some((opens_on, closes_on)) = next {
+        (opens_on, closes_on, TransferWindowStatus::Closed)
+    } else {
+        return TransferWindowContext::default();
+    };
+    TransferWindowContext {
+        status,
+        opens_on: Some(format_date(opens_on)),
+        closes_on: Some(format_date(closes_on)),
+        days_until_opens: (current_date < opens_on).then_some((opens_on - current_date).num_days()),
+        days_remaining: (current_date >= opens_on && current_date <= closes_on).then_some((closes_on - current_date).num_days()),
+    }
+}
+
 fn format_date(date: NaiveDate) -> String {
     date.format("%Y-%m-%d").to_string()
 }
@@ -143,7 +181,7 @@ fn add_year_clamped(date: NaiveDate) -> NaiveDate {
 mod tests {
     use super::derive_season_context;
     use crate::clock::GameClock;
-    use crate::game::Game;
+    use crate::game::{Game, TransferWindowRule};
     use chrono::{TimeZone, Utc};
     use domain::league::{
         Fixture, FixtureCompetition, FixtureStatus, League, MatchResult, StandingEntry,
@@ -273,6 +311,34 @@ mod tests {
             TransferWindowStatus::DeadlineDay
         );
         assert_eq!(context.transfer_window.days_remaining, Some(0));
+    }
+
+    #[test]
+    fn pinned_transfer_calendar_overrides_legacy_season_relative_window() {
+        let mut game = make_game((2026, 12, 20), Some(League::default()));
+        game.transfer_windows = vec![
+            TransferWindowRule {
+                name: "summer".to_string(),
+                start_month: 6,
+                start_day: 10,
+                end_month: 9,
+                end_day: 1,
+            },
+            TransferWindowRule {
+                name: "winter".to_string(),
+                start_month: 1,
+                start_day: 1,
+                end_month: 2,
+                end_day: 3,
+            },
+        ];
+
+        let context = derive_season_context(&game);
+
+        assert_eq!(context.transfer_window.status, TransferWindowStatus::Closed);
+        assert_eq!(context.transfer_window.opens_on.as_deref(), Some("2027-01-01"));
+        assert_eq!(context.transfer_window.closes_on.as_deref(), Some("2027-02-03"));
+        assert_eq!(context.transfer_window.days_until_opens, Some(12));
     }
 
     #[test]

@@ -87,6 +87,8 @@ fn write_game_to_connection(
         .map_err(|_| game_persistence_write_error())?;
     let package_lockfile_json = serde_json::to_string(&game.package_lockfile)
         .map_err(|_| game_persistence_write_error())?;
+    let transfer_windows_json = serde_json::to_string(&game.transfer_windows)
+        .map_err(|_| game_persistence_write_error())?;
     let manager_id = if game.manager_id.is_empty() {
         game.manager.id.clone()
     } else {
@@ -133,6 +135,7 @@ fn write_game_to_connection(
             package_lockfile_json,
             ruleset_id: game.ruleset_id.clone(),
             ruleset_version: game.ruleset_version,
+            transfer_windows_json,
         },
     )?;
 
@@ -344,6 +347,7 @@ impl GamePersistenceReader {
             },
             ruleset_id: meta.ruleset_id,
             ruleset_version: meta.ruleset_version,
+            transfer_windows: serde_json::from_str(&meta.transfer_windows_json).unwrap_or_default(),
         };
         game.promote_legacy_league();
         ofm_core::season_context::refresh_game_context(&mut game);
@@ -392,6 +396,7 @@ mod tests {
             package_lockfile_json: "[]".to_string(),
             ruleset_id: None,
             ruleset_version: None,
+            transfer_windows_json: "[]".to_string(),
         }
     }
 
@@ -552,12 +557,20 @@ mod tests {
         let mut game = sample_game_with_clock(2032, 18);
         game.ruleset_id = Some("england-2026-27-v1".to_string());
         game.ruleset_version = Some(1);
+        game.transfer_windows = vec![ofm_core::game::TransferWindowRule {
+            name: "summer".to_string(),
+            start_month: 6,
+            start_day: 10,
+            end_month: 9,
+            end_day: 1,
+        }];
 
         GamePersistenceWriter::write_game(&db, &game, "save-1", "Career").unwrap();
 
         let loaded = GamePersistenceReader::read_game(&db).unwrap();
         assert_eq!(loaded.ruleset_id, game.ruleset_id);
         assert_eq!(loaded.ruleset_version, game.ruleset_version);
+        assert_eq!(loaded.transfer_windows, game.transfer_windows);
     }
 
     #[test]

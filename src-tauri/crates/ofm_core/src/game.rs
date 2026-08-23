@@ -65,6 +65,15 @@ pub struct YouthScoutingAssignment {
     pub days_remaining: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TransferWindowRule {
+    pub name: String,
+    pub start_month: u8,
+    pub start_day: u8,
+    pub end_month: u8,
+    pub end_day: u8,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {
     pub clock: GameClock,
@@ -126,6 +135,8 @@ pub struct Game {
     pub ruleset_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ruleset_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transfer_windows: Vec<TransferWindowRule>,
 }
 
 impl Game {
@@ -166,6 +177,7 @@ impl Game {
             package_lockfile: vec![],
             ruleset_id: None,
             ruleset_version: None,
+            transfer_windows: vec![],
         };
         game.promote_legacy_league();
         crate::football_identity::upgrade_game_football_identities(&mut game);

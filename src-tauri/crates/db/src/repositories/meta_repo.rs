@@ -40,6 +40,8 @@ pub struct GameMeta {
     pub package_lockfile_json: String,
     pub ruleset_id: Option<String>,
     pub ruleset_version: Option<u32>,
+    #[serde(default = "default_package_lockfile_json")]
+    pub transfer_windows_json: String,
 }
 
 fn default_vacant_team_days_json() -> String {
@@ -83,8 +85,8 @@ fn default_package_lockfile_json() -> String {
 /// Insert or replace the singleton game_meta row.
 pub fn upsert_meta(conn: &Connection, meta: &GameMeta) -> Result<(), String> {
     conn.execute(
-        "INSERT OR REPLACE INTO game_meta (id, save_id, save_name, manager_id, start_date, game_date, created_at, last_played_at, vacant_team_days_json, world_history_json, available_staff_market_last_activity_date, save_format_version, world_format_version, app_version, source_world_id, source_world_kind, active_region_ids_json, active_competition_ids_json, extra_translations_json, package_lockfile_json, ruleset_id, ruleset_version)
-         VALUES ('singleton', ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
+        "INSERT OR REPLACE INTO game_meta (id, save_id, save_name, manager_id, start_date, game_date, created_at, last_played_at, vacant_team_days_json, world_history_json, available_staff_market_last_activity_date, save_format_version, world_format_version, app_version, source_world_id, source_world_kind, active_region_ids_json, active_competition_ids_json, extra_translations_json, package_lockfile_json, ruleset_id, ruleset_version, transfer_windows_json)
+         VALUES ('singleton', ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
         params![
             meta.save_id,
             meta.save_name,
@@ -107,6 +109,7 @@ pub fn upsert_meta(conn: &Connection, meta: &GameMeta) -> Result<(), String> {
             meta.package_lockfile_json,
             meta.ruleset_id,
             meta.ruleset_version,
+            meta.transfer_windows_json,
         ],
     )
     .map_err(|_| GAME_PERSISTENCE_WRITE_ERROR.to_string())?;
@@ -117,7 +120,7 @@ pub fn upsert_meta(conn: &Connection, meta: &GameMeta) -> Result<(), String> {
 pub fn load_meta(conn: &Connection) -> Result<Option<GameMeta>, String> {
     let mut stmt = conn
         .prepare(
-            "SELECT save_id, save_name, manager_id, start_date, game_date, created_at, last_played_at, vacant_team_days_json, world_history_json, available_staff_market_last_activity_date, save_format_version, world_format_version, app_version, source_world_id, source_world_kind, active_region_ids_json, active_competition_ids_json, extra_translations_json, package_lockfile_json, ruleset_id, ruleset_version
+            "SELECT save_id, save_name, manager_id, start_date, game_date, created_at, last_played_at, vacant_team_days_json, world_history_json, available_staff_market_last_activity_date, save_format_version, world_format_version, app_version, source_world_id, source_world_kind, active_region_ids_json, active_competition_ids_json, extra_translations_json, package_lockfile_json, ruleset_id, ruleset_version, transfer_windows_json
              FROM game_meta WHERE id = 'singleton'",
         )
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
@@ -152,6 +155,7 @@ pub fn load_meta(conn: &Connection) -> Result<Option<GameMeta>, String> {
                     .unwrap_or_else(|_| default_package_lockfile_json()),
                 ruleset_id: row.get(19).ok(),
                 ruleset_version: row.get(20).ok(),
+                transfer_windows_json: row.get(21).unwrap_or_else(|_| default_package_lockfile_json()),
             })
         })
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;
@@ -197,6 +201,7 @@ mod tests {
             package_lockfile_json: "[]".to_string(),
             ruleset_id: Some("england-2026-27-v1".to_string()),
             ruleset_version: Some(1),
+            transfer_windows_json: "[]".to_string(),
         };
 
         upsert_meta(db.conn(), &meta).unwrap();
@@ -247,6 +252,7 @@ mod tests {
             package_lockfile_json: "[]".to_string(),
             ruleset_id: None,
             ruleset_version: None,
+            transfer_windows_json: "[]".to_string(),
         };
         upsert_meta(db.conn(), &meta1).unwrap();
 
@@ -272,6 +278,7 @@ mod tests {
             package_lockfile_json: "[]".to_string(),
             ruleset_id: Some("england-2026-27-v1".to_string()),
             ruleset_version: Some(2),
+            transfer_windows_json: "[]".to_string(),
         };
         upsert_meta(db.conn(), &meta2).unwrap();
 
@@ -311,6 +318,7 @@ mod tests {
             package_lockfile_json: "[]".to_string(),
             ruleset_id: None,
             ruleset_version: None,
+            transfer_windows_json: "[]".to_string(),
         };
 
         let result = upsert_meta(&conn, &meta);

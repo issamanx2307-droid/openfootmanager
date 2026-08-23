@@ -139,9 +139,21 @@ fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifes
             competition.rules.half_time_does_not_count_as_substitution_window =
                 substitutions.half_time_does_not_count_as_window;
         }
+        if source.id == "premier-league" {
+            game.transfer_windows = source.transfer_windows.iter().map(|window| {
+                ofm_core::game::TransferWindowRule {
+                    name: window.name.clone(),
+                    start_month: window.start_month,
+                    start_day: window.start_day,
+                    end_month: window.end_month,
+                    end_day: window.end_day,
+                }
+            }).collect();
+        }
     }
     game.ruleset_id = Some(ruleset.ruleset_id.clone());
     game.ruleset_version = Some(ruleset.ruleset_version);
+    ofm_core::season_context::refresh_game_context(game);
     game.sync_legacy_league();
 }
 
@@ -2071,7 +2083,7 @@ mod tests {
         game.competitions = vec![league];
 
         let ruleset = albion_rules::load_from_yaml_str(
-            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
+            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    transfer_windows:\n      - name: summer\n        start_month: 6\n        start_day: 10\n        end_month: 9\n        end_day: 1\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
         )
         .expect("test ruleset should parse");
 
@@ -2081,6 +2093,8 @@ mod tests {
         assert_eq!(game.ruleset_version, Some(7));
         assert_eq!(game.competitions[0].rules.max_substitutes, 4);
         assert_eq!(game.competitions[0].rules.max_substitution_windows, 2);
+        assert_eq!(game.transfer_windows.len(), 1);
+        assert_eq!(game.transfer_windows[0].end_month, 9);
         assert!(!game.competitions[0]
             .rules
             .half_time_does_not_count_as_substitution_window);
