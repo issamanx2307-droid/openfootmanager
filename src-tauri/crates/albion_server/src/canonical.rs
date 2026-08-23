@@ -1,7 +1,8 @@
 //! Canonical game mutations performed by the authoritative command lane.
 
-use albion_protocol::command::{Command, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody};
+use albion_protocol::command::{Command, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody, SubmitContractOfferBody, SubmitTransferBidBody};
 use albion_protocol::ErrorCode;
+use chrono::Datelike;
 use domain::team::{PlayStyle, TrainingFocus, TrainingIntensity};
 use domain::league::FixtureStatus;
 use ofm_core::game::Game;
@@ -164,6 +165,8 @@ impl CanonicalCareer {
             Command::SetTactics(body) => self.set_tactics(manager_id, body),
             Command::SetStartingXi(body) => self.set_starting_xi(manager_id, body),
             Command::SetTrainingPlan(body) => self.set_training_plan(manager_id, body),
+            Command::SubmitTransferBid(body) => self.submit_transfer_bid(manager_id, body),
+            Command::SubmitContractOffer(body) => self.submit_contract_offer(manager_id, body),
             _ => Err(ErrorCode::MatchCommandNotAllowed),
         }
     }
@@ -249,6 +252,99 @@ impl CanonicalCareer {
         team.training_intensity = intensity;
         team.training_focus = focus;
         Ok(json!({ "teamId": team.id, "weeklyIntensity": body.weekly_intensity, "teamFocus": body.team_focus }))
+    }
+
+    fn submit_transfer_bid(
+        &mut self,
+        manager_id: Uuid,
+        body: &SubmitTransferBidBody,
+    ) -> Result<Value, ErrorCode> {
+        if !body.installments_minor.is_empty() {
+            return Err(ErrorCode::MatchCommandNotAllowed);
+        }
+        let fee = whole_currency(body.upfront_minor)?;
+        let outcome = self.with_manager_context(manager_id, |game| {
+            ofm_core::transfers::make_transfer_bid(game, &body.player_id.to_string(), fee)
+        })?;
+        Ok(json!({
+            "playerId": body.player_id,
+            "decision": format!("{:?}", outcome.decision),
+            "suggestedFee": outcome.suggested_fee,
+            "isTerminal": outcome.is_terminal,
+            "registrationDate": outcome.registration_date,
+        }))
+    }
+
+    fn submit_contract_offer(
+        &mut self,
+        manager_id: Uuid,
+        body: &SubmitContractOfferBody,
+    ) -> Result<Value, ErrorCode> {
+        let current_date = self.game.clock.current_date.date_naive();
+        let years = i32::from(body.contract_end_year) - current_date.year();
+        if years <= 0 || body.contract_end_month == 0 || body.contract_end_month > 12 {
+            return Err(ErrorCode::MatchCommandNotAllowed);
+        }
+        let wage = whole_currency(body.weekly_wage_minor)?;
+        let wage = u32::try_from(wage).map_err(|_| ErrorCode::InsufficientWageBudget)?;
+        let outcome = self.with_manager_context(manager_id, |game| {
+            ofm_core::contracts::offer_free_agent_contract(
+                game,
+                &body.player_id.to_string(),
+                ofm_core::contracts::RenewalOffer { weekly_wage: wage, contract_years: years as u32 },
+            )
+        })?;
+        Ok(json!({
+            "playerId": body.player_id,
+            "decision": format!("{:?}", outcome.decision),
+            "isTerminal": outcome.is_terminal,
+            "suggestedWage": outcome.suggested_wage,
+            "suggestedYears": outcome.suggested_years,
+        }))
+    }
+
+    fn with_manager_context<T>(
+        &mut self,
+        manager_id: Uuid,
+        operation: impl FnOnce(&mut Game) -> Result<T, String>,
+    ) -> Result<T, ErrorCode> {
+        let manager_id = manager_id.to_string();
+        let acting_manager = self
+            .game
+            .managers
+            .iter()
+            .find(|manager| manager.id == manager_id)
+            .cloned()
+            .ok_or(ErrorCode::AuthInvalid)?;
+        let previous_manager = std::mem::replace(&mut self.game.manager, acting_manager);
+        let previous_manager_id = std::mem::replace(&mut self.game.manager_id, manager_id);
+        let result = operation(&mut self.game).map_err(map_game_error);
+        self.game.sync_user_manager_record();
+        self.game.manager = previous_manager;
+        self.game.manager_id = previous_manager_id;
+        self.game.sync_user_manager_record();
+        result
+    }
+}
+
+fn whole_currency(minor: i64) -> Result<u64, ErrorCode> {
+    if minor < 0 || minor % 100 != 0 {
+        return Err(ErrorCode::InsufficientTransferBudget);
+    }
+    u64::try_from(minor / 100).map_err(|_| ErrorCode::InsufficientTransferBudget)
+}
+
+fn map_game_error(error: String) -> ErrorCode {
+    if error.contains("transferWindow") {
+        ErrorCode::TransferWindowClosed
+    } else if error.contains("transferBudget") || error.contains("insufficientFunds") {
+        ErrorCode::InsufficientTransferBudget
+    } else if error.contains("boardWagePolicy") {
+        ErrorCode::InsufficientWageBudget
+    } else if error.contains("playerNotFound") {
+        ErrorCode::AuthInvalid
+    } else {
+        ErrorCode::MatchCommandNotAllowed
     }
 }
 
@@ -363,5 +459,18 @@ mod tests {
         assert_eq!(view["club"]["name"], "Albion");
         assert!(view.get("players").is_none());
         assert!(view.get("managers").is_none());
+    }
+
+    #[test]
+    fn transfer_bids_reject_non_integral_minor_currency_before_mutating() {
+        let (mut career, manager_id) = career();
+        let before = career.game().teams[0].finance;
+        let result = career.apply(manager_id, &Command::SubmitTransferBid(SubmitTransferBidBody {
+            player_id: Uuid::new_v4(),
+            upfront_minor: 101,
+            installments_minor: vec![],
+        }));
+        assert_eq!(result.unwrap_err(), ErrorCode::InsufficientTransferBudget);
+        assert_eq!(career.game().teams[0].finance, before);
     }
 }

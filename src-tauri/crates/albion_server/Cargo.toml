@@ -7,6 +7,7 @@ description = "Project Albion authoritative private-career server."
 [dependencies]
 albion_protocol = { path = "../albion_protocol" }
 axum = { version = "0.8", features = ["ws"] }
+chrono = "0.4.45"
 domain = { path = "../domain" }
 db = { path = "../db" }
 engine = { path = "../engine" }
@@ -17,6 +18,5 @@ tokio = { version = "1", features = ["net", "rt-multi-thread", "macros", "signal
 uuid = { version = "1", features = ["v4", "v5", "serde"] }
 
 [dev-dependencies]
-chrono = "0.4.45"
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
