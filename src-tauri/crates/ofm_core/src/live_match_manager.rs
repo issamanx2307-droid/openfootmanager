@@ -128,6 +128,10 @@ pub struct LiveMatchSession {
     pub round_previous_standings: Vec<StandingEntry>,
     pub home_team_id: String,
     pub away_team_id: String,
+    /// Every side currently controlled by a human. `user_side` remains for
+    /// single-player callers, while a server-hosted human-v-human match sets
+    /// both sides through [`Self::set_human_sides`].
+    pub human_sides: HashSet<Side>,
     pub user_side: Option<Side>,
     pub ai_home: AiProfile,
     pub ai_away: AiProfile,
@@ -199,9 +203,13 @@ impl LiveMatchSession {
         self.match_state.is_finished()
     }
 
+    pub fn set_human_sides(&mut self, sides: impl IntoIterator<Item = Side>) {
+        self.human_sides = sides.into_iter().collect();
+    }
+
     fn apply_ai_decisions(&mut self) {
         // AI for home team (if not user-controlled)
-        if self.user_side != Some(Side::Home) {
+        if !self.human_sides.contains(&Side::Home) {
             let cmds = ai::ai_decide(&self.match_state, Side::Home, &self.ai_home, &mut self.rng);
             for cmd in cmds {
                 let _ = self.match_state.apply_command(cmd);
@@ -209,7 +217,7 @@ impl LiveMatchSession {
         }
 
         // AI for away team (if not user-controlled)
-        if self.user_side != Some(Side::Away) {
+        if !self.human_sides.contains(&Side::Away) {
             let cmds = ai::ai_decide(&self.match_state, Side::Away, &self.ai_away, &mut self.rng);
             for cmd in cmds {
                 let _ = self.match_state.apply_command(cmd);
@@ -336,6 +344,7 @@ pub fn create_live_match(
         personality: derive_personality(away_rep, manager_for_team(game, &away_team_id)),
     };
 
+    let human_sides = user_side.into_iter().collect();
     Ok(LiveMatchSession {
         match_state,
         rng: StdRng::seed_from_u64(match_seed),
@@ -347,6 +356,7 @@ pub fn create_live_match(
         round_previous_standings: league.standings.clone(),
         home_team_id,
         away_team_id,
+        human_sides,
         user_side,
         ai_home,
         ai_away,
