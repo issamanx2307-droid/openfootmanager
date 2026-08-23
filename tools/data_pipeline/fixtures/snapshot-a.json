@@ -1,0 +1,11 @@
+{
+  "season": "2026/27",
+  "clubs": [
+    { "id": "northbridge-fc", "name": "Northbridge FC" },
+    { "id": "riverside-town", "name": "Riverside Town" }
+  ],
+  "players": [
+    { "id": "alex-porter", "name": "Alex Porter", "clubId": "northbridge-fc", "position": "ST" },
+    { "id": "sam-reed", "name": "Sam Reed", "clubId": "riverside-town", "position": "GK" }
+  ]
+}
