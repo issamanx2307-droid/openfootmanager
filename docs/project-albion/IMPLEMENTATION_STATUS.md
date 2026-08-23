@@ -86,7 +86,7 @@ its working tree untouched.
 | 1 | Versions, protocol, rules foundation | DONE |
 | 2 | Relational per-career save | DONE |
 | 3 | Snapshot/data pipeline | DONE |
-| 4 | Competition/calendar | IN PROGRESS |
+| 4 | Competition/calendar | DONE |
 | 5 | Core management systems | NOT STARTED |
 | 6 | Albion match engine v1 | NOT STARTED |
 | 7 | AI managers | NOT STARTED |
@@ -157,7 +157,7 @@ Snapshot A/B import flow: B carries the transfer into a new playable world
 while A remains unchanged. Phase 2's save close/reopen and backup coverage
 continues to protect the resulting per-career state.
 
-Phase 4 started: audit the existing generic league, fixture generation,
+Phase 4 completed: audit the existing generic league, fixture generation,
 promotion/relegation and season rollover paths; add the structural multi-season
 regression coverage before extending any missing competition formats. The first
 regression drives a three-tier pyramid through 20 seasons, asserting that every
@@ -172,4 +172,17 @@ promotion::tests::twenty_structural_seasons_preserve_pyramid_membership_and_sche
 and `cargo test -p openfootmanager england_foundation_uses_the_fa_cup_identity
 --lib` pass. `cargo test -p ofm_core league_playoff --lib` and `cargo test -p
 ofm_core playoff_berth --lib` cover playoff entrant selection and qualification
-from the settled final.
+from the settled final. Ruleset-owned automatic promotion, relegation and
+playoff slots now flow into runtime competitions; the completed playoff winner
+takes the final promotion slot. England's foundation distributes available clubs
+through the Premier League, Championship, League One, League Two and National
+League feeder ladder when sufficient clubs exist, and maps the ruleset by tier
+instead of ambiguous participant count.
+
+Phase 4 completion evidence: `cargo test -p ofm_core --lib` passes 524 tests,
+including the 20-season structural pyramid regression and configured playoff
+promotion. `cargo test -p ofm_core --test end_of_season_tests` passes 75
+qualification, cup, history and rollover integrations. `cargo test -p
+openfootmanager --lib --quiet` passes 226 tests (1 ignored), including England
+foundation, five-tier feeder, FA Cup/EFL Cup/Community Shield and tier-specific
+ruleset mapping coverage.
