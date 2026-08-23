@@ -724,6 +724,55 @@ fn english_community_shield_entrants(game: &Game) -> Option<Vec<String>> {
     Some(vec![champion, opponent])
 }
 
+#[cfg(test)]
+mod community_shield_tests {
+    use super::*;
+    use crate::clock::GameClock;
+    use chrono::{TimeZone, Utc};
+    use domain::league::{Fixture, FixtureCompetition, FixtureStatus, KnockoutRoundState, MatchResult, StandingEntry};
+    use domain::manager::Manager;
+
+    fn standings(team_ids: &[&str]) -> Vec<StandingEntry> {
+        team_ids
+            .iter()
+            .enumerate()
+            .map(|(position, team_id)| {
+                let mut entry = StandingEntry::new((*team_id).to_string());
+                entry.points = 100 - position as u32;
+                entry
+            })
+            .collect()
+    }
+
+    fn game_with_winners(cup_winner: &str) -> Game {
+        let clock = GameClock::new(Utc.with_ymd_and_hms(2026, 5, 20, 12, 0, 0).unwrap());
+        let manager = Manager::new("mgr".to_string(), "A".to_string(), "B".to_string(), "1980-01-01".to_string(), "ENG".to_string());
+        let mut game = Game::new(clock, manager, vec![], vec![], vec![], vec![]);
+        let mut league = League::new("eng-d1".to_string(), "England".to_string(), 2026, &[]);
+        league.standings = standings(&["champion", "runner-up", "third"]);
+        let mut cup = League::new("eng-fa-cup".to_string(), "FA Cup".to_string(), 2026, &[]);
+        cup.fixtures = vec![Fixture {
+            id: "final".to_string(), competition_id: "eng-fa-cup".to_string(), matchday: 1,
+            date: "2026-05-18".to_string(), home_team_id: cup_winner.to_string(), away_team_id: "cup-runner-up".to_string(),
+            competition: FixtureCompetition::Cup, status: FixtureStatus::Completed,
+            result: Some(MatchResult { home_goals: 2, away_goals: 0, home_scorers: vec![], away_scorers: vec![], report: None, home_penalties: None, away_penalties: None }),
+        }];
+        cup.knockout_rounds = vec![KnockoutRoundState { id: "final-round".to_string(), name: "Final".to_string(), fixture_ids: vec!["final".to_string()], bye_team_ids: vec![], completed: true }];
+        game.competitions = vec![league, cup];
+        game
+    }
+
+    #[test]
+    fn community_shield_uses_league_champion_and_fa_cup_winner() {
+        assert_eq!(english_community_shield_entrants(&game_with_winners("cup-winner")), Some(vec!["champion".to_string(), "cup-winner".to_string()]));
+    }
+
+    #[test]
+    fn community_shield_uses_runner_up_when_one_team_wins_the_double() {
+        assert_eq!(english_community_shield_entrants(&game_with_winners("champion")), Some(vec!["champion".to_string(), "runner-up".to_string()]));
+    }
+}
+
 /// Decide what the upcoming season's international calendar looks like:
 /// - a World Cup summer stages the tournament in the break (no club friendlies);
 /// - the season before a World Cup hosts qualifying in the windows;
