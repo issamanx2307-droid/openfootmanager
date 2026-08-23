@@ -6,6 +6,7 @@ use domain::team::{PlayStyle, TrainingFocus, TrainingIntensity};
 use domain::league::FixtureStatus;
 use ofm_core::game::Game;
 use ofm_core::player_rating::formation_slots;
+use ofm_core::live_match_manager::{create_live_match, LiveMatchSession, MatchMode};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -36,6 +37,12 @@ impl CanonicalCareer {
             .is_some_and(|team_id| team_id == club_id.to_string())
     }
 
+    pub fn controlled_club(&self, manager_id: Uuid) -> Result<Uuid, ErrorCode> {
+        let team_id = self.controlled_team_id(manager_id)?;
+        Uuid::parse_str(&team_id)
+            .map_err(|_| ErrorCode::AuthInvalid)
+    }
+
     /// Advance AI-only dates until a controlled club reaches a scheduled
     /// fixture. The caller must create and coordinate that live match instead
     /// of passing it through the instant simulator.
@@ -59,6 +66,74 @@ impl CanonicalCareer {
         Advancement::AdvancedThrough {
             date: self.game.clock.current_date.format("%Y-%m-%d").to_string(),
         }
+    }
+
+    pub fn open_live_match(
+        &self,
+        fixture_id: Uuid,
+        controlled_clubs: &HashSet<Uuid>,
+    ) -> Result<LiveMatchSession, String> {
+        let (competition_index, fixture_index) = self
+            .game
+            .competitions
+            .iter()
+            .enumerate()
+            .find_map(|(competition_index, competition)| {
+                competition.fixtures.iter().enumerate().find_map(|(fixture_index, fixture)| {
+                    let candidate = Uuid::parse_str(&fixture.id)
+                        .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.id.as_bytes()));
+                    (candidate == fixture_id).then_some((competition_index, fixture_index))
+                })
+            })
+            .ok_or_else(|| "be.error.liveMatch.fixtureNotFound".to_string())?;
+        let fixture = &self.game.competitions[competition_index].fixtures[fixture_index];
+        let home_club_id = Uuid::parse_str(&fixture.home_team_id)
+            .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.home_team_id.as_bytes()));
+        let away_club_id = Uuid::parse_str(&fixture.away_team_id)
+            .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.away_team_id.as_bytes()));
+        let mut match_game = self.game.clone();
+        match_game.league = Some(self.game.competitions[competition_index].clone());
+        let mut session = create_live_match(&match_game, fixture_index, MatchMode::Live, false)?;
+        let mut human_sides = Vec::new();
+        if controlled_clubs.contains(&home_club_id) {
+            human_sides.push(engine::Side::Home);
+        }
+        if controlled_clubs.contains(&away_club_id) {
+            human_sides.push(engine::Side::Away);
+        }
+        session.set_human_sides(human_sides);
+        Ok(session)
+    }
+
+    pub fn finish_live_match(&mut self, mut session: LiveMatchSession) -> Result<serde_json::Value, String> {
+        if !session.is_finished() {
+            session.run_to_completion();
+        }
+        let fixture_index = session.fixture_index;
+        let competition_id = session.competition_id.clone();
+        let home_team_id = session.home_team_id.clone();
+        let away_team_id = session.away_team_id.clone();
+        let report = session.match_state.into_report();
+        let competition_index = self
+            .game
+            .competitions
+            .iter()
+            .position(|competition| competition.id == competition_id)
+            .ok_or_else(|| "be.error.liveMatch.fixtureNotFound".to_string())?;
+        self.game.league = Some(self.game.competitions[competition_index].clone());
+        ofm_core::turn::apply_match_report(
+            &mut self.game,
+            fixture_index,
+            &home_team_id,
+            &away_team_id,
+            &report,
+        );
+        if let Some(updated) = self.game.league.clone() {
+            self.game.competitions[competition_index] = updated;
+        }
+        self.game.sync_legacy_league();
+        ofm_core::turn::finish_live_match_day(&mut self.game);
+        Ok(json!({ "homeGoals": report.home_goals, "awayGoals": report.away_goals }))
     }
 
     pub fn apply(&mut self, manager_id: Uuid, command: &Command) -> Result<Value, ErrorCode> {

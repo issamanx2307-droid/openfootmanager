@@ -26,6 +26,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use ofm_core::live_match_manager::LiveMatchSession;
 
 pub use canonical::{Advancement, CanonicalCareer};
 pub use store::SqliteCareerStore;
@@ -213,7 +214,6 @@ async fn send_event(socket: &mut WebSocket, event: ServerEvent) -> Result<(), ()
     socket.send(Message::Text(text.into())).await.map_err(|_| ())
 }
 
-#[derive(Debug)]
 struct CareerSession {
     config: ServerConfig,
     revision: u64,
@@ -224,6 +224,7 @@ struct CareerSession {
     ready_managers: HashSet<Uuid>,
     career: Option<CanonicalCareer>,
     store: Option<SqliteCareerStore>,
+    live_matches: HashMap<Uuid, LiveMatchSession>,
 }
 
 impl CareerSession {
@@ -240,6 +241,7 @@ impl CareerSession {
             ready_managers: HashSet::new(),
             career,
             store,
+            live_matches: HashMap::new(),
         }
     }
 
@@ -321,10 +323,11 @@ impl CareerSession {
 
     fn apply_new_command(&mut self, manager_id: Uuid, envelope: Envelope) -> Vec<ServerEvent> {
         let command_id = envelope.command_id();
+        let current_revision = self.revision;
         let reject = |code| {
             ServerEvent::CommandRejected(CommandRejectedBody {
                 command_id,
-                current_revision: self.revision,
+                current_revision,
                 error: ProtocolError::new(code),
             })
         };
@@ -352,6 +355,29 @@ impl CareerSession {
                     events.extend(self.advance_ready_barrier());
                 }
                 events
+            }
+            Command::ApplyLiveMatchCommand(body) => {
+                let Some(expected_revision) = envelope.expected_revision else {
+                    return vec![reject(ErrorCode::StaleRevision)];
+                };
+                if expected_revision != self.revision {
+                    return vec![reject(ErrorCode::StaleRevision)];
+                }
+                let snapshot = match self.apply_live_command(manager_id, body) {
+                    Ok(snapshot) => snapshot,
+                    Err(error) => return vec![reject(error)],
+                };
+                self.revision += 1;
+                vec![
+                    ServerEvent::CommandAck(CommandAckBody { command_id, applied_revision: self.revision }),
+                    ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
+                        match_id: body.match_id,
+                        phase: format!("{:?}", snapshot.phase),
+                        match_second: u32::from(snapshot.current_minute) * 60,
+                        home_score: snapshot.home_score,
+                        away_score: snapshot.away_score,
+                    }),
+                ]
             }
             command => {
                 let Some(expected_revision) = envelope.expected_revision else {
@@ -402,6 +428,57 @@ impl CareerSession {
         })
     }
 
+    fn apply_live_command(
+        &mut self,
+        manager_id: Uuid,
+        body: &albion_protocol::command::ApplyLiveMatchCommandBody,
+    ) -> Result<engine::MatchSnapshot, ErrorCode> {
+        let club_id = self
+            .career
+            .as_ref()
+            .ok_or(ErrorCode::MatchCommandNotAllowed)?
+            .controlled_club(manager_id)?;
+        let session = self
+            .live_matches
+            .get_mut(&body.match_id)
+            .ok_or(ErrorCode::MatchCommandNotAllowed)?;
+        let side = if session.home_team_id == club_id.to_string() {
+            engine::Side::Home
+        } else if session.away_team_id == club_id.to_string() {
+            engine::Side::Away
+        } else {
+            return Err(ErrorCode::AuthInvalid);
+        };
+        let command = match &body.command {
+            albion_protocol::command::LiveMatchCommandKind::Substitute { player_out_id, player_in_id } => {
+                engine::MatchCommand::Substitute {
+                    side,
+                    player_off_id: player_out_id.to_string(),
+                    player_on_id: player_in_id.to_string(),
+                }
+            }
+            albion_protocol::command::LiveMatchCommandKind::ChangeFormation { formation } => {
+                engine::MatchCommand::ChangeFormation { side, formation: formation.clone() }
+            }
+            albion_protocol::command::LiveMatchCommandKind::SetTeamInstruction { key, value }
+                if key == "play_style" => {
+                    let play_style = match value.as_str() {
+                        "balanced" => engine::PlayStyle::Balanced,
+                        "attacking" => engine::PlayStyle::Attacking,
+                        "defensive" => engine::PlayStyle::Defensive,
+                        "possession" => engine::PlayStyle::Possession,
+                        "counter" => engine::PlayStyle::Counter,
+                        "high_press" | "highpress" => engine::PlayStyle::HighPress,
+                        _ => return Err(ErrorCode::MatchCommandNotAllowed),
+                    };
+                    engine::MatchCommand::ChangePlayStyle { side, play_style }
+                }
+            _ => return Err(ErrorCode::MatchCommandNotAllowed),
+        };
+        session.apply_command(command).map_err(|_| ErrorCode::MatchCommandNotAllowed)?;
+        Ok(session.snapshot())
+    }
+
     fn advance_ready_barrier(&mut self) -> Vec<ServerEvent> {
         let controlled_clubs = self.claimed_clubs.keys().copied().collect();
         let Some(career) = self.career.as_mut() else {
@@ -436,14 +513,24 @@ impl CareerSession {
                 severity: albion_protocol::event::ServerNoticeSeverity::Info,
                 message_key: "server.advancedThrough".into(),
             })],
-            Advancement::HumanFixture { fixture_id, home_club_id, away_club_id } => vec![
-                ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
-                    match_id: Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture_id.as_bytes()),
-                    fixture_id,
-                    home_club_id,
-                    away_club_id,
-                }),
-            ],
+            Advancement::HumanFixture { fixture_id, home_club_id, away_club_id } => {
+                let match_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture_id.as_bytes());
+                match career.open_live_match(fixture_id, &controlled_clubs) {
+                    Ok(session) => {
+                        self.live_matches.insert(match_id, session);
+                        vec![ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
+                            match_id,
+                            fixture_id,
+                            home_club_id,
+                            away_club_id,
+                        })]
+                    }
+                    Err(_) => vec![ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
+                        severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                        message_key: "server.liveMatchOpenFailed".into(),
+                    })],
+                }
+            }
         }
     }
 }
