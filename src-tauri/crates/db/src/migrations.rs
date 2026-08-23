@@ -1,7 +1,7 @@
 use rusqlite_migration::{M, Migrations};
 
 /// Number of migrations defined. Keep in sync with the vec in `all_migrations`.
-pub const MIGRATION_COUNT: usize = 42;
+pub const MIGRATION_COUNT: usize = 43;
 
 /// All migrations for a per-save game database.
 /// Each save `.db` file gets this schema applied via `rusqlite_migration`.
@@ -91,6 +91,8 @@ pub fn all_migrations() -> Migrations<'static> {
         M::up(include_str!("sql/v041_player_movement_history.sql")),
         // V42: Persist installed-package lockfile (id, version, hash) for save reproducibility
         M::up(include_str!("sql/v042_game_package_lockfile.sql")),
+        // V43: Persist Project Albion compatibility versions per career
+        M::up(include_str!("sql/v043_career_versions.sql")),
     ])
 }
 
@@ -165,6 +167,10 @@ mod tests {
         assert!(
             tables.contains(&"youth_scouting_assignments".to_string()),
             "missing youth_scouting_assignments"
+        );
+        assert!(
+            tables.contains(&"career_versions".to_string()),
+            "missing career_versions"
         );
 
         let game_meta_columns: Vec<String> = conn
