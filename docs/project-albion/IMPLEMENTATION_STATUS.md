@@ -98,3 +98,10 @@ ruleset.
 Next: use the pinned ruleset as the source for competition registration and
 transfer-window enforcement, rather than only its substitution limits. Phase 2
 continues with relational save coverage for the remaining competition state.
+
+Latest Phase 1 evidence: `cargo test -p albion_rules` passes 13 validation and
+round-trip tests; `cargo test -p albion_protocol` passes 6 envelope and exact
+compatibility tests. Ruleset-owned substitution, transfer-calendar, and squad
+registration constraints are now copied into the playable career and persisted
+with it. The remaining Phase 1 audit is to identify any active core path still
+using a season-specific rule constant instead of the pinned ruleset.
