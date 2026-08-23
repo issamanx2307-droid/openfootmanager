@@ -7,6 +7,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
+mod canonical;
+
 use albion_protocol::command::{Command, MarkReadyBody};
 use albion_protocol::event::{
     CommandAckBody, CommandRejectedBody, HelloBody, ReadyStateChangedBody, ServerEvent,
@@ -24,6 +26,8 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub use canonical::CanonicalCareer;
+
 const MAX_MANAGER_SLOTS: usize = 2;
 
 #[derive(Debug, Clone)]
@@ -31,6 +35,7 @@ pub struct ServerConfig {
     pub career_id: Uuid,
     pub join_secret: String,
     pub versions: VersionSet,
+    pub game: Option<ofm_core::game::Game>,
 }
 
 impl ServerConfig {
@@ -39,7 +44,13 @@ impl ServerConfig {
             career_id,
             join_secret: join_secret.into(),
             versions: CURRENT_VERSIONS.to_owned_set(),
+            game: None,
         }
+    }
+
+    pub fn with_canonical_game(mut self, game: ofm_core::game::Game) -> Self {
+        self.game = Some(game);
+        self
     }
 }
 
@@ -196,10 +207,12 @@ struct CareerSession {
     reconnect_tokens: HashMap<String, Uuid>,
     completed_commands: HashMap<Uuid, Vec<ServerEvent>>,
     ready_managers: HashSet<Uuid>,
+    career: Option<CanonicalCareer>,
 }
 
 impl CareerSession {
-    fn new(config: ServerConfig) -> Self {
+    fn new(mut config: ServerConfig) -> Self {
+        let career = config.game.take().map(CanonicalCareer::new);
         Self {
             config,
             revision: 0,
@@ -208,6 +221,7 @@ impl CareerSession {
             reconnect_tokens: HashMap::new(),
             completed_commands: HashMap::new(),
             ready_managers: HashSet::new(),
+            career,
         }
     }
 
@@ -217,6 +231,13 @@ impl CareerSession {
         }
         if !request.client_versions.is_compatible_with(&self.config.versions) {
             return Err(ApiError::protocol(ErrorCode::ProtocolIncompatible));
+        }
+        if self
+            .career
+            .as_ref()
+            .is_some_and(|career| !career.manager_controls(request.manager_id, request.club_id))
+        {
+            return Err(ApiError::protocol(ErrorCode::AuthInvalid));
         }
         if let Some(manager) = self.claimed_clubs.get(&request.club_id) {
             if *manager != request.manager_id {
@@ -310,14 +331,30 @@ impl CareerSession {
                     applied_revision: self.revision,
                 }), self.ready_state_event(manager_id)]
             }
-            _ => {
+            command => {
                 let Some(expected_revision) = envelope.expected_revision else {
                     return vec![reject(ErrorCode::StaleRevision)];
                 };
                 if expected_revision != self.revision {
                     return vec![reject(ErrorCode::StaleRevision)];
                 }
-                vec![reject(ErrorCode::MatchCommandNotAllowed)]
+                let Some(career) = self.career.as_mut() else {
+                    return vec![reject(ErrorCode::MatchCommandNotAllowed)];
+                };
+                let changes = match career.apply(manager_id, command) {
+                    Ok(changes) => changes,
+                    Err(error) => return vec![reject(error)],
+                };
+                let from_revision = self.revision;
+                self.revision += 1;
+                vec![
+                    ServerEvent::CommandAck(CommandAckBody { command_id, applied_revision: self.revision }),
+                    ServerEvent::StateDelta(albion_protocol::event::StateDeltaBody {
+                        from_revision,
+                        to_revision: self.revision,
+                        changes,
+                    }),
+                ]
             }
         }
     }
