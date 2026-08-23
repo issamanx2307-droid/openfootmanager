@@ -90,7 +90,7 @@ its working tree untouched.
 | 5 | Core management systems | DONE |
 | 6 | Albion match engine v1 | DONE |
 | 7 | AI managers | DONE |
-| 8 | Authoritative server | NOT STARTED |
+| 8 | Authoritative server | IN PROGRESS |
 | 9 | Desktop client migration | NOT STARTED |
 | 10 | Thai + accessibility | NOT STARTED |
 | 11 | Production snapshot | BLOCKED (external data pending) |
@@ -237,3 +237,15 @@ between turns. `cargo test -p ofm_core --lib ai_hiring::tests` passes 14 tests,
 multi-season 737-day career and asserts each AI club retains a persistent
 manager, can field at least 11 healthy players, has finite finance and retains
 more than one tactical identity.
+
+Phase 8 progress: added the standalone `albion_server` binary/crate with a
+private HTTP/WebSocket transport foundation. It exposes `/healthz`, `/readyz`
+and `/version`, protects join/reconnect flow with a private secret and issued
+reconnect token, limits a career to host and guest slots, and rejects a club
+claim already held by another manager. Its single in-memory command lane
+validates protocol/career/manager identity, owns the monotonic revision and
+caches command results by UUID so a retried `MarkReady` cannot apply twice.
+The WebSocket sends typed `Hello`, `CommandAck`, `CommandRejected` and
+`ReadyStateChanged` events. This is deliberately only the transport/session
+foundation: canonical game persistence, command-to-game application, ready
+advancement and live-match coordination remain in progress.

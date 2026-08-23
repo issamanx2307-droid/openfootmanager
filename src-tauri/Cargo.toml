@@ -15,7 +15,7 @@ name = "openfootmanager_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [workspace]
-members = ["crates/ofm_core", "crates/db", "crates/domain", "crates/engine", "crates/sim-bench", "crates/ofm-cli", "crates/albion_rules", "crates/albion_protocol"]
+members = ["crates/ofm_core", "crates/db", "crates/domain", "crates/engine", "crates/sim-bench", "crates/ofm-cli", "crates/albion_rules", "crates/albion_protocol", "crates/albion_server"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
