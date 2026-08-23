@@ -64,7 +64,7 @@ focused regression test now passes. Run the full workspace suite before a PR.
 | 0 | Baseline audit | DONE |
 | 1 | Versions, protocol, rules foundation | DONE |
 | 2 | Relational per-career save | DONE |
-| 3 | Snapshot/data pipeline | NOT STARTED |
+| 3 | Snapshot/data pipeline | IN PROGRESS |
 | 4 | Competition/calendar | NOT STARTED |
 | 5 | Core management systems | NOT STARTED |
 | 6 | Albion match engine v1 | NOT STARTED |
@@ -109,5 +109,18 @@ the repository suite covers create/mutate/close/reopen state, schema migrations,
 and the default snapshot rotation now retains a recoverable database before an
 overwrite. `test_save_game_updates_existing` asserts that snapshot behavior.
 
-Next: begin Phase 3 with the normalized snapshot/data pipeline and a synthetic
-fixture dataset that can exercise publish, diff, and update flows headlessly.
+Phase 3 progress: `tools/data_pipeline` now has deterministic recursive content
+hashing, manual JSON and CSV adapters, fixture coverage, FK/duplicate validation,
+provenance and a machine/human diff. The desktop app verifies that hash again
+before importing a snapshot, converts the immutable source into a separate
+playable world database, and only uses it for subsequently-created careers.
+The Settings screen exposes the import action; New Game prefers the imported
+snapshot over the FPL baseline and binds the existing England rules pack.
+
+Evidence: `npm run test:data-pipeline`; `cargo test -p openfootmanager
+snapshot_data --lib`; `npm run build`. The Rust test verifies the exact content
+hash emitted by the Node fixture, so the import boundary is covered rather than
+only each implementation in isolation.
+
+Next: add the rating-model and identity-review layers, then cover Snapshot A/B
+career creation end-to-end (including proof that an existing career is unchanged).
