@@ -613,6 +613,11 @@ fn regenerate_competitions_for_new_season(
         })
         .collect();
 
+    // The Community Shield is a one-match curtain raiser. Re-seed it from the
+    // just-finished English league champion and FA Cup winner before either
+    // competition is reset for the next season.
+    let community_shield_entrants = english_community_shield_entrants(game);
+
     apply_pyramid_promotion_relegation(&mut game.competitions);
 
     // Re-seed continental competitions with this season's qualified entrants
@@ -620,6 +625,11 @@ fn regenerate_competitions_for_new_season(
     // cups that haven't started yet (no fixtures) still get new participants
     // even when the completeness guard below would otherwise skip them.
     for competition in game.competitions.iter_mut() {
+        if competition.id == "eng-community-shield"
+            && let Some(entrants) = &community_shield_entrants
+        {
+            competition.participant_ids = entrants.clone();
+        }
         if let Some(entrants) = continental_entrants.get(&competition.id)
             && entrants.len() >= 2
         {
@@ -686,6 +696,32 @@ fn regenerate_competitions_for_new_season(
         qualified_field,
     );
     game.sync_legacy_league();
+}
+
+fn english_community_shield_entrants(game: &Game) -> Option<Vec<String>> {
+    let champion = game
+        .competitions
+        .iter()
+        .find(|competition| competition.id == "eng-d1")?
+        .sorted_standings()
+        .first()?
+        .team_id
+        .clone();
+    let cup_winner = game
+        .competitions
+        .iter()
+        .find(|competition| competition.id == "eng-fa-cup")
+        .and_then(crate::world_cup::world_cup_champion);
+    let opponent = cup_winner.filter(|winner| winner != &champion).or_else(|| {
+        game.competitions
+            .iter()
+            .find(|competition| competition.id == "eng-d1")?
+            .sorted_standings()
+            .into_iter()
+            .map(|entry| entry.team_id)
+            .find(|team_id| team_id != &champion)
+    })?;
+    Some(vec![champion, opponent])
 }
 
 /// Decide what the upcoming season's international calendar looks like:
