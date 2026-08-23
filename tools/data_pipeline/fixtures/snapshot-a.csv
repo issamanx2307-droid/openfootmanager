@@ -1,0 +1,5 @@
+type,season,id,name,country,clubId,position
+club,2026/27,northbridge-fc,Northbridge FC,ENG,,
+club,2026/27,riverside-town,Riverside Town,ENG,,
+player,2026/27,alex-porter,Alex Porter,,northbridge-fc,ST
+player,2026/27,sam-reed,Sam Reed,,riverside-town,GK
