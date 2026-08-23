@@ -705,6 +705,59 @@ fn regenerate_competitions_for_new_season(
     game.sync_legacy_league();
 }
 
+/// Stage every playoff required by a completed league's berth rules. The
+/// resulting knockout competitions use the regular day processor, so human and
+/// dormant clubs both play them through the normal fixture/calendar path.
+/// Returns the number of newly staged playoffs; repeated calls are idempotent.
+pub fn stage_pending_league_playoffs(game: &mut Game) -> usize {
+    use std::collections::HashSet;
+
+    let existing_ids: HashSet<String> = game
+        .competitions
+        .iter()
+        .map(|competition| competition.id.clone())
+        .collect();
+    let mut staged_ids = HashSet::new();
+    let start_date = game.clock.current_date + Duration::days(1);
+    let candidates: Vec<(League, u32, u32)> = game
+        .competitions
+        .iter()
+        .filter(|competition| {
+            competition.rules.format == CompetitionFormat::LeagueTable
+                && is_league_complete(competition)
+        })
+        .flat_map(|competition| {
+            competition.berths.iter().filter_map(move |berth| match &berth.rule {
+                BerthRule::PlayoffWinner { from, to } => Some((competition.clone(), *from, *to)),
+                _ => None,
+            })
+        })
+        .collect();
+
+    let mut playoffs = Vec::new();
+    for (league, from, to) in candidates {
+        let playoff_id = format!("{}-playoff-{from}-{to}", league.id);
+        if existing_ids.contains(&playoff_id) || !staged_ids.insert(playoff_id) {
+            continue;
+        }
+        if let Some(mut playoff) = crate::schedule::generate_league_playoff(&league, from, to, start_date) {
+            playoff.priority = league.priority;
+            playoffs.push((league.id, playoff));
+        }
+    }
+
+    let staged = playoffs.len();
+    for (source_id, playoff) in playoffs {
+        if !game.active_competition_ids.is_empty()
+            && game.active_competition_ids.contains(&source_id)
+        {
+            game.active_competition_ids.push(playoff.id.clone());
+        }
+        game.competitions.push(playoff);
+    }
+    staged
+}
+
 fn english_community_shield_entrants(game: &Game) -> Option<Vec<String>> {
     let champion = game
         .competitions
@@ -736,7 +789,7 @@ mod community_shield_tests {
     use super::*;
     use crate::clock::GameClock;
     use chrono::{TimeZone, Utc};
-    use domain::league::{Fixture, FixtureCompetition, FixtureStatus, KnockoutRoundState, MatchResult, StandingEntry};
+    use domain::league::{Berth, Fixture, FixtureCompetition, FixtureStatus, KnockoutRoundState, MatchResult, StandingEntry};
     use domain::manager::Manager;
 
     fn standings(team_ids: &[&str]) -> Vec<StandingEntry> {
@@ -803,6 +856,33 @@ mod community_shield_tests {
             evaluate_berth_rule(&game, source, &BerthRule::PlayoffWinner { from: 3, to: 6 }),
             vec!["playoff-winner".to_string()]
         );
+    }
+
+    #[test]
+    fn completed_league_stages_its_berth_playoff_once() {
+        let mut game = game_with_winners("cup-winner");
+        let teams = vec!["one".to_string(), "two".to_string(), "three".to_string(), "four".to_string()];
+        let kickoff = Utc.with_ymd_and_hms(2026, 5, 20, 12, 0, 0).unwrap();
+        let mut league = crate::schedule::generate_league("Playoff League", 2026, &teams, kickoff);
+        league.id = "playoff-league".to_string();
+        league.berths = vec![Berth {
+            target: "continental-target".to_string(),
+            rule: BerthRule::PlayoffWinner { from: 3, to: 4 },
+            fallback_to: None,
+        }];
+        for (rank, standing) in league.standings.iter_mut().enumerate() {
+            standing.points = 100 - rank as u32;
+            standing.played = 6;
+        }
+        for fixture in &mut league.fixtures {
+            fixture.status = FixtureStatus::Completed;
+        }
+        game.competitions.push(league);
+
+        assert_eq!(stage_pending_league_playoffs(&mut game), 1);
+        let playoff = game.competitions.iter().find(|competition| competition.id == "playoff-league-playoff-3-4").unwrap();
+        assert_eq!(playoff.participant_ids, teams[2..].to_vec());
+        assert_eq!(stage_pending_league_playoffs(&mut game), 0);
     }
 }
 
