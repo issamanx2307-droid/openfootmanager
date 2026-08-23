@@ -858,6 +858,57 @@ fn build_foundation_competition_plan(
         ));
         priority += 1;
 
+        if country == "ENG" {
+            // Both cups use the same generic knockout lifecycle as every other
+            // domestic cup. The shared calendar pass below moves any opening
+            // round clash away from a league fixture for the same club.
+            let efl_cup_start = league_start + Duration::days(21);
+            planned.push((
+                CompetitionDefinition {
+                    id: "eng-efl-cup".to_string(),
+                    name: "EFL Cup".to_string(),
+                    r#type: CompetitionType::Cup,
+                    scope: CompetitionScope::Domestic,
+                    region_id: Some(region_id.clone()),
+                    country_id: Some(country.clone()),
+                    required_region_ids: vec![region_id.clone()],
+                    priority,
+                    format: make_format(CompetitionFormat::Knockout),
+                    participants: ParticipantSpec { explicit: Some(team_ids.clone()), selector: None },
+                    berths: Vec::new(),
+                    season_start_month: Some(efl_cup_start.month() as u8),
+                    season_start_day: Some(efl_cup_start.day() as u8),
+                    name_key: None,
+                    logo: None,
+                },
+                efl_cup_start,
+            ));
+            priority += 1;
+
+            let community_shield_start = league_start - Duration::days(9);
+            planned.push((
+                CompetitionDefinition {
+                    id: "eng-community-shield".to_string(),
+                    name: "Community Shield".to_string(),
+                    r#type: CompetitionType::Cup,
+                    scope: CompetitionScope::Domestic,
+                    region_id: Some(region_id.clone()),
+                    country_id: Some(country.clone()),
+                    required_region_ids: vec![region_id.clone()],
+                    priority,
+                    format: make_format(CompetitionFormat::Knockout),
+                    participants: ParticipantSpec { explicit: Some(team_ids.iter().take(2).cloned().collect()), selector: None },
+                    berths: Vec::new(),
+                    season_start_month: Some(community_shield_start.month() as u8),
+                    season_start_day: Some(community_shield_start.day() as u8),
+                    name_key: None,
+                    logo: None,
+                },
+                community_shield_start,
+            ));
+            priority += 1;
+        }
+
         if country == "BR" {
             let labels = [
                 (
@@ -2159,6 +2210,14 @@ mod tests {
         assert_eq!(fa_cup.r#type, CompetitionType::Cup);
         assert_eq!(fa_cup.scope, CompetitionScope::Domestic);
         assert_eq!(fa_cup.participants.explicit.as_ref().map(Vec::len), Some(8));
+        let efl_cup = plan.iter().map(|(definition, _)| definition)
+            .find(|definition| definition.id == "eng-efl-cup")
+            .expect("England creates the EFL Cup");
+        assert_eq!(efl_cup.participants.explicit.as_ref().map(Vec::len), Some(8));
+        let community_shield = plan.iter().map(|(definition, _)| definition)
+            .find(|definition| definition.id == "eng-community-shield")
+            .expect("England creates the Community Shield");
+        assert_eq!(community_shield.participants.explicit.as_ref().map(Vec::len), Some(2));
         assert!(!plan
             .iter()
             .any(|(definition, _)| definition.id == "eng-cup"));
