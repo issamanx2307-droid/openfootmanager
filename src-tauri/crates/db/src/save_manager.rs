@@ -1676,6 +1676,14 @@ mod tests {
         assert_eq!(saves.len(), 1);
         // Checksum should change since data changed
         assert_ne!(saves[0].checksum, old_checksum);
+        #[cfg(feature = "save-snapshots")]
+        assert!(
+            fs::read_dir(&saves_dir)
+                .unwrap()
+                .filter_map(Result::ok)
+                .any(|entry| entry.file_name().to_string_lossy().contains(".db.snap-")),
+            "overwriting a save should retain a recoverable snapshot"
+        );
 
         // Reload and verify
         let loaded = sm.load_game(&save_id).unwrap();
