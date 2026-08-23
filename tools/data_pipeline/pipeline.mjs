@@ -26,11 +26,22 @@ export function diffSnapshots(before, after) {
   });
 }
 
+export function formatDiffReport(diff) {
+  if (diff.length === 0) return "Snapshot diff: no player transfers.";
+  return ["Snapshot diff: player transfers", ...diff.map((move) =>
+    `- ${move.playerId}: ${move.fromClubId} -> ${move.toClubId}`,
+  )].join("\n");
+}
+
 if (import.meta.url === `file://${process.argv[1]?.replaceAll("\\", "/")}`) {
   const [command, inputPath, outputPath, previousPath] = process.argv.slice(2);
   if (command !== "publish" || !inputPath || !outputPath) throw new Error("Usage: publish input.json output.json [previous.json]");
   const snapshot = normalizeSnapshot(JSON.parse(await readFile(resolve(inputPath), "utf8")));
   await mkdir(dirname(resolve(outputPath)), { recursive: true });
   await writeFile(resolve(outputPath), `${JSON.stringify(snapshot, null, 2)}\n`);
-  if (previousPath) console.log(JSON.stringify(diffSnapshots(JSON.parse(await readFile(resolve(previousPath), "utf8")), snapshot), null, 2));
+  if (previousPath) {
+    const diff = diffSnapshots(JSON.parse(await readFile(resolve(previousPath), "utf8")), snapshot);
+    console.log(JSON.stringify(diff, null, 2));
+    console.log(formatDiffReport(diff));
+  }
 }
