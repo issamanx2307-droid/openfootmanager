@@ -100,10 +100,12 @@ pub fn is_season_complete(game: &Game) -> bool {
             .filter(|c| {
                 c.rules.format == CompetitionFormat::LeagueTable
                     && c.participant_ids.iter().any(|id| id == user_id)
-            })
-            .collect();
+        })
+        .collect();
         if !user_leagues.is_empty() {
-            return user_leagues.into_iter().all(is_league_complete);
+            return user_leagues.into_iter().all(|league| {
+                is_league_complete(league) && league_playoffs_are_settled(game, league)
+            });
         }
         // Fallback when user has no known league (e.g. international-only):
         // all league tables must complete before rollover is available.
@@ -705,6 +707,20 @@ fn regenerate_competitions_for_new_season(
     game.sync_legacy_league();
 }
 
+/// A league that awards a playoff berth cannot roll into the next season until
+/// every required playoff has produced a final winner.
+fn league_playoffs_are_settled(game: &Game, league: &League) -> bool {
+    league.berths.iter().all(|berth| match &berth.rule {
+        BerthRule::PlayoffWinner { from, to } => game
+            .competitions
+            .iter()
+            .find(|competition| competition.id == format!("{}-playoff-{from}-{to}", league.id))
+            .and_then(crate::world_cup::world_cup_champion)
+            .is_some(),
+        _ => true,
+    })
+}
+
 /// Stage every playoff required by a completed league's berth rules. The
 /// resulting knockout competitions use the regular day processor, so human and
 /// dormant clubs both play them through the normal fixture/calendar path.
@@ -862,6 +878,7 @@ mod community_shield_tests {
     fn completed_league_stages_its_berth_playoff_once() {
         let mut game = game_with_winners("cup-winner");
         let teams = vec!["one".to_string(), "two".to_string(), "three".to_string(), "four".to_string()];
+        game.manager.team_id = Some("one".to_string());
         let kickoff = Utc.with_ymd_and_hms(2026, 5, 20, 12, 0, 0).unwrap();
         let mut league = crate::schedule::generate_league("Playoff League", 2026, &teams, kickoff);
         league.id = "playoff-league".to_string();
@@ -879,9 +896,11 @@ mod community_shield_tests {
         }
         game.competitions.push(league);
 
+        assert!(!is_season_complete(&game), "an unstaged playoff blocks rollover");
         assert_eq!(stage_pending_league_playoffs(&mut game), 1);
         let playoff = game.competitions.iter().find(|competition| competition.id == "playoff-league-playoff-3-4").unwrap();
         assert_eq!(playoff.participant_ids, teams[2..].to_vec());
+        assert!(!is_season_complete(&game), "a pending playoff blocks rollover");
         assert_eq!(stage_pending_league_playoffs(&mut game), 0);
     }
 }
