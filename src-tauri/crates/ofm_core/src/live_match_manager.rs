@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::game::Game;
+use crate::match_seed::fixture_seed;
 
 use domain::league::StandingEntry;
 use domain::manager::Manager;
@@ -114,6 +115,8 @@ pub struct LiveMatchSession {
     pub match_state: LiveMatchState,
     pub rng: StdRng,
     pub mode: MatchMode,
+    /// Stable seed derived from the fixture identity; retained for replay/debug.
+    pub match_seed: u64,
     /// Index into the fixtures of the competition identified by
     /// `competition_id` — NOT necessarily into `game.league`, which
     /// `sync_legacy_league` resets to the user's domestic league.
@@ -234,6 +237,7 @@ pub fn create_live_match(
 
     let home_team_id = fixture.home_team_id.clone();
     let away_team_id = fixture.away_team_id.clone();
+    let match_seed = fixture_seed(fixture);
 
     // Build engine TeamData (starting XI = first 11 players by position)
     let (home_xi, home_bench) = build_team_with_bench(game, &home_team_id);
@@ -334,8 +338,9 @@ pub fn create_live_match(
 
     Ok(LiveMatchSession {
         match_state,
-        rng: StdRng::from_rng(&mut rand::rng()),
+        rng: StdRng::seed_from_u64(match_seed),
         mode,
+        match_seed,
         fixture_index,
         competition_id: league.id.clone(),
         round_matchday: fixture.matchday,

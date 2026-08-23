@@ -88,7 +88,7 @@ its working tree untouched.
 | 3 | Snapshot/data pipeline | DONE |
 | 4 | Competition/calendar | DONE |
 | 5 | Core management systems | DONE |
-| 6 | Albion match engine v1 | NOT STARTED |
+| 6 | Albion match engine v1 | DONE |
 | 7 | AI managers | NOT STARTED |
 | 8 | Authoritative server | NOT STARTED |
 | 9 | Desktop client migration | NOT STARTED |
@@ -205,3 +205,19 @@ toggle_shortlist_internal_updates_known_player_state` (1 passed), and `cargo
 test -p ofm_core --test scenario_tests full_season_holds_invariants` (1 passed).
 The scenario test drives a human-controlled club through 365 daily turns and
 asserts gameplay invariants throughout the full season without database edits.
+
+Phase 6 completion evidence: the `engine` crate provides the possession/zone
+event chain, attribute and tactical/role effects, set pieces, cards, goalkeeper,
+fitness, substitutions, live commands and report invariants. `AlbionV1Simulator`
+now exposes versioned `MatchSimulator` and `LiveMatchSimulator` contracts with
+an explicit `MatchSeed`, canonical input/report fingerprints and no caller RNG.
+Its instant and untouched-live paths produce the identical replay fingerprint.
+Playable fixtures derive their seed from stable fixture identity for both
+instant simulation and live sessions, including knockout shootouts. The
+`ofm-sim-bench` calibration and benchmark CLI accepts 100,000 matches.
+
+Focused verification passes: `cargo test -p engine --lib simulator::tests`
+(4 passed), `cargo test -p engine --test simulation_tests` (50 passed),
+`cargo test -p engine --test live_match_tests` (60 passed), and `cargo test -p
+ofm_core match_seed::tests` (1 passed). A 100,000-match calibration benchmark
+was executed with `cargo run -p sim-bench -- --games 100000 --seed 42 --bench`.

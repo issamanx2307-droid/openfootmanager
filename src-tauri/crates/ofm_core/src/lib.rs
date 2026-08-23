@@ -20,6 +20,7 @@ pub mod group_stage;
 pub mod history_generation;
 pub mod job_offers;
 pub mod live_match_manager;
+pub mod match_seed;
 pub mod messages;
 pub mod national_team;
 pub mod nations;

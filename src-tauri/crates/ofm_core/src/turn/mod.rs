@@ -6,6 +6,7 @@ mod round_summary;
 use crate::board_objectives;
 use crate::game::Game;
 use crate::live_match_manager::{domain_to_engine_role, domain_to_engine_tactics};
+use crate::match_seed::fixture_seed;
 use crate::player_events;
 use crate::random_events;
 use crate::scouting;
@@ -16,6 +17,7 @@ use domain::league::FixtureStatus;
 use domain::player::Position as DomainPosition;
 use domain::stats::StatsState;
 use log::{debug, info};
+use rand::SeedableRng;
 
 // Re-export public items
 pub use news::generate_matchday_news;
@@ -524,7 +526,9 @@ where
     let home_data = build_engine_team(game, &home_team_id);
     let away_data = build_engine_team(game, &away_team_id);
     let config = engine::MatchConfig::default();
-    let mut report = engine::simulate(&home_data, &away_data, &config);
+    let fixture_seed = fixture_seed(&game.league.as_ref().unwrap().fixtures[idx]);
+    let mut rng = rand::rngs::StdRng::seed_from_u64(fixture_seed);
+    let mut report = engine::simulate_with_rng(&home_data, &away_data, &config, &mut rng);
     // A level knockout tie must produce a winner: resolve it with a simulated
     // shootout so the home side no longer advances by default on a draw.
     if is_knockout && report.home_goals == report.away_goals {
@@ -533,7 +537,7 @@ where
         let (home_pens, away_pens) = crate::national_team::simulate_shootout(
             home_strength,
             away_strength,
-            &mut rand::rng(),
+            &mut rng,
         );
         report.home_penalties = Some(home_pens);
         report.away_penalties = Some(away_pens);

@@ -3,6 +3,7 @@ pub mod engine;
 pub mod event;
 pub mod live_match;
 pub mod report;
+pub mod simulator;
 pub(crate) mod shared;
 pub mod types;
 
@@ -15,6 +16,10 @@ pub use live_match::{
     PenaltyShootoutSnapshot, SetPieceTakers, SubstitutionRecord, SubstitutionRules,
 };
 pub use report::{GoalDetail, GoalSource, MatchReport, PlayerMatchStats, TeamStats};
+pub use simulator::{
+    AlbionV1Simulator, LiveMatchSimulator, MATCH_ENGINE_VERSION, MatchInput, MatchSeed,
+    MatchSimulator, SeededLiveMatch, report_fingerprint,
+};
 pub use types::{
     BreakSpeed, CounterPressDuration, DefensiveLine, DefensiveShape, MarkingStyle, MatchConfig,
     PlayStyle, PlayerData, PlayerRole, Position, PressingIntensity, Side, TacticsBuildUpStyle,
