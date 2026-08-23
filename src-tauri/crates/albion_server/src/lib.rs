@@ -108,7 +108,7 @@ async fn version(State(state): State<AppState>) -> Json<VersionSet> {
     Json(state.0.lock().expect("career session lock poisoned").config.versions.clone())
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct JoinRequest {
     pub join_secret: String,
     pub manager_id: Uuid,
@@ -141,7 +141,7 @@ async fn join(
     Ok(Json(response))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReconnectRequest {
     pub reconnect_token: String,
     pub client_versions: VersionSet,
@@ -660,7 +660,9 @@ mod tests {
     use super::*;
     use albion_protocol::command::SetTacticsBody;
     use axum::body::Body;
+    use axum::body::to_bytes;
     use axum::http::Request;
+    use axum::http::header::CONTENT_TYPE;
     use chrono::{TimeZone, Utc};
     use domain::manager::Manager;
     use domain::team::Team;
@@ -778,6 +780,70 @@ mod tests {
                 .unwrap();
             assert_eq!(response.status(), StatusCode::NO_CONTENT, "{path}");
         }
+    }
+
+    #[tokio::test]
+    async fn http_join_assigns_two_distinct_clubs_and_rejects_a_duplicate_claim() {
+        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let club_a = Uuid::new_v4();
+        let club_b = Uuid::new_v4();
+        let manager_a = Uuid::new_v4();
+        let manager_b = Uuid::new_v4();
+        for request in [join_request(manager_a, club_a), join_request(manager_b, club_b)] {
+            let response = router(state.clone())
+                .oneshot(Request::post("/api/v1/session/join")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(serde_json::to_vec(&request).unwrap()))
+                    .unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            let joined: JoinResponse = serde_json::from_slice(&body).unwrap();
+            assert!(matches!(joined.slot, ManagerSlot::Host | ManagerSlot::Guest));
+        }
+        let duplicate = join_request(Uuid::new_v4(), club_a);
+        let response = router(state)
+            .oneshot(Request::post("/api/v1/session/join")
+                .header(CONTENT_TYPE, "application/json")
+                .body(Body::from(serde_json::to_vec(&duplicate).unwrap()))
+                .unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn reconnect_restores_the_original_manager_slot() {
+        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let manager_id = Uuid::new_v4();
+        let join = join_request(manager_id, Uuid::new_v4());
+        let response = router(state.clone())
+            .oneshot(Request::post("/api/v1/session/join")
+                .header(CONTENT_TYPE, "application/json")
+                .body(Body::from(serde_json::to_vec(&join).unwrap()))
+                .unwrap())
+            .await
+            .unwrap();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let joined: JoinResponse = serde_json::from_slice(&body).unwrap();
+        let reconnect = ReconnectRequest {
+            reconnect_token: joined.reconnect_token.clone(),
+            client_versions: CURRENT_VERSIONS.to_owned_set(),
+        };
+        let response = router(state)
+            .oneshot(Request::post("/api/v1/session/reconnect")
+                .header(CONTENT_TYPE, "application/json")
+                .body(Body::from(serde_json::to_vec(&reconnect).unwrap()))
+                .unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let restored: JoinResponse = serde_json::from_slice(&body).unwrap();
+        assert_eq!(restored.manager_id, manager_id);
+        assert_eq!(restored.slot, joined.slot);
+        assert_eq!(restored.reconnect_token, joined.reconnect_token);
     }
 
     #[test]
