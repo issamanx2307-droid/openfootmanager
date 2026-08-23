@@ -323,6 +323,7 @@ mod tests {
                 start_day: 10,
                 end_month: 9,
                 end_day: 1,
+                max_squad_size: Some(25),
             },
             TransferWindowRule {
                 name: "winter".to_string(),
@@ -330,6 +331,7 @@ mod tests {
                 start_day: 1,
                 end_month: 2,
                 end_day: 3,
+                max_squad_size: Some(25),
             },
         ];
 

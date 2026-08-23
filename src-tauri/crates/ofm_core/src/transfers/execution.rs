@@ -196,7 +196,19 @@ pub(super) fn transfer_buyer_can_register(game: &Game, buyer_team_id: &str, fee:
         return false;
     };
 
-    game.teams
+    let fits_registration = game
+        .transfer_windows
+        .iter()
+        .find_map(|window| window.max_squad_size)
+        .is_none_or(|limit| {
+            game.players
+                .iter()
+                .filter(|player| player.team_id.as_deref() == Some(buyer_team_id))
+                .count()
+                < limit as usize
+        });
+
+    fits_registration && game.teams
         .iter()
         .find(|team| team.id == buyer_team_id)
         .is_some_and(|team| team.finance >= fee_i64 && team.transfer_budget >= fee_i64)
@@ -210,6 +222,9 @@ pub(super) fn execute_transfer(
     from_team_id: &str,
     fee: u64,
 ) -> Result<(), String> {
+    if !transfer_buyer_can_register(game, to_team_id, fee) {
+        return Err("be.error.transfers.registrationLimitReached".to_string());
+    }
     let player_snapshot = game
         .players
         .iter()

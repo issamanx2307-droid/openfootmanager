@@ -72,6 +72,9 @@ pub struct TransferWindowRule {
     pub start_day: u8,
     pub end_month: u8,
     pub end_day: u8,
+    /// Registration limit for the domestic competition that owns this calendar.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_squad_size: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

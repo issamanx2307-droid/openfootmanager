@@ -563,6 +563,7 @@ mod tests {
             start_day: 10,
             end_month: 9,
             end_day: 1,
+            max_squad_size: Some(25),
         }];
 
         GamePersistenceWriter::write_game(&db, &game, "save-1", "Career").unwrap();

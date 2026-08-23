@@ -147,6 +147,7 @@ fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifes
                     start_day: window.start_day,
                     end_month: window.end_month,
                     end_day: window.end_day,
+                    max_squad_size: source.registration.as_ref().map(|rule| rule.max_squad_size),
                 }
             }).collect();
         }
@@ -2083,7 +2084,7 @@ mod tests {
         game.competitions = vec![league];
 
         let ruleset = albion_rules::load_from_yaml_str(
-            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    transfer_windows:\n      - name: summer\n        start_month: 6\n        start_day: 10\n        end_month: 9\n        end_day: 1\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
+            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    registration:\n      max_squad_size: 25\n    transfer_windows:\n      - name: summer\n        start_month: 6\n        start_day: 10\n        end_month: 9\n        end_day: 1\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
         )
         .expect("test ruleset should parse");
 
@@ -2095,6 +2096,7 @@ mod tests {
         assert_eq!(game.competitions[0].rules.max_substitution_windows, 2);
         assert_eq!(game.transfer_windows.len(), 1);
         assert_eq!(game.transfer_windows[0].end_month, 9);
+        assert_eq!(game.transfer_windows[0].max_squad_size, Some(25));
         assert!(!game.competitions[0]
             .rules
             .half_time_does_not_count_as_substitution_window);
