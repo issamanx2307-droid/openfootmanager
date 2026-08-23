@@ -630,13 +630,7 @@ fn regenerate_competitions_for_new_season(
     // Playoffs are one-season brackets. Qualification above has already read
     // their final winners, so discard them instead of regenerating last
     // season's entrants into a stale next-season competition.
-    let playoff_ids = league_playoff_ids(&game.competitions);
-    if !playoff_ids.is_empty() {
-        game.competitions
-            .retain(|competition| !playoff_ids.contains(&competition.id));
-        game.active_competition_ids
-            .retain(|competition_id| !playoff_ids.contains(competition_id));
-    }
+    retire_league_playoffs(game);
 
     apply_pyramid_promotion_relegation(&mut game.competitions);
 
@@ -748,6 +742,17 @@ fn league_playoff_ids(competitions: &[League]) -> std::collections::HashSet<Stri
             })
         })
         .collect()
+}
+
+fn retire_league_playoffs(game: &mut Game) {
+    let playoff_ids = league_playoff_ids(&game.competitions);
+    if playoff_ids.is_empty() {
+        return;
+    }
+    game.competitions
+        .retain(|competition| !playoff_ids.contains(&competition.id));
+    game.active_competition_ids
+        .retain(|competition_id| !playoff_ids.contains(competition_id));
 }
 
 /// Stage every playoff required by a completed league's berth rules. The
@@ -924,6 +929,7 @@ mod community_shield_tests {
             fixture.status = FixtureStatus::Completed;
         }
         game.competitions.push(league);
+        game.active_competition_ids = vec!["playoff-league".to_string()];
         game.competitions[1].fixtures[0].date = "2026-05-21".to_string();
         game.competitions[1].fixtures[0].status = FixtureStatus::Scheduled;
         game.competitions[1].fixtures[0].home_team_id = "three".to_string();
@@ -937,6 +943,9 @@ mod community_shield_tests {
         assert_ne!(playoff.fixtures[0].date, "2026-05-21", "the playoff cannot overlap the cup fixture");
         assert!(!is_season_complete(&game), "a pending playoff blocks rollover");
         assert_eq!(stage_pending_league_playoffs(&mut game), 0);
+        retire_league_playoffs(&mut game);
+        assert!(!game.competitions.iter().any(|competition| competition.id == "playoff-league-playoff-3-4"));
+        assert!(!game.active_competition_ids.iter().any(|id| id == "playoff-league-playoff-3-4"));
     }
 }
 
