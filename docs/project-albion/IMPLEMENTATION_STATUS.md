@@ -138,4 +138,13 @@ continues to protect the resulting per-career state.
 
 Phase 4 started: audit the existing generic league, fixture generation,
 promotion/relegation and season rollover paths; add the structural multi-season
-regression coverage before extending any missing competition formats.
+regression coverage before extending any missing competition formats. The first
+regression drives a three-tier pyramid through 20 seasons, asserting that every
+club belongs to exactly one tier and every regenerated fixture is valid. England's
+national cup is now represented as the FA Cup while retaining the generic
+knockout/calendar engine.
+
+Evidence: `cargo test -p ofm_core
+promotion::tests::twenty_structural_seasons_preserve_pyramid_membership_and_schedules`
+and `cargo test -p openfootmanager england_foundation_uses_the_fa_cup_identity
+--lib` pass.
