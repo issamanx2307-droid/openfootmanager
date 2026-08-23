@@ -44,6 +44,7 @@ const baseProps = {
   onStart: vi.fn(),
   onBack: vi.fn(),
   onClose: vi.fn(),
+  usingFplData: false,
 };
 
 const dbPackage: PackageInfo = {
@@ -99,6 +100,20 @@ describe("GenerationStep (WorldSelect)", () => {
     );
 
     expect(screen.getByText("generation.coverage")).toBeInTheDocument();
+    expect(screen.queryByText("worldSelect.historyDepth.label")).not.toBeInTheDocument();
+  });
+
+  it("shows the FPL baseline as the active reference world", () => {
+    render(
+      <GenerationStep
+        {...baseProps}
+        usingFplData
+        activePackages={[]}
+      />,
+    );
+
+    expect(screen.getByText("FPL Core Insights")).toBeInTheDocument();
+    expect(screen.getByText("worldSelect.historyMode.reference")).toBeInTheDocument();
     expect(screen.queryByText("worldSelect.historyDepth.label")).not.toBeInTheDocument();
   });
 });

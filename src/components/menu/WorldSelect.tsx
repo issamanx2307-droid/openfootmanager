@@ -105,6 +105,8 @@ interface GenerationStepProps {
   onClose: () => void;
   /** Pre-filtered active packages from MainMenu state. */
   activePackages: PackageInfo[];
+  /** A refreshed FPL baseline is used when no database package is active. */
+  usingFplData: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,11 +123,13 @@ export default function GenerationStep({
   onBack,
   onClose,
   activePackages,
+  usingFplData,
 }: GenerationStepProps) {
   const { t } = useTranslation();
   const historyDepthLabelId = useId();
 
   const hasActiveDatabases = activePackages.some((p) => p.packageType === "database");
+  const hasReferenceWorld = hasActiveDatabases || usingFplData;
 
   // Coverage totals across active database packages
   const dbPackages = activePackages.filter((p) => p.packageType === "database");
@@ -169,13 +173,13 @@ export default function GenerationStep({
             {startYear}
           </span>
           <span className="rounded-full bg-primary-500/10 px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">
-            {hasActiveDatabases
+            {hasReferenceWorld
               ? t("worldSelect.historyMode.reference")
               : t("worldSelect.historyMode.generated")}
           </span>
         </div>
         <p className="mt-2 text-xs uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-          {hasActiveDatabases
+          {hasReferenceWorld
             ? t(`worldSelect.summary.${startPhase}.reference`, { year: startYear, count: historyDepthYears })
             : t(`worldSelect.summary.${startPhase}.generated`, { year: startYear, count: historyDepthYears })}
         </p>
@@ -212,8 +216,20 @@ export default function GenerationStep({
         </div>
       )}
 
+      {usingFplData && !hasActiveDatabases && (
+        <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm dark:border-navy-600 dark:bg-navy-700/60">
+          <p className="font-heading font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 mb-2">
+            {t("generation.coverage")}
+          </p>
+          <span className="inline-flex items-center gap-1 text-[10px] font-heading uppercase tracking-wider rounded-full bg-primary-500/10 px-2 py-0.5 text-primary-600 dark:text-primary-300">
+            <Package className="w-2.5 h-2.5" />
+            FPL Core Insights
+          </span>
+        </div>
+      )}
+
       {/* History depth — only for random world */}
-      {!hasActiveDatabases && (
+      {!hasReferenceWorld && (
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-sm dark:border-navy-600 dark:bg-navy-700/60">
           <div className="flex items-start justify-between gap-3">
             <div>

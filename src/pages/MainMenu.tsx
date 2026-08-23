@@ -877,6 +877,7 @@ export default function MainMenu() {
                 onBack={() => setMenuState("packages")}
                 onClose={() => setMenuState("main")}
                 activePackages={installedPackages.filter((p) => activePackageIds.includes(p.id))}
+                usingFplData={fplWorldSource !== null && activePackageIds.length === 0}
               />
             </Suspense>
           )}
