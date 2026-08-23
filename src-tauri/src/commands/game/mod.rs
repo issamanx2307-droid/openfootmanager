@@ -153,6 +153,13 @@ fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifes
             competition.rules.half_time_does_not_count_as_substitution_window =
                 substitutions.half_time_does_not_count_as_window;
         }
+        if let Some(promotion) = &source.promotion {
+            competition.rules.promotion_automatic_slots = promotion.automatic_slots as u8;
+            competition.rules.promotion_playoff_slots = promotion.playoff_slots as u8;
+        }
+        if let Some(relegation) = &source.relegation {
+            competition.rules.relegation_automatic_slots = relegation.automatic_slots as u8;
+        }
         if source.id == "premier-league" {
             game.transfer_windows = source.transfer_windows.iter().map(|window| {
                 ofm_core::game::TransferWindowRule {
@@ -2169,7 +2176,7 @@ mod tests {
         game.competitions = vec![league];
 
         let ruleset = albion_rules::load_from_yaml_str(
-            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    registration:\n      max_squad_size: 25\n    transfer_windows:\n      - name: summer\n        start_month: 6\n        start_day: 10\n        end_month: 9\n        end_day: 1\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
+            "ruleset_id: england-test\nruleset_version: 7\nseason: '2026/27'\ncompetitions:\n  - id: premier-league\n    name: Premier League\n    format: league\n    participant_clubs: 20\n    promotion:\n      automatic_slots: 2\n      playoff_slots: 4\n      target_competition_id: championship\n    relegation:\n      automatic_slots: 3\n      target_competition_id: championship\n    registration:\n      max_squad_size: 25\n    transfer_windows:\n      - name: summer\n        start_month: 6\n        start_day: 10\n        end_month: 9\n        end_day: 1\n    substitutions:\n      max_substitutes: 4\n      max_windows: 2\n      half_time_does_not_count_as_window: false\n",
         )
         .expect("test ruleset should parse");
 
@@ -2179,6 +2186,9 @@ mod tests {
         assert_eq!(game.ruleset_version, Some(7));
         assert_eq!(game.competitions[0].rules.max_substitutes, 4);
         assert_eq!(game.competitions[0].rules.max_substitution_windows, 2);
+        assert_eq!(game.competitions[0].rules.promotion_automatic_slots, 2);
+        assert_eq!(game.competitions[0].rules.promotion_playoff_slots, 4);
+        assert_eq!(game.competitions[0].rules.relegation_automatic_slots, 3);
         assert_eq!(game.transfer_windows.len(), 1);
         assert_eq!(game.transfer_windows[0].end_month, 9);
         assert_eq!(game.transfer_windows[0].max_squad_size, Some(25));

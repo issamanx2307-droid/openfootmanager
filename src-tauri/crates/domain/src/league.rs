@@ -61,6 +61,17 @@ pub struct CompetitionRules {
     /// the in-play windows.
     #[serde(default)]
     pub half_time_does_not_count_as_substitution_window: bool,
+    /// Domestic clubs promoted automatically from the tier below. Zero means
+    /// the generic pyramid policy applies for legacy/generated competitions.
+    #[serde(default)]
+    pub promotion_automatic_slots: u8,
+    /// Additional finishers entering the promotion playoff.
+    #[serde(default)]
+    pub promotion_playoff_slots: u8,
+    /// Domestic clubs relegated automatically to the tier below. Zero means
+    /// the generic pyramid policy applies for legacy/generated competitions.
+    #[serde(default)]
+    pub relegation_automatic_slots: u8,
 }
 
 fn default_knockout_matches_per_day() -> u32 { 1 }
@@ -85,6 +96,9 @@ impl Default for CompetitionRules {
             max_substitutes: default_max_substitutes(),
             max_substitution_windows: default_max_substitution_windows(),
             half_time_does_not_count_as_substitution_window: true,
+            promotion_automatic_slots: 0,
+            promotion_playoff_slots: 0,
+            relegation_automatic_slots: 0,
         }
     }
 }
