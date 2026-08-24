@@ -10,11 +10,13 @@ export function EventFeed({
   snapshot,
   feedRef,
   playerJerseyMap,
+  showCommentary = true,
 }: {
   events: MatchEvent[];
   snapshot: MatchSnapshot;
   feedRef: React.RefObject<HTMLDivElement | null>;
   playerJerseyMap?: Map<string, number>;
+  showCommentary?: boolean;
 }) {
   function displayName(playerId: string | null): string {
     const name = getPlayerName(snapshot, playerId);
@@ -46,7 +48,7 @@ export function EventFeed({
               </span>
               <span className="text-lg flex-shrink-0">{display.icon}</span>
               <div className="flex-1 min-w-0">
-                {commentary ? (
+                {showCommentary && commentary ? (
                   <>
                     <div className="flex items-center gap-2">
                       <span

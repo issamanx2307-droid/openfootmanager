@@ -691,3 +691,9 @@ between each side's authoritative active outfield markers, so a confirmed
 formation or red-card shape change is easier to read without creating a new
 tactical state. The preference is stored in browser/Tauri settings only and
 never crosses the match command boundary.
+
+Match Centre UX update: the existing persisted commentary preference is now a
+live control in the Match Centre. When disabled, the event feed retains
+authoritative minute, team, event type and participant facts while omitting
+generated commentary prose. It is presentation-only and can be changed during
+a match without altering its event order or outcome.
