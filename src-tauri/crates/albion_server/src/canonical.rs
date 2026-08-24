@@ -98,8 +98,9 @@ impl CanonicalCareer {
             .collect::<Vec<_>>();
         let incoming_transfer_offers = self.game.players.iter()
             .filter(|player| player.team_id.as_deref() == Some(team_id.as_str()))
-            .flat_map(|player| player.transfer_offers.iter().filter_map(|offer| {
-                (offer.status == domain::player::TransferOfferStatus::Pending).then(|| {
+            .flat_map(|player| player.transfer_offers.iter()
+                .filter(|offer| offer.status == domain::player::TransferOfferStatus::Pending)
+                .map(|offer| {
                     let buyer_name = self.game.teams.iter()
                         .find(|candidate| candidate.id == offer.from_team_id)
                         .map(|candidate| candidate.name.clone())
@@ -110,8 +111,7 @@ impl CanonicalCareer {
                         "fromClub": buyer_name,
                         "fee": offer.fee,
                     })
-                })
-            }))
+                }))
             .collect::<Vec<_>>();
         let transfer_targets = self.game.players.iter()
             .filter(|player| player.transfer_listed && player.team_id.as_deref() != Some(team_id.as_str()) && !player.retired)
@@ -581,8 +581,7 @@ mod tests {
     fn manager_dashboard_is_a_narrow_club_view() {
         let (mut career, manager_id) = career();
         let team_id = career.game.teams[0].id.clone();
-        let mut competition = League::default();
-        competition.name = "Test League".into();
+        let mut competition = League { name: "Test League".into(), ..Default::default() };
         competition.fixtures.push(Fixture {
             id: Uuid::new_v4().to_string(), competition_id: "league".into(), matchday: 1,
             date: "2026-07-08".into(), home_team_id: team_id, away_team_id: Uuid::new_v4().to_string(),

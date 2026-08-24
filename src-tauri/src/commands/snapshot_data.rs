@@ -298,8 +298,7 @@ pub fn get_albion_snapshot_status(app: AppHandle) -> Result<AlbionSnapshotStatus
         world_database_path: path.is_file().then(|| path.to_string_lossy().to_string()),
         season: metadata
             .as_ref()
-            .map(|(season, _)| season.clone())
-            .flatten(),
+            .and_then(|(season, _)| season.clone()),
         snapshot_hash: metadata.map(|(_, hash)| hash),
     })
 }

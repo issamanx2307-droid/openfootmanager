@@ -31,17 +31,17 @@ fn every_command_variant_round_trips() {
     }));
     roundtrip_command(Command::SubmitTransferBid(SubmitTransferBidBody {
         player_id: "fpl-99".into(),
-        upfront_minor: 2_500_000_00,
-        installments_minor: vec![500_000_00, 500_000_00],
+        upfront_minor: 250_000_000,
+        installments_minor: vec![50_000_000, 50_000_000],
     }));
     roundtrip_command(Command::RespondTransferOffer(RespondTransferOfferBody {
         offer_id: "offer-99".into(),
         response: TransferOfferResponse::Counter,
-        counter_upfront_minor: Some(3_000_000_00),
+        counter_upfront_minor: Some(300_000_000),
     }));
     roundtrip_command(Command::SubmitContractOffer(SubmitContractOfferBody {
         player_id: "fpl-99".into(),
-        weekly_wage_minor: 125_000_00,
+        weekly_wage_minor: 12_500_000,
         contract_end_year: 2030,
         contract_end_month: 6,
     }));

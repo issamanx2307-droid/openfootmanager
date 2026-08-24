@@ -211,26 +211,24 @@ pub fn validate(manifest: &RulesetManifest) -> Result<(), Vec<ValidationError>> 
             }
         }
 
-        if let Some(qual) = &comp.qualification {
-            if qual.source_ruleset_id.is_none()
-                && !known_ids.contains(qual.source_competition_id.as_str())
-            {
-                errors.push(ValidationError::UnknownQualificationSource {
-                    competition_id: comp.id.clone(),
-                    source_id: qual.source_competition_id.clone(),
-                });
-            }
+        if let Some(qual) = &comp.qualification
+            && qual.source_ruleset_id.is_none()
+            && !known_ids.contains(qual.source_competition_id.as_str())
+        {
+            errors.push(ValidationError::UnknownQualificationSource {
+                competition_id: comp.id.clone(),
+                source_id: qual.source_competition_id.clone(),
+            });
         }
 
-        if let Some(substitutions) = &comp.substitutions {
-            if substitutions.max_substitutes == 0
+        if let Some(substitutions) = &comp.substitutions
+            && (substitutions.max_substitutes == 0
                 || substitutions.max_windows == 0
-                || substitutions.max_windows > substitutions.max_substitutes
-            {
-                errors.push(ValidationError::InvalidSubstitutionConfig {
-                    competition_id: comp.id.clone(),
-                });
-            }
+                || substitutions.max_windows > substitutions.max_substitutes)
+        {
+            errors.push(ValidationError::InvalidSubstitutionConfig {
+                competition_id: comp.id.clone(),
+            });
         }
 
         if matches!(

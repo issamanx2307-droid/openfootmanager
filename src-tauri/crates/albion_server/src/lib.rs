@@ -378,10 +378,10 @@ impl CareerSession {
         {
             return Err(ApiError::protocol(ErrorCode::AuthInvalid));
         }
-        if let Some(manager) = self.claimed_clubs.get(&request.club_id) {
-            if *manager != request.manager_id {
-                return Err(ApiError::protocol(ErrorCode::ClubAlreadyControlled));
-            }
+        if let Some(manager) = self.claimed_clubs.get(&request.club_id)
+            && *manager != request.manager_id
+        {
+            return Err(ApiError::protocol(ErrorCode::ClubAlreadyControlled));
         }
         if self
             .claimed_clubs
@@ -970,8 +970,7 @@ mod tests {
             live_player(format!("b-{index}"), &club_b, position.clone()),
         ]));
         let fixture_id = Uuid::new_v4();
-        let mut league = League::default();
-        league.id = "test-league".into();
+        let mut league = League { id: "test-league".into(), ..Default::default() };
         league.fixtures.push(Fixture {
             id: fixture_id.to_string(),
             competition_id: league.id.clone(),
