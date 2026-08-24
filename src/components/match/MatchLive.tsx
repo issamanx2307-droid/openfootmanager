@@ -87,7 +87,7 @@ export default function MatchLive({
   const match2dCopy = {
     title: t("match.twoD.title"), key: t("match.twoD.key"), extended: t("match.twoD.extended"), full: t("match.twoD.full"),
     showNames: t("match.twoD.showNames"), hideNames: t("match.twoD.hideNames"), showRoles: t("match.twoD.showRoles"), hideRoles: t("match.twoD.hideRoles"), showShape: t("match.twoD.showShape"), hideShape: t("match.twoD.hideShape"), showCommentary: t("match.twoD.showCommentary"), hideCommentary: t("match.twoD.hideCommentary"), replayLatest: t("match.twoD.replayLatest"), stopReplay: t("match.twoD.stopReplay"),
-    highlights: t("match.twoD.highlights"), fullPitch: t("match.twoD.fullPitch"), followBall: t("match.twoD.followBall"), zoom: t("match.twoD.zoom"),
+    highlights: t("match.twoD.highlights"), fullPitch: t("match.twoD.fullPitch"), followBall: t("match.twoD.followBall"), tactical: t("match.twoD.tactical"), zoom: t("match.twoD.zoom"),
     unavailable: t("match.twoD.unavailable"), pitch: t("match.twoD.pitch"),
   };
   const replayableEvents = importantEvents.filter((event) => ["Goal", "PenaltyGoal", "PenaltyMiss", "ShotOnTarget", "ShotSaved", "RedCard", "SecondYellow"].includes(event.event_type));
