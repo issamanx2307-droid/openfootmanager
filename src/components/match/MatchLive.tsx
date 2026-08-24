@@ -9,6 +9,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { EventFeed, MatchStats, Lineups } from "./MatchPanels";
 import MatchScreenLayout from "./MatchScreenLayout";
 import { SubPanel } from "./SubPanel";
+import Match2DRenderer from "../match2d/Match2DRenderer";
 import {
   Play, Pause, FastForward, SkipForward,
   Clock, Users, BarChart3, MessageSquare, RefreshCw,
@@ -66,6 +67,7 @@ export default function MatchLive({
   }, [gameState.players]);
 
   const isFinished = snapshot.phase === "Finished";
+  const rendererSpeed: 1 | 2 | 4 = speed === "fast" ? 4 : speed === "slow" ? 1 : 2;
 
   // Reads only `lastResult` for phase transitions, which is sound because step_many stops on
   // entering any phase that needs the manager — so a half time, shootout or finish is always the
@@ -289,6 +291,16 @@ export default function MatchLive({
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel: Event Feed + Stats */}
         <div className="flex-1 flex flex-col">
+          <section className="h-[min(46vh,34rem)] min-h-80 border-b border-gray-200 bg-emerald-950 dark:border-navy-700">
+            <Match2DRenderer
+              snapshot={snapshot}
+              homeColor={homeTeamColor}
+              awayColor={awayTeamColor}
+              speed={rendererSpeed}
+              highlightMode="full"
+              reducedMotion={!isRunning || speed === "paused"}
+            />
+          </section>
           <div className="flex bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-700 transition-colors duration-300">
             {([
               { id: "events" as ActivePanel, label: t('match.events'), icon: <MessageSquare className="w-4 h-4" /> },
