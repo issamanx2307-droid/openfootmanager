@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { MatchEvent, MatchSnapshot } from "../match/types";
-import { presentationFrame } from "./presentation";
+import { playerVisualStatus, presentationFrame } from "./presentation";
 import { MATCH_2D_CONFIG, rendererDebugEnabled, type CameraMode } from "./config";
 import type { HighlightMode, PitchPoint, PresentationPlayer } from "./types";
 
@@ -76,6 +76,8 @@ function drawPlayer(
   showNames: boolean,
   highlighted: boolean,
   markerLabel: string,
+  yellowCards: number,
+  injured: boolean,
 ): void {
   const [x, y] = toCanvas(presentationPlayer.point, width, height);
   const radius = Math.max(9, Math.min(width, height) * 0.026);
@@ -109,6 +111,28 @@ function drawPlayer(
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillText(markerLabel, x, y + 0.5);
+  if (yellowCards > 0) {
+    context.fillStyle = "#facc15";
+    context.strokeStyle = "#111827";
+    context.lineWidth = 1;
+    context.fillRect(x + radius * 0.55, y - radius * 1.15, radius * 0.52, radius * 0.72);
+    context.strokeRect(x + radius * 0.55, y - radius * 1.15, radius * 0.52, radius * 0.72);
+    if (yellowCards > 1) {
+      context.fillStyle = "#ffffff";
+      context.font = `bold ${Math.max(8, radius * 0.65)}px Inter, sans-serif`;
+      context.fillText("2", x + radius * 0.81, y - radius * 0.79);
+    }
+  }
+  if (injured) {
+    context.strokeStyle = "#f97316";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(x - radius * 0.35, y + radius * 1.15);
+    context.lineTo(x + radius * 0.35, y + radius * 1.15);
+    context.moveTo(x, y + radius * 0.8);
+    context.lineTo(x, y + radius * 1.5);
+    context.stroke();
+  }
   if (showNames) {
     context.font = `${Math.max(9, radius * 0.75)}px Inter, sans-serif`;
     context.fillStyle = "#f8fafc";
@@ -186,6 +210,11 @@ export default function Match2DRenderer({
       let awayMarkerNumber = 0;
       frame.players.forEach((player) => {
         const fallbackNumber = player.side === "Home" ? ++homeMarkerNumber : ++awayMarkerNumber;
+        const status = playerVisualStatus(
+          player.id,
+          player.side === "Home" ? snapshot.home_yellows : snapshot.away_yellows,
+          snapshot.events,
+        );
         drawPlayer(
           context,
           player,
@@ -195,6 +224,8 @@ export default function Match2DRenderer({
           showNames,
           player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
           String(playerNumbers?.[player.id] ?? fallbackNumber),
+          status.yellowCards,
+          status.injured,
         );
       });
       const [ballX, ballY] = toCanvas(frame.ball, rect.width, rect.height);

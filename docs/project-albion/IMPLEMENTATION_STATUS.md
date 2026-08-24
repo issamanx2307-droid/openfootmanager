@@ -583,6 +583,12 @@ acceptance scenario in `10_2D_ENHANCED_MATCH_RENDERER.md` still remains in
 progress; in particular, visual QA across two browser/desktop clients and the
 developer diagnostics overlay are not yet accepted as complete.
 
+2D Enhanced Match Renderer update: player markers now expose authoritative
+yellow-card and injury state with a card badge and a non-colour medical cross.
+The renderer continues to remove sent-off players from the resolved formation;
+these visual states are derived from the snapshot/event stream and cannot
+modify match state.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new

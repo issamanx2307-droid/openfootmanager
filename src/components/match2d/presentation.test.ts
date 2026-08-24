@@ -5,6 +5,7 @@ import {
   compilePresentationTimeline,
   filterPresentationTimeline,
   presentationFrame,
+  playerVisualStatus,
   resolveTeamPositions,
   zonePoint,
 } from "./presentation";
@@ -109,5 +110,12 @@ describe("2D match presentation", () => {
     const mid = presentationFrame(input, 280);
     expect(mid.players.find((item) => item.id === "runner")?.point).not.toEqual(start.players.find((item) => item.id === "runner")?.point);
     expect(mid.players.find((item) => item.id === "gk")?.point).toEqual(start.players.find((item) => item.id === "gk")?.point);
+  });
+
+  it("derives card and injury badges from authoritative snapshot facts", () => {
+    const events = [event(64, "Injury", "Home")];
+    events[0].player_id = "runner";
+    expect(playerVisualStatus("runner", { runner: 1 }, events)).toEqual({ yellowCards: 1, injured: true });
+    expect(playerVisualStatus("other", { runner: 1 }, events)).toEqual({ yellowCards: 0, injured: false });
   });
 });

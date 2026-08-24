@@ -15,6 +15,12 @@ export type PresentationPlayer = {
   sentOff: boolean;
 };
 
+/** Visual-only status badges derived from the authoritative snapshot. */
+export type PresentationPlayerStatus = {
+  yellowCards: number;
+  injured: boolean;
+};
+
 export type PresentationClip = {
   clipId: string;
   event: MatchEvent;

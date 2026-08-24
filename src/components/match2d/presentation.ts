@@ -7,6 +7,7 @@ import type {
   PitchPoint,
   PresentationClip,
   PresentationPlayer,
+  PresentationPlayerStatus,
   PresentationSide,
 } from "./types";
 
@@ -83,6 +84,22 @@ function moveTowards(from: PitchPoint, to: PitchPoint, amount: number): PitchPoi
   return {
     x: from.x + (to.x - from.x) * amount,
     y: from.y + (to.y - from.y) * amount,
+  };
+}
+
+/**
+ * Cards and injury events are already authoritative snapshot facts.  The
+ * renderer only converts them into marker badges; it never changes who is
+ * available or on the pitch.
+ */
+export function playerVisualStatus(
+  playerId: string,
+  yellowCards: Readonly<Record<string, number>>,
+  events: readonly MatchEvent[],
+): PresentationPlayerStatus {
+  return {
+    yellowCards: yellowCards[playerId] ?? 0,
+    injured: events.some((event) => event.event_type === "Injury" && event.player_id === playerId),
   };
 }
 
