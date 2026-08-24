@@ -196,25 +196,23 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
 }
 
 async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id: Uuid) {
-    let hello = {
+    let initial_events = {
         let session = state.session.lock().expect("career session lock poisoned");
-        ServerEvent::Hello(HelloBody {
-            career_id: session.config.career_id,
-            server_versions: session.config.versions.clone(),
-            current_revision: session.revision,
-        })
+        let mut events = vec![ServerEvent::Hello(HelloBody {
+                career_id: session.config.career_id,
+                server_versions: session.config.versions.clone(),
+                current_revision: session.revision,
+            })];
+        if let Some(view) = session.manager_dashboard_event(manager_id) {
+            events.push(view);
+        }
+        events.extend(session.live_reconnect_events(manager_id));
+        events
     };
-    if send_event(socket, hello).await.is_err() {
-        return;
-    }
-    let manager_view = {
-        let session = state.session.lock().expect("career session lock poisoned");
-        session.manager_dashboard_event(manager_id)
-    };
-    if let Some(view) = manager_view
-        && send_event(socket, view).await.is_err()
-    {
-        return;
+    for event in initial_events {
+        if send_event(socket, event).await.is_err() {
+            return;
+        }
     }
 
     let mut live_tick = tokio::time::interval(Duration::from_millis(500));
@@ -287,6 +285,7 @@ struct PersistedClaims {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ActiveLiveMatch {
+    fixture_id: Uuid,
     session: LiveMatchSession,
     next_event_sequence: u64,
 }
@@ -578,6 +577,35 @@ impl CareerSession {
         }))
     }
 
+    fn live_reconnect_events(&self, manager_id: Uuid) -> Vec<ServerEvent> {
+        self.live_matches.iter().filter_map(|(match_id, active)| {
+            let home_club_id = Uuid::parse_str(&active.session.home_team_id).ok()?;
+            let away_club_id = Uuid::parse_str(&active.session.away_team_id).ok()?;
+            let controls_match = [home_club_id, away_club_id]
+                .into_iter()
+                .any(|club_id| self.claimed_clubs.get(&club_id) == Some(&manager_id));
+            if !controls_match {
+                return None;
+            }
+            let snapshot = active.session.snapshot();
+            Some(vec![
+                ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
+                    match_id: *match_id,
+                    fixture_id: active.fixture_id,
+                    home_club_id,
+                    away_club_id,
+                }),
+                ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
+                    match_id: *match_id,
+                    phase: format!("{:?}", snapshot.phase),
+                    match_second: u32::from(snapshot.current_minute) * 60,
+                    home_score: snapshot.home_score,
+                    away_score: snapshot.away_score,
+                }),
+            ])
+        }).flatten().collect()
+    }
+
     fn apply_live_command(
         &mut self,
         manager_id: Uuid,
@@ -667,7 +695,11 @@ impl CareerSession {
                 let match_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture_id.as_bytes());
                 match career.open_live_match(fixture_id, &controlled_clubs) {
                     Ok(session) => {
-                        self.live_matches.insert(match_id, ActiveLiveMatch { session, next_event_sequence: 1 });
+                        self.live_matches.insert(match_id, ActiveLiveMatch {
+                            fixture_id,
+                            session,
+                            next_event_sequence: 1,
+                        });
                         vec![ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
                             match_id,
                             fixture_id,
@@ -1071,6 +1103,10 @@ mod tests {
         assert_eq!(restored.current_minute, before.current_minute);
         assert_eq!(restored.home_score, before.home_score);
         assert_eq!(restored.away_score, before.away_score);
+        let replay = restarted.live_reconnect_events(manager_a);
+        assert!(replay.iter().any(|event| matches!(event, ServerEvent::MatchOpened(body) if body.match_id == match_id)));
+        assert!(replay.iter().any(|event| matches!(event, ServerEvent::MatchState(body)
+            if body.match_id == match_id && body.match_second == u32::from(before.current_minute) * 60)));
     }
 
     #[tokio::test]

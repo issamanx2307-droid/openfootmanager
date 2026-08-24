@@ -398,6 +398,11 @@ addition to score/time state, retaining a short canonical event feed with
 polite assistive-technology announcements. This makes the streamed server
 event chain visible to the player rather than leaving it transport-only.
 
+Phase 9 update: after WebSocket reconnect, the server now replays
+`MatchOpened` and the current `MatchState` for each live fixture controlled by
+that manager. This lets the lobby re-enter the canonical live-match view after
+a server restart without retaining a client-side match clock or match ID.
+
 Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin
