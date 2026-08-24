@@ -514,3 +514,20 @@ of transfer-listed players only (identity, position and known market value),
 excluding hidden attributes. The lobby can submit a whole-currency bid through
 `SubmitTransferBid`; it converts the displayed amount to protocol minor units
 and leaves budget/window/negotiation validation authoritative on the server.
+
+## Phase 9 release-slice decision (2026-08-24)
+
+Phase 9 is accepted for the **authoritative private multiplayer core loop**,
+not as a claim that every legacy single-player Tauri screen has been migrated.
+The accepted loop is: host or join a career, claim a club, reconnect, pass the
+Ready barrier, inspect the server-owned club/dashboard/inbox/squad/fixture and
+finances, set tactics/training/starting XI, submit or answer transfer activity,
+and play the server-owned live match. All mutations in that loop cross the
+authenticated, revisioned server command boundary.
+
+The legacy dashboard's scouting, medical, staff, profiles, competitions,
+full-schedule, match-preview and post-match modules remain local single-player
+surfaces. They are explicitly deferred follow-up migration work, rather than
+silently being treated as server-authoritative multiplayer features. This scope
+decision permits Phase 10 validation to concentrate on the accepted core loop
+in English and Thai.
