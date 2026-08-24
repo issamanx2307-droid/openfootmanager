@@ -502,3 +502,9 @@ Phase 10 update: the private-play lobby now announces connection and command
 status through an atomic polite live region. Training intensity has a textual
 range value, while every starting-XI checkbox describes the player's condition
 or injury state in addition to its visible non-colour indicator.
+
+Phase 9 update: the canonical dashboard now exposes a narrow transfer market
+of transfer-listed players only (identity, position and known market value),
+excluding hidden attributes. The lobby can submit a whole-currency bid through
+`SubmitTransferBid`; it converts the displayed amount to protocol minor units
+and leaves budget/window/negotiation validation authoritative on the server.
