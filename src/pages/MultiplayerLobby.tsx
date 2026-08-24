@@ -7,6 +7,7 @@ import {
   AlbionServerClient,
   clearAlbionSession,
   formatAlbionLiveEvent,
+  formatAlbionMatchPhase,
   formatAlbionProtocolError,
   loadAlbionSession,
   saveAlbionSession,
@@ -483,7 +484,7 @@ export default function MultiplayerLobby() {
         </fieldset>
         {livePresentation.matchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
-          <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {livePresentation.phase ?? ""}</p>
+          <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {formatAlbionMatchPhase(livePresentation.phase, thai)}</p>
           {livePresentation.snapshot && <div aria-label={copy.possession} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs">
             <span className="font-semibold text-emerald-300">{homePossession.toFixed(0)}%</span>
             <div className="flex h-2 overflow-hidden rounded bg-navy-700" aria-hidden="true">

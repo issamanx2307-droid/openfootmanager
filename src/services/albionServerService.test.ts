@@ -4,6 +4,7 @@ import {
   applyAlbionServerEvent,
   clearAlbionSession,
   formatAlbionLiveEvent,
+  formatAlbionMatchPhase,
   formatAlbionProtocolError,
   loadAlbionSession,
   saveAlbionSession,
@@ -39,7 +40,15 @@ describe("formatAlbionLiveEvent", () => {
   it("renders canonical event facts in English and Thai", () => {
     const event = { minute: 72, event_type: "Goal", side: "Home" };
     expect(formatAlbionLiveEvent(event, false)).toBe("72′ Goal · Home");
-    expect(formatAlbionLiveEvent(event, true)).toBe("72′ ประตู · Home");
+    expect(formatAlbionLiveEvent(event, true)).toBe("72′ ประตู · เหย้า");
+    expect(formatAlbionLiveEvent({ minute: 3, event_type: "Unexpected", side: "Unknown" }, true)).toBe("3′ เหตุการณ์การแข่งขัน");
+  });
+});
+
+describe("formatAlbionMatchPhase", () => {
+  it("never displays raw protocol phase names to Thai or English players", () => {
+    expect(formatAlbionMatchPhase("ExtraTimeHalfTime", true)).toBe("พักต่อเวลาพิเศษ");
+    expect(formatAlbionMatchPhase("Unexpected", false)).toBe("Match in progress");
   });
 });
 

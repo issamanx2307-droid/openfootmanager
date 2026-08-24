@@ -523,7 +523,7 @@ export default function MatchLive({
                       type="button"
                       onClick={() => setReplayEvent(evt)}
                       className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:hover:bg-navy-700"
-                      aria-label={`${evt.minute}' ${evt.event_type}`}
+                      aria-label={`${evt.minute}' ${getEventTypeLabel(evt.event_type, t)}`}
                     >
                       <span className="text-gray-600 dark:text-gray-500 tabular-nums w-6 text-right font-heading">{evt.minute}'</span>
                       <span>{display.icon}</span>

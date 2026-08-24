@@ -79,6 +79,25 @@ const LIVE_EVENT_LABELS: Record<string, { en: string; th: string }> = {
   FullTime: { en: "Full time", th: "จบการแข่งขัน" }, KickOff: { en: "Kick-off", th: "เริ่มการแข่งขัน" },
 };
 
+const MATCH_PHASE_LABELS: Record<string, { en: string; th: string }> = {
+  PreKickOff: { en: "Pre-match", th: "ก่อนการแข่งขัน" },
+  FirstHalf: { en: "First half", th: "ครึ่งแรก" },
+  HalfTime: { en: "Half time", th: "พักครึ่ง" },
+  SecondHalf: { en: "Second half", th: "ครึ่งหลัง" },
+  FullTime: { en: "Full time", th: "จบการแข่งขัน" },
+  ExtraTimeFirstHalf: { en: "Extra time · first half", th: "ต่อเวลาพิเศษ · ครึ่งแรก" },
+  ExtraTimeHalfTime: { en: "Extra time half time", th: "พักต่อเวลาพิเศษ" },
+  ExtraTimeSecondHalf: { en: "Extra time · second half", th: "ต่อเวลาพิเศษ · ครึ่งหลัง" },
+  ExtraTimeEnd: { en: "End of extra time", th: "จบต่อเวลาพิเศษ" },
+  PenaltyShootout: { en: "Penalty shootout", th: "ดวลจุดโทษ" },
+  Finished: { en: "Final", th: "สิ้นสุด" },
+};
+
+const MATCH_SIDE_LABELS: Record<string, { en: string; th: string }> = {
+  Home: { en: "Home", th: "เหย้า" },
+  Away: { en: "Away", th: "เยือน" },
+};
+
 const ERROR_LABELS: Record<string, { en: string; th: string }> = {
   AUTH_INVALID: { en: "You cannot make that change for this club.", th: "คุณไม่มีสิทธิ์เปลี่ยนแปลงสโมสรนี้" },
   PROTOCOL_INCOMPATIBLE: { en: "Your game version is incompatible with this host.", th: "เวอร์ชันเกมของคุณไม่ตรงกับโฮสต์" },
@@ -106,10 +125,16 @@ export function formatAlbionLiveEvent(event: unknown, thai: boolean): string {
   if (!event || typeof event !== "object") return thai ? "เหตุการณ์การแข่งขัน" : "Match event";
   const record = event as Record<string, unknown>;
   const minute = typeof record.minute === "number" ? `${record.minute}′ ` : "";
-  const type = typeof record.event_type === "string" ? record.event_type : "Match event";
-  const side = typeof record.side === "string" ? ` · ${record.side}` : "";
-  const label = LIVE_EVENT_LABELS[type]?.[thai ? "th" : "en"] ?? type;
-  return `${minute}${label}${side}`;
+  const type = typeof record.event_type === "string" ? record.event_type : "";
+  const side = typeof record.side === "string" ? MATCH_SIDE_LABELS[record.side]?.[thai ? "th" : "en"] : undefined;
+  const label = LIVE_EVENT_LABELS[type]?.[thai ? "th" : "en"] ?? (thai ? "เหตุการณ์การแข่งขัน" : "Match event");
+  return `${minute}${label}${side ? ` · ${side}` : ""}`;
+}
+
+/** Localizes stable server phase codes without displaying protocol names to players. */
+export function formatAlbionMatchPhase(phase: unknown, thai: boolean): string {
+  const code = typeof phase === "string" ? phase : "";
+  return MATCH_PHASE_LABELS[code]?.[thai ? "th" : "en"] ?? (thai ? "กำลังแข่งขัน" : "Match in progress");
 }
 
 export function applyAlbionServerEvent(
