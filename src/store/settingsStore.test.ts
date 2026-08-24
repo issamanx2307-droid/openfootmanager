@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   match_camera_mode: "full",
   match_highlight_mode: "full",
   show_match_player_names: false,
+  show_match_role_labels: false,
 } as const;
 
 const SUPPORTED_CURRENCIES = [
@@ -162,12 +163,14 @@ describe("useSettingsStore", () => {
       match_camera_mode: "follow-ball",
       match_highlight_mode: "key",
       show_match_player_names: true,
+      show_match_role_labels: true,
     });
 
     expect(useSettingsStore.getState().settings).toMatchObject({
       match_camera_mode: "follow-ball",
       match_highlight_mode: "key",
       show_match_player_names: true,
+      show_match_role_labels: true,
       match_speed: "normal",
     });
   });

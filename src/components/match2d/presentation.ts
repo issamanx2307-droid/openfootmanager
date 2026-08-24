@@ -37,6 +37,25 @@ const KNOWN_EVENT_TYPES = new Set([
 ]);
 const reportedUnknownEventTypes = new Set<string>();
 
+const ROLE_ABBREVIATIONS: Readonly<Record<string, string>> = {
+  Goalkeeper: "GK",
+  SweeperKeeper: "SK",
+  CentreBack: "CB",
+  FullBack: "FB",
+  WingBack: "WB",
+  DefensiveMidfielder: "DM",
+  CentralMidfielder: "CM",
+  AttackingMidfielder: "AM",
+  Winger: "WG",
+  InsideForward: "IF",
+  TargetForward: "TF",
+  CompleteForward: "CF",
+};
+
+export function roleAbbreviation(role: string): string {
+  return ROLE_ABBREVIATIONS[role] ?? role.replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
+}
+
 function clamp(value: number): number {
   return Math.max(PITCH_MARGIN, Math.min(1 - PITCH_MARGIN, value));
 }

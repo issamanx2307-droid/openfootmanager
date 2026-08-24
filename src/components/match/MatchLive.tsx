@@ -52,6 +52,7 @@ export default function MatchLive({
   const [showSubPanel, setShowSubPanel] = useState(false);
   const [highlightMode, setHighlightMode] = useState<HighlightMode>(settings.match_highlight_mode);
   const [showPlayerNames, setShowPlayerNames] = useState(settings.show_match_player_names);
+  const [showRoleLabels, setShowRoleLabels] = useState(settings.show_match_role_labels);
   const [replayEvent, setReplayEvent] = useState<MatchEvent | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>(settings.match_camera_mode);
   const [cameraZoom, setCameraZoom] = useState(1);
@@ -79,7 +80,7 @@ export default function MatchLive({
   const rendererSpeed: 1 | 2 | 4 = speed === "fast" ? 4 : speed === "slow" ? 1 : 2;
   const match2dCopy = {
     title: t("match.twoD.title"), key: t("match.twoD.key"), extended: t("match.twoD.extended"), full: t("match.twoD.full"),
-    showNames: t("match.twoD.showNames"), hideNames: t("match.twoD.hideNames"), replayLatest: t("match.twoD.replayLatest"), stopReplay: t("match.twoD.stopReplay"),
+    showNames: t("match.twoD.showNames"), hideNames: t("match.twoD.hideNames"), showRoles: t("match.twoD.showRoles"), hideRoles: t("match.twoD.hideRoles"), replayLatest: t("match.twoD.replayLatest"), stopReplay: t("match.twoD.stopReplay"),
     highlights: t("match.twoD.highlights"), fullPitch: t("match.twoD.fullPitch"), followBall: t("match.twoD.followBall"), zoom: t("match.twoD.zoom"),
     unavailable: t("match.twoD.unavailable"), pitch: t("match.twoD.pitch"),
   };
@@ -319,6 +320,7 @@ export default function MatchLive({
               highlightMode={highlightMode}
               reducedMotion={settings.reduced_motion || ((!isRunning || speed === "paused") && !replayEvent)}
               showNames={showPlayerNames}
+              showRoleLabels={showRoleLabels}
               replayEvent={replayEvent}
               cameraMode={cameraMode}
               zoom={cameraZoom}
@@ -424,6 +426,18 @@ export default function MatchLive({
               aria-pressed={showPlayerNames}
             >
               {showPlayerNames ? match2dCopy.hideNames : match2dCopy.showNames}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !showRoleLabels;
+                setShowRoleLabels(next);
+                void savePresentationPreference({ show_match_role_labels: next });
+              }}
+              className="rounded bg-gray-100 px-2 py-1.5 text-left text-xs text-gray-700 dark:bg-navy-700 dark:text-gray-200"
+              aria-pressed={showRoleLabels}
+            >
+              {showRoleLabels ? match2dCopy.hideRoles : match2dCopy.showRoles}
             </button>
             {replayEvent ? (
               <button type="button" onClick={() => setReplayEvent(null)} className="rounded bg-accent-500 px-2 py-1.5 text-left text-xs font-semibold text-white">

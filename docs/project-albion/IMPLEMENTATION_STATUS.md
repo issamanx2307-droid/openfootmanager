@@ -589,6 +589,12 @@ The renderer continues to remove sent-off players from the resolved formation;
 these visual states are derived from the snapshot/event stream and cannot
 modify match state.
 
+2D Enhanced Match Renderer update: role abbreviations can now be toggled in
+the Match Centre and persist as a local presentation preference alongside
+camera, highlight and player-name choices.  The renderer derives concise role
+labels from the existing snapshot player role; it does not create a tactical
+state or send a command to the match engine.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new

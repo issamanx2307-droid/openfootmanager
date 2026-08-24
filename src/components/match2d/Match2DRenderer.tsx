@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { MatchEvent, MatchSnapshot } from "../match/types";
-import { playerVisualStatus, presentationFrame } from "./presentation";
+import { playerVisualStatus, presentationFrame, roleAbbreviation } from "./presentation";
 import { MATCH_2D_CONFIG, rendererDebugEnabled, type CameraMode } from "./config";
 import type { HighlightMode, PitchPoint, PresentationPlayer } from "./types";
 
@@ -12,6 +12,7 @@ type Match2DRendererProps = {
   highlightMode: HighlightMode;
   reducedMotion?: boolean;
   showNames?: boolean;
+  showRoleLabels?: boolean;
   /** A viewer-selected server event. This changes presentation playback only. */
   replayEvent?: MatchEvent | null;
   cameraMode?: CameraMode;
@@ -74,6 +75,7 @@ function drawPlayer(
   height: number,
   color: string,
   showNames: boolean,
+  showRoleLabels: boolean,
   highlighted: boolean,
   markerLabel: string,
   yellowCards: number,
@@ -139,6 +141,11 @@ function drawPlayer(
     const names = presentationPlayer.player.name.split(" ");
     context.fillText(names[names.length - 1] ?? presentationPlayer.player.name, x, y - radius - 8);
   }
+  if (showRoleLabels) {
+    context.font = `bold ${Math.max(8, radius * 0.62)}px Inter, sans-serif`;
+    context.fillStyle = "#f8fafc";
+    context.fillText(roleAbbreviation(presentationPlayer.player.role), x, y + radius + 9);
+  }
   context.restore();
 }
 
@@ -150,6 +157,7 @@ export default function Match2DRenderer({
   highlightMode,
   reducedMotion = false,
   showNames = false,
+  showRoleLabels = false,
   replayEvent = null,
   cameraMode = "full",
   zoom = MATCH_2D_CONFIG.camera.minZoom,
@@ -222,6 +230,7 @@ export default function Match2DRenderer({
           rect.height,
           player.side === "Home" ? homeColor : awayColor,
           showNames,
+          showRoleLabels,
           player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
           String(playerNumbers?.[player.id] ?? fallbackNumber),
           status.yellowCards,
@@ -271,7 +280,7 @@ export default function Match2DRenderer({
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [awayColor, cameraMode, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, snapshot, speed, zoom]);
+  }, [awayColor, cameraMode, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, showRoleLabels, snapshot, speed, zoom]);
 
   return <canvas ref={canvasRef} aria-label={ariaLabel} className="block h-full min-h-80 w-full bg-emerald-800" />;
 }

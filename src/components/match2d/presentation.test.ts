@@ -6,6 +6,7 @@ import {
   filterPresentationTimeline,
   presentationFrame,
   playerVisualStatus,
+  roleAbbreviation,
   resolveTeamPositions,
   zonePoint,
 } from "./presentation";
@@ -117,5 +118,10 @@ describe("2D match presentation", () => {
     events[0].player_id = "runner";
     expect(playerVisualStatus("runner", { runner: 1 }, events)).toEqual({ yellowCards: 1, injured: true });
     expect(playerVisualStatus("other", { runner: 1 }, events)).toEqual({ yellowCards: 0, injured: false });
+  });
+
+  it("uses concise deterministic role labels", () => {
+    expect(roleAbbreviation("DefensiveMidfielder")).toBe("DM");
+    expect(roleAbbreviation("Balanced")).toBe("BAL");
   });
 });

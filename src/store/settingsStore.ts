@@ -17,6 +17,7 @@ export interface AppSettings {
   match_camera_mode: "full" | "follow-ball";
   match_highlight_mode: "key" | "extended" | "full";
   show_match_player_names: boolean;
+  show_match_role_labels: boolean;
 }
 
 export interface CurrencyDefinition {
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   match_camera_mode: "full",
   match_highlight_mode: "full",
   show_match_player_names: false,
+  show_match_role_labels: false,
 };
 
 const DEFAULT_CURRENCY: CurrencyDefinition = {
