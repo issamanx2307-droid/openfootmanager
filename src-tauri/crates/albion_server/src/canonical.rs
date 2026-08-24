@@ -55,6 +55,24 @@ impl CanonicalCareer {
             .iter()
             .find(|team| team.id == team_id)
             .ok_or(ErrorCode::AuthInvalid)?;
+        let next_fixture = self.game.competitions.iter()
+            .flat_map(|competition| competition.fixtures.iter().map(move |fixture| (competition, fixture)))
+            .filter(|(_, fixture)| fixture.status == FixtureStatus::Scheduled
+                && (fixture.home_team_id == team_id || fixture.away_team_id == team_id))
+            .min_by(|(_, left), (_, right)| left.date.cmp(&right.date))
+            .map(|(competition, fixture)| {
+                let team_name = |id: &str| self.game.teams.iter()
+                    .find(|candidate| candidate.id == id)
+                    .map(|candidate| candidate.name.clone())
+                    .unwrap_or_else(|| id.to_owned());
+                json!({
+                    "id": fixture.id,
+                    "date": fixture.date,
+                    "competition": competition.name,
+                    "homeTeam": team_name(&fixture.home_team_id),
+                    "awayTeam": team_name(&fixture.away_team_id),
+                })
+            });
         Ok(json!({
             "currentDate": self.game.clock.current_date.format("%Y-%m-%d").to_string(),
             "club": {
@@ -67,7 +85,8 @@ impl CanonicalCareer {
             "training": {
                 "focus": format!("{:?}", team.training_focus),
                 "intensity": format!("{:?}", team.training_intensity),
-            }
+            },
+            "nextFixture": next_fixture,
         }))
     }
 
@@ -493,11 +512,22 @@ mod tests {
 
     #[test]
     fn manager_dashboard_is_a_narrow_club_view() {
-        let (career, manager_id) = career();
+        let (mut career, manager_id) = career();
+        let team_id = career.game.teams[0].id.clone();
+        let mut competition = League::default();
+        competition.name = "Test League".into();
+        competition.fixtures.push(Fixture {
+            id: Uuid::new_v4().to_string(), competition_id: "league".into(), matchday: 1,
+            date: "2026-07-08".into(), home_team_id: team_id, away_team_id: Uuid::new_v4().to_string(),
+            competition: FixtureCompetition::League, status: FixtureStatus::Scheduled, result: None,
+        });
+        career.game.competitions.push(competition);
         let view = career.manager_dashboard(manager_id).unwrap();
         assert_eq!(view["club"]["name"], "Albion");
         assert!(view["training"]["focus"].is_string());
         assert!(view["training"]["intensity"].is_string());
+        assert_eq!(view["nextFixture"]["date"], "2026-07-08");
+        assert_eq!(view["nextFixture"]["competition"], "Test League");
         assert!(view.get("players").is_none());
         assert!(view.get("managers").is_none());
     }

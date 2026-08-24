@@ -427,6 +427,11 @@ only when their team id matches its canonical club card, so accepted tactics
 and training commands visibly refresh without treating local form state as
 authoritative.
 
+Phase 9 update: the same canonical dashboard snapshot now exposes the owning
+club's next scheduled fixture (date, competition and both club names). The
+lobby renders it as a schedule card, with a regression proving the view is
+derived from the server schedule rather than local frontend state.
+
 Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin

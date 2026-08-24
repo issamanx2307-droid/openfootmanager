@@ -17,6 +17,7 @@ type ManagerDashboard = {
   currentDate: string;
   club: { id: string; name: string; formation: string; playStyle: string };
   training?: { focus: string; intensity: string };
+  nextFixture?: { date: string; competition: string; homeTeam: string; awayTeam: string };
 };
 
 function readManagerDashboard(value: unknown): ManagerDashboard | null {
@@ -32,7 +33,15 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
     && typeof (trainingRecord as Record<string, unknown>).intensity === "string"
     ? { focus: (trainingRecord as Record<string, string>).focus, intensity: (trainingRecord as Record<string, string>).intensity }
     : undefined;
-  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training };
+  const fixtureRecord = record.nextFixture;
+  const nextFixture = fixtureRecord && typeof fixtureRecord === "object"
+    && typeof (fixtureRecord as Record<string, unknown>).date === "string"
+    && typeof (fixtureRecord as Record<string, unknown>).competition === "string"
+    && typeof (fixtureRecord as Record<string, unknown>).homeTeam === "string"
+    && typeof (fixtureRecord as Record<string, unknown>).awayTeam === "string"
+    ? fixtureRecord as ManagerDashboard["nextFixture"]
+    : undefined;
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture };
 }
 
 function applyDashboardDelta(value: unknown, changes: unknown): unknown {
@@ -80,6 +89,7 @@ export default function MultiplayerLobby() {
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
     events: "เหตุการณ์ล่าสุด",
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
+    nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
@@ -95,6 +105,7 @@ export default function MultiplayerLobby() {
     matchFinished: "Match finished", score: "Score",
     events: "Latest events",
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
+    nextFixture: "Next fixture", noFixture: "No scheduled fixture",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
@@ -324,6 +335,12 @@ export default function MultiplayerLobby() {
             <dt className="text-gray-300">{copy.playStyle}</dt><dd>{localizedCanonicalLabel(dashboardView.club.playStyle, thai)}</dd>
             {dashboardView.training && <><dt className="text-gray-300">{copy.training}</dt><dd>{localizedCanonicalLabel(dashboardView.training.focus, thai)} · {localizedCanonicalLabel(dashboardView.training.intensity, thai)}</dd></>}
           </dl>
+          <div className="mt-3 border-t border-navy-600 pt-3 text-sm">
+            <p className="font-semibold">{copy.nextFixture}</p>
+            {dashboardView.nextFixture
+              ? <p>{dashboardView.nextFixture.date} · {dashboardView.nextFixture.homeTeam}–{dashboardView.nextFixture.awayTeam} · {dashboardView.nextFixture.competition}</p>
+              : <p className="text-gray-300">{copy.noFixture}</p>}
+          </div>
         </section>}
       </section>}
     </div>
