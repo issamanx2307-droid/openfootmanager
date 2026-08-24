@@ -1898,7 +1898,7 @@
       "showShape": "Show formation shape", "hideShape": "Hide formation shape",
       "showCommentary": "Show commentary", "hideCommentary": "Hide commentary",
       "replayLatest": "Replay latest highlight", "stopReplay": "Return to live view",
-      "highlights": "Match highlights", "fullPitch": "Full pitch", "followBall": "Follow ball", "zoom": "Zoom",
+      "highlights": "Match highlights", "fullPitch": "Full pitch", "followBall": "Follow ball", "tactical": "Tactical", "zoom": "Zoom",
       "unavailable": "The 2D view is unavailable. Commentary and match statistics remain available.",
       "pitch": "2D live match pitch"
     },

@@ -462,9 +462,10 @@ export default function MatchLive({
                 {match2dCopy.replayLatest}
               </button>
             )}
-            <fieldset className="grid grid-cols-2 gap-1" aria-label={match2dCopy.title}>
+            <fieldset className="grid grid-cols-3 gap-1" aria-label={match2dCopy.title}>
               <button type="button" onClick={() => { setCameraMode("full"); void savePresentationPreference({ match_camera_mode: "full" }); }} aria-pressed={cameraMode === "full"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "full" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.fullPitch}</button>
               <button type="button" onClick={() => { setCameraMode("follow-ball"); void savePresentationPreference({ match_camera_mode: "follow-ball" }); }} aria-pressed={cameraMode === "follow-ball"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "follow-ball" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.followBall}</button>
+              <button type="button" onClick={() => { setCameraMode("tactical"); void savePresentationPreference({ match_camera_mode: "tactical" }); }} aria-pressed={cameraMode === "tactical"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "tactical" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.tactical}</button>
             </fieldset>
             <label className="text-xs text-gray-700 dark:text-gray-200">{match2dCopy.zoom}
               <input className="ml-2 align-middle" type="range" min={MATCH_2D_CONFIG.camera.minZoom} max={MATCH_2D_CONFIG.camera.maxZoom} step="0.1" value={cameraZoom} onChange={(event) => setCameraZoom(Number(event.target.value))} />

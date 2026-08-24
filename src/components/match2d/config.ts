@@ -6,7 +6,7 @@ export const MATCH_2D_CONFIG = {
   debug: { panelWidth: 360, panelHeight: 108, panelInset: 12, gridColumns: 6, gridRows: 4 },
 } as const;
 
-export type CameraMode = "full" | "follow-ball";
+export type CameraMode = "full" | "follow-ball" | "tactical";
 
 export function rendererDebugEnabled(): boolean {
   return import.meta.env.DEV && typeof window !== "undefined"

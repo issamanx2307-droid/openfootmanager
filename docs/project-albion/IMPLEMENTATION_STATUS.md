@@ -697,3 +697,9 @@ live control in the Match Centre. When disabled, the event feed retains
 authoritative minute, team, event type and participant facts while omitting
 generated commentary prose. It is presentation-only and can be changed during
 a match without altering its event order or outcome.
+
+2D camera update: Tactical is now a third local camera mode alongside Full
+Pitch and Follow Ball. It keeps the same authoritative pitch orientation while
+forcing readable role labels and the formation-shape guide for tactical
+inspection. Its state is persisted locally and does not synchronize to another
+manager or influence the engine.

@@ -351,14 +351,14 @@ export default function Match2DRenderer({
           pitchViewport.height,
           player.side === "Home" ? homeColor : awayColor,
           showNames,
-          showRoleLabels,
+          showRoleLabels || cameraMode === "tactical",
           player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
           String(playerNumbers?.[player.id] ?? fallbackNumber),
           status.yellowCards,
           status.injured,
         );
       });
-      if (showFormationShape) drawFormationShape(context, frame.players, pitchViewport.width, pitchViewport.height, homeColor, awayColor);
+      if (showFormationShape || cameraMode === "tactical") drawFormationShape(context, frame.players, pitchViewport.width, pitchViewport.height, homeColor, awayColor);
       const [ballX, ballY] = toCanvas(frame.ball, pitchViewport.width, pitchViewport.height);
       if (frame.activeClip && frame.ballTrajectory !== "ground") {
         const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, pitchViewport.width, pitchViewport.height);
