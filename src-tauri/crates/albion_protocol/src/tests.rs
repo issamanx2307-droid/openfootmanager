@@ -158,6 +158,7 @@ fn every_event_variant_round_trips() {
         match_second: 3105,
         home_score: 1,
         away_score: 0,
+        snapshot: serde_json::json!({"current_minute": 51}),
     }));
     roundtrip_event(ServerEvent::MatchFinished(MatchFinishedBody {
         match_id,

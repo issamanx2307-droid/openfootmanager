@@ -5,7 +5,7 @@
  * derives football results, positions, or events that the Albion server did
  * not publish, which makes it safe to rebuild after a reconnect.
  */
-import type { MatchEvent } from "../components/match/types";
+import type { MatchEvent, MatchSnapshot } from "../components/match/types";
 import type { AlbionServerEvent } from "./albionServerService";
 
 export type AlbionLiveMatchPresentation = {
@@ -16,6 +16,7 @@ export type AlbionLiveMatchPresentation = {
   awayScore: number;
   lastSequence: number;
   events: MatchEvent[];
+  snapshot: MatchSnapshot | null;
   finished: boolean;
 };
 
@@ -27,6 +28,7 @@ export const EMPTY_ALBION_LIVE_MATCH: AlbionLiveMatchPresentation = {
   awayScore: 0,
   lastSequence: 0,
   events: [],
+  snapshot: null,
   finished: false,
 };
 
@@ -53,6 +55,18 @@ export function normalizeAlbionMatchEvent(value: unknown): MatchEvent | null {
   };
 }
 
+/** A lightweight runtime guard before trusted server JSON reaches the renderer. */
+export function readAlbionMatchSnapshot(value: unknown): MatchSnapshot | null {
+  if (!isRecord(value)) return null;
+  const { phase, current_minute: currentMinute, home_score: homeScore, away_score: awayScore, possession, ball_zone: ballZone, home_team: homeTeam, away_team: awayTeam, events, sent_off: sentOff } = value;
+  const validTeam = (team: unknown) => isRecord(team)
+    && typeof team.name === "string" && typeof team.formation === "string" && Array.isArray(team.players);
+  if (typeof phase !== "string" || typeof currentMinute !== "number" || typeof homeScore !== "number" || typeof awayScore !== "number"
+    || (possession !== "Home" && possession !== "Away") || typeof ballZone !== "string" || !validTeam(homeTeam) || !validTeam(awayTeam)
+    || !Array.isArray(events) || !Array.isArray(sentOff)) return null;
+  return value as MatchSnapshot;
+}
+
 /**
  * Reduces reconnection and live updates into an idempotent display model.
  * Repeated event batches are ignored by their server-assigned sequence range.
@@ -72,7 +86,14 @@ export function reduceAlbionLiveMatch(
   if (event.type === "MatchState"
     && typeof body.phase === "string" && typeof body.match_second === "number"
     && typeof body.home_score === "number" && typeof body.away_score === "number") {
-    return { ...current, phase: body.phase, matchSecond: body.match_second, homeScore: body.home_score, awayScore: body.away_score };
+    return {
+      ...current,
+      phase: body.phase,
+      matchSecond: body.match_second,
+      homeScore: body.home_score,
+      awayScore: body.away_score,
+      snapshot: readAlbionMatchSnapshot(body.snapshot) ?? current.snapshot,
+    };
   }
   if (event.type === "MatchEventBatch" && typeof body.from_seq === "number" && typeof body.to_seq === "number" && Array.isArray(body.events)) {
     if (body.to_seq <= current.lastSequence || body.to_seq < body.from_seq) return current;

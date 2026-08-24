@@ -19,6 +19,7 @@ import {
   reduceAlbionLiveMatch,
 } from "../services/albionMatchPresentation";
 import { useGameStore } from "../store/gameStore";
+import Match2DRenderer from "../components/match2d/Match2DRenderer";
 
 type ManagerDashboard = {
   currentDate: string;
@@ -422,6 +423,7 @@ export default function MultiplayerLobby() {
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
           <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {livePresentation.phase ?? ""}</p>
           <button type="button" onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold">{copy.liveFormation}: {formation}</button>
+          {livePresentation.snapshot && <div className="h-72 overflow-hidden rounded border border-navy-600"><Match2DRenderer snapshot={livePresentation.snapshot} homeColor="#10b981" awayColor="#6366f1" speed={2} highlightMode="full" /></div>}
           {livePresentation.events.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{livePresentation.events.slice(-6).map((event) => <li key={`${event.minute}-${event.event_type}-${event.player_id ?? "unknown"}-${event.secondary_player_id ?? "none"}`}>{formatAlbionLiveEvent(event, thai)}</li>)}</ul></div>}
         </fieldset>}
         {dashboardView && <section className="mt-4 rounded border border-navy-600 p-3" aria-label={copy.clubView}>

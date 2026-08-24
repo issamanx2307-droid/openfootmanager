@@ -548,6 +548,7 @@ impl CareerSession {
                         match_second: u32::from(snapshot.current_minute) * 60,
                         home_score: snapshot.home_score,
                         away_score: snapshot.away_score,
+                        snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
                     }),
                 ]
             }
@@ -634,6 +635,7 @@ impl CareerSession {
                     match_second: u32::from(snapshot.current_minute) * 60,
                     home_score: snapshot.home_score,
                     away_score: snapshot.away_score,
+                    snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
                 }),
             ])
         }).flatten().collect()
@@ -781,6 +783,7 @@ impl CareerSession {
                 match_second: u32::from(snapshot.current_minute) * 60,
                 home_score: snapshot.home_score,
                 away_score: snapshot.away_score,
+                snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
             }));
             if minute.is_finished {
                 let Some(career) = self.career.as_mut() else { continue; };
@@ -1197,7 +1200,9 @@ mod tests {
         let replay = restarted.live_reconnect_events(manager_a);
         assert!(replay.iter().any(|event| matches!(event, ServerEvent::MatchOpened(body) if body.match_id == match_id)));
         assert!(replay.iter().any(|event| matches!(event, ServerEvent::MatchState(body)
-            if body.match_id == match_id && body.match_second == u32::from(before.current_minute) * 60)));
+            if body.match_id == match_id
+                && body.match_second == u32::from(before.current_minute) * 60
+                && body.snapshot.get("current_minute").and_then(serde_json::Value::as_u64) == Some(u64::from(before.current_minute)))));
     }
 
     #[tokio::test]

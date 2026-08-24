@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_ALBION_LIVE_MATCH, normalizeAlbionMatchEvent, reduceAlbionLiveMatch } from "./albionMatchPresentation";
+import { EMPTY_ALBION_LIVE_MATCH, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
 
 const opened = { type: "MatchOpened", body: { match_id: "match-1" } };
 const goal = { minute: 12, event_type: "Goal", side: "Home", zone: "AttackingBox", player_id: "p-9", secondary_player_id: null };
@@ -9,6 +9,11 @@ describe("Albion live-match presentation adapter", () => {
   it("keeps only canonical engine events", () => {
     expect(normalizeAlbionMatchEvent(goal)).toMatchObject({ event_type: "Goal", player_id: "p-9" });
     expect(normalizeAlbionMatchEvent({ ...goal, side: "Neutral" })).toBeNull();
+  });
+
+  it("admits only a renderer-safe authoritative snapshot", () => {
+    expect(readAlbionMatchSnapshot({ phase: "FirstHalf", current_minute: 12, home_score: 0, away_score: 0, possession: "Home", ball_zone: "MidfieldCentre", home_team: { name: "Home", formation: "4-3-3", players: [] }, away_team: { name: "Away", formation: "4-3-3", players: [] }, events: [], sent_off: [] })).toMatchObject({ current_minute: 12 });
+    expect(readAlbionMatchSnapshot({ phase: "FirstHalf" })).toBeNull();
   });
 
   it("applies event batches once and preserves the server score", () => {

@@ -106,6 +106,10 @@ pub struct MatchStateBody {
     pub match_second: u32,
     pub home_score: u8,
     pub away_score: u8,
+    /// Read-only engine snapshot used to rebuild a live presentation after a
+    /// reconnect. The protocol crate intentionally keeps this as JSON so it
+    /// does not depend on the simulation crate.
+    pub snapshot: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
