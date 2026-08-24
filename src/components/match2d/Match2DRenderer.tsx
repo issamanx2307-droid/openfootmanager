@@ -17,6 +17,7 @@ type Match2DRendererProps = {
   cameraMode?: CameraMode;
   zoom?: number;
   onRendererUnavailable?: () => void;
+  playerNumbers?: Readonly<Record<string, number>>;
 };
 
 function toCanvas(point: PitchPoint, width: number, height: number): [number, number] {
@@ -43,11 +44,25 @@ function drawPitch(context: CanvasRenderingContext2D, width: number, height: num
   context.lineTo(width / 2, height - marginY);
   context.arc(width / 2, height / 2, height * 0.13, 0, Math.PI * 2);
   context.stroke();
+  context.fillStyle = line;
+  for (const direction of [1, -1]) {
+    const spotX = direction === 1 ? marginX + pitchWidth * 0.11 : width - marginX - pitchWidth * 0.11;
+    context.beginPath();
+    context.arc(spotX, height / 2, Math.max(1.5, width * 0.003), 0, Math.PI * 2);
+    context.fill();
+    const goalDepth = pitchWidth * 0.025;
+    context.strokeRect(direction === 1 ? marginX - goalDepth : width - marginX, height * 0.43, goalDepth, height * 0.14);
+  }
   for (const direction of [1, -1]) {
     const left = direction === 1 ? marginX : width - marginX - pitchWidth * 0.16;
     context.strokeRect(left, height * 0.24, pitchWidth * 0.16, height * 0.52);
     const sixLeft = direction === 1 ? marginX : width - marginX - pitchWidth * 0.07;
     context.strokeRect(sixLeft, height * 0.36, pitchWidth * 0.07, height * 0.28);
+  }
+  for (const [x, y, start] of [[marginX, marginY, 0], [width - marginX, marginY, Math.PI / 2], [width - marginX, height - marginY, Math.PI], [marginX, height - marginY, Math.PI * 1.5]] as const) {
+    context.beginPath();
+    context.arc(x, y, height * 0.035, start, start + Math.PI / 2);
+    context.stroke();
   }
 }
 
@@ -59,6 +74,7 @@ function drawPlayer(
   color: string,
   showNames: boolean,
   highlighted: boolean,
+  markerLabel: string,
 ): void {
   const [x, y] = toCanvas(presentationPlayer.point, width, height);
   const radius = Math.max(9, Math.min(width, height) * 0.026);
@@ -67,7 +83,17 @@ function drawPlayer(
   context.strokeStyle = presentationPlayer.side === "Home" ? "#ffffff" : "#111827";
   context.lineWidth = 2;
   context.beginPath();
-  context.arc(x, y, radius, 0, Math.PI * 2);
+  if (presentationPlayer.goalkeeper) {
+    context.moveTo(x, y - radius);
+    context.lineTo(x + radius, y);
+    context.lineTo(x, y + radius);
+    context.lineTo(x - radius, y);
+    context.closePath();
+  } else if (presentationPlayer.side === "Away") {
+    context.rect(x - radius, y - radius, radius * 2, radius * 2);
+  } else {
+    context.arc(x, y, radius, 0, Math.PI * 2);
+  }
   context.fill();
   context.stroke();
   if (highlighted) {
@@ -81,7 +107,7 @@ function drawPlayer(
   context.font = `bold ${Math.max(9, radius)}px Inter, sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(String(presentationPlayer.player.id.slice(-2)), x, y + 0.5);
+  context.fillText(markerLabel, x, y + 0.5);
   if (showNames) {
     context.font = `${Math.max(9, radius * 0.75)}px Inter, sans-serif`;
     context.fillStyle = "#f8fafc";
@@ -103,6 +129,7 @@ export default function Match2DRenderer({
   cameraMode = "full",
   zoom = MATCH_2D_CONFIG.camera.minZoom,
   onRendererUnavailable,
+  playerNumbers,
 }: Match2DRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startedAt = useRef<number | null>(null);
@@ -153,7 +180,10 @@ export default function Match2DRenderer({
       context.scale(activeZoom, activeZoom);
       context.translate(-focusX, -focusY);
       drawPitch(context, rect.width, rect.height);
+      let homeMarkerNumber = 0;
+      let awayMarkerNumber = 0;
       frame.players.forEach((player) => {
+        const fallbackNumber = player.side === "Home" ? ++homeMarkerNumber : ++awayMarkerNumber;
         drawPlayer(
           context,
           player,
@@ -162,6 +192,7 @@ export default function Match2DRenderer({
           player.side === "Home" ? homeColor : awayColor,
           showNames,
           player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
+          String(playerNumbers?.[player.id] ?? fallbackNumber),
         );
       });
       const [ballX, ballY] = toCanvas(frame.ball, rect.width, rect.height);
@@ -207,7 +238,7 @@ export default function Match2DRenderer({
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [awayColor, cameraMode, highlightMode, homeColor, onRendererUnavailable, reducedMotion, replayEvent, showNames, snapshot, speed, zoom]);
+  }, [awayColor, cameraMode, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, snapshot, speed, zoom]);
 
   return <canvas ref={canvasRef} aria-label="2D live match pitch" className="block h-full min-h-80 w-full bg-emerald-800" />;
 }

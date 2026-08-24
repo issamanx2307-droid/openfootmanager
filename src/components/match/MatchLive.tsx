@@ -73,6 +73,7 @@ export default function MatchLive({
     }
     return m;
   }, [gameState.players]);
+  const playerNumbers = useMemo(() => Object.fromEntries(playerJerseyMap), [playerJerseyMap]);
 
   const isFinished = snapshot.phase === "Finished";
   const rendererSpeed: 1 | 2 | 4 = speed === "fast" ? 4 : speed === "slow" ? 1 : 2;
@@ -318,6 +319,7 @@ export default function MatchLive({
               cameraMode={cameraMode}
               zoom={cameraZoom}
               onRendererUnavailable={handleRendererUnavailable}
+              playerNumbers={playerNumbers}
             /> : <p role="alert" className="p-5 text-sm text-white">{match2dCopy.unavailable}</p>}
           </section>
           <div className="flex bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-700 transition-colors duration-300">
