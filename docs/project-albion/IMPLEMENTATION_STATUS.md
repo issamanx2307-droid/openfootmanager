@@ -393,6 +393,10 @@ regression opens a human-v-human fixture, advances one server tick, recreates
 the session from the same save, and verifies the match identifier, minute and
 score are restored instead of opening a new fixture.
 
+Phase 8 update: a one-human-versus-AI live regression now verifies that the
+single human manager can pass Ready, open the canonical fixture and receive a
+live `MatchState` without an AI-side connection or Ready acknowledgement.
+
 Phase 9 update: the live match centre now consumes `MatchEventBatch` in
 addition to score/time state, retaining a short canonical event feed with
 polite assistive-technology announcements. This makes the streamed server

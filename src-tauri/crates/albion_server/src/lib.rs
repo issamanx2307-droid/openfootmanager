@@ -1026,6 +1026,31 @@ mod tests {
     }
 
     #[test]
+    fn one_human_can_open_and_tick_a_canonical_match_against_ai() {
+        let (mut game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        game.managers.retain(|manager| manager.id == manager_a.to_string());
+        game.teams
+            .iter_mut()
+            .find(|team| team.id == club_b.to_string())
+            .unwrap()
+            .manager_id = None;
+        assert_ne!(manager_a, manager_b);
+
+        let mut session = CareerSession::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        session.join(join_request(manager_a, club_a)).unwrap();
+        session.manager_connected(manager_a);
+        let opened = session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+        assert!(opened.iter().any(|event| matches!(event, ServerEvent::MatchOpened(_))));
+        assert_eq!(session.live_matches.len(), 1);
+
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        let updates = session.tick_live_matches();
+        assert!(updates.iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+    }
+
+    #[test]
     fn human_live_match_pauses_until_the_disconnected_manager_returns() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
         let mut session = CareerSession::new(
