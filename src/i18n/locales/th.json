@@ -207,6 +207,8 @@
     "uiScaleOptions": { "small": "เล็ก", "normal": "ปกติ", "large": "ใหญ่", "xlarge": "ใหญ่มาก" },
     "highContrast": "คอนทราสต์สูง",
     "highContrastDesc": "เพิ่มความต่างของข้อความในโหมดมืดให้อ่านง่ายขึ้น",
+    "reducedMotion": "ลดการเคลื่อนไหว",
+    "reducedMotionDesc": "ลดภาพเคลื่อนไหวในมุมมองแมตช์ 2D",
     "fullscreen": "เต็มหน้าจอ",
     "fullscreenDesc": "สลับเป็นโหมดเต็มหน้าจอเพื่อการเล่นที่เต็มอิ่ม",
     "enterFullscreen": "เข้า",

@@ -1790,6 +1790,8 @@
     },
     "highContrast": "High Contrast",
     "highContrastDesc": "Boost text contrast in dark mode for improved readability",
+    "reducedMotion": "Reduced motion",
+    "reducedMotionDesc": "Minimize animation in the 2D match view",
     "fullscreen": "Fullscreen",
     "fullscreenDesc": "Toggle fullscreen mode for an immersive experience",
     "enterFullscreen": "Enter",

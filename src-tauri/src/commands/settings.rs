@@ -23,6 +23,9 @@ pub struct AppSettings {
     pub ui_scale: String, // "small" | "normal" | "large" | "xlarge"
     #[serde(default)]
     pub high_contrast: bool,
+    /// Presentation preference only; never changes simulation pacing or state.
+    #[serde(default)]
+    pub reduced_motion: bool,
     /// When true, the Continue button rolls forward several days until the next
     /// event (user match, blocker, transfer deadline, high-priority inbox).
     #[serde(default)]
@@ -56,6 +59,7 @@ impl Default for AppSettings {
             confirm_advance: false,
             ui_scale: "normal".to_string(),
             high_contrast: false,
+            reduced_motion: false,
             continue_to_next_event: false,
         }
     }

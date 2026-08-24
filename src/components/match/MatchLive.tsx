@@ -310,7 +310,7 @@ export default function MatchLive({
               awayColor={awayTeamColor}
               speed={rendererSpeed}
               highlightMode={highlightMode}
-              reducedMotion={(!isRunning || speed === "paused") && !replayEvent}
+              reducedMotion={settings.reduced_motion || ((!isRunning || speed === "paused") && !replayEvent)}
               showNames={showPlayerNames}
               replayEvent={replayEvent}
               cameraMode={cameraMode}

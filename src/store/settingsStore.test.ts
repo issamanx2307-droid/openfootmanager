@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   continue_to_next_event: false,
   ui_scale: "normal",
   high_contrast: false,
+  reduced_motion: false,
 } as const;
 
 const SUPPORTED_CURRENCIES = [

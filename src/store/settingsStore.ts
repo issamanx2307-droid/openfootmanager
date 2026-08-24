@@ -13,6 +13,7 @@ export interface AppSettings {
   continue_to_next_event: boolean;
   ui_scale: "small" | "normal" | "large" | "xlarge";
   high_contrast: boolean;
+  reduced_motion: boolean;
 }
 
 export interface CurrencyDefinition {
@@ -39,6 +40,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   continue_to_next_event: false,
   ui_scale: "normal",
   high_contrast: false,
+  reduced_motion: false,
 };
 
 const DEFAULT_CURRENCY: CurrencyDefinition = {
