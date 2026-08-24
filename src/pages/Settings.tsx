@@ -297,6 +297,16 @@ export default function Settings() {
           </SettingRow>
 
           <SettingRow
+            label={t("settings.reducedMotion")}
+            description={t("settings.reducedMotionDesc")}
+          >
+            <Toggle
+              checked={settings.reduced_motion}
+              onChange={(v) => handleUpdate({ reduced_motion: v })}
+            />
+          </SettingRow>
+
+          <SettingRow
             label={t("settings.fullscreen")}
             description={t("settings.fullscreenDesc")}
           >
@@ -438,15 +448,6 @@ export default function Settings() {
             </button>
           </SettingRow>
 
-          <SettingRow
-            label={t("settings.reducedMotion")}
-            description={t("settings.reducedMotionDesc")}
-          >
-            <Toggle
-              checked={settings.reduced_motion}
-              onChange={(v) => handleUpdate({ reduced_motion: v })}
-            />
-          </SettingRow>
           {fplDataStatus?.updatedAt && (
             <p className="-mt-2 ml-1 text-xs text-primary-500">
               {fplDataStatus.updatedAt}
