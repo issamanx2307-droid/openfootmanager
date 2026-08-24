@@ -624,9 +624,9 @@ impl CareerSession {
             Some(vec![
                 ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
                     match_id: *match_id,
-                    fixture_id: active.fixture_id,
-                    home_club_id,
-                    away_club_id,
+                    fixture_id: active.fixture_id.to_string(),
+                    home_club_id: home_club_id.to_string(),
+                    away_club_id: away_club_id.to_string(),
                 }),
                 ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
                     match_id: *match_id,
@@ -735,9 +735,9 @@ impl CareerSession {
                         });
                         vec![ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
                             match_id,
-                            fixture_id,
-                            home_club_id,
-                            away_club_id,
+                            fixture_id: fixture_id.to_string(),
+                            home_club_id: home_club_id.to_string(),
+                            away_club_id: away_club_id.to_string(),
                         })]
                     }
                     Err(_) => vec![ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {

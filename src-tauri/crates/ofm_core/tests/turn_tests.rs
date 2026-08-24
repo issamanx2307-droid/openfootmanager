@@ -437,8 +437,19 @@ fn process_day_fires_ai_manager_after_heavy_losing_run() {
 
     turn::process_day(&mut game);
 
+    // AI_MANAGER_REPLACEMENT_DELAY_DAYS is 1 (ai_hiring.rs, issue #477: an AI
+    // club must never be left without a manager), so the same `process_day`
+    // that fires mgr2 also immediately appoints a replacement for team2
+    // rather than leaving it vacant.
+    let fired_manager = game.managers.iter().find(|manager| manager.id == "mgr2").unwrap();
+    assert!(fired_manager.team_id.is_none(), "mgr2 should no longer be attached to any club");
+
     let rival_team = game.teams.iter().find(|team| team.id == "team2").unwrap();
-    assert!(rival_team.manager_id.is_none());
+    let replacement_manager_id = rival_team
+        .manager_id
+        .clone()
+        .expect("team2 should have an immediate replacement manager, not sit vacant");
+    assert_ne!(replacement_manager_id, "mgr2");
     assert!(game.news.iter().any(|article| {
         article.category == NewsCategory::ManagerialChange
             && article.team_ids.contains(&"team2".to_string())

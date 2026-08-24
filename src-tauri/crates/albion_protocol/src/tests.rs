@@ -35,7 +35,7 @@ fn every_command_variant_round_trips() {
         installments_minor: vec![500_000_00, 500_000_00],
     }));
     roundtrip_command(Command::RespondTransferOffer(RespondTransferOfferBody {
-        offer_id: "fpl-offer-99".into(),
+        offer_id: "offer-99".into(),
         response: TransferOfferResponse::Counter,
         counter_upfront_minor: Some(3_000_000_00),
     }));
@@ -46,8 +46,8 @@ fn every_command_variant_round_trips() {
         contract_end_month: 6,
     }));
     roundtrip_command(Command::SetTrainingPlan(SetTrainingPlanBody {
-        weekly_intensity: 70,
-        team_focus: "attacking".into(),
+        weekly_intensity: 7,
+        team_focus: "attacking_movement".into(),
     }));
     roundtrip_command(Command::MarkReady(MarkReadyBody {}));
     roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
@@ -57,10 +57,31 @@ fn every_command_variant_round_trips() {
             player_in_id: "fpl-11".into(),
         },
     }));
+    roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
+        match_id: Uuid::new_v4(),
+        command: LiveMatchCommandKind::ChangeFormation { formation: "4-2-3-1".into() },
+    }));
+    roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
+        match_id: Uuid::new_v4(),
+        command: LiveMatchCommandKind::ChangeRoleDuty {
+            player_id: "fpl-7".into(),
+            role: "advanced_playmaker".into(),
+            duty: "attack".into(),
+        },
+    }));
+    roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
+        match_id: Uuid::new_v4(),
+        command: LiveMatchCommandKind::SetTeamInstruction {
+            key: "tempo".into(),
+            value: "higher".into(),
+        },
+    }));
 }
 
 #[test]
-fn react_command_wire_shape_deserializes() {
+fn command_wire_shape_uses_stable_string_ids_not_uuids() {
+    // Guards the deliberate design choice in command.rs: fixture/player ids
+    // must accept non-UUID stable ids like FPL-imported records.
     let command: Command = serde_json::from_value(serde_json::json!({
         "type": "SetStartingXi",
         "body": {
@@ -68,7 +89,8 @@ fn react_command_wire_shape_deserializes() {
             "player_ids": ["fpl-1", "fpl-2"],
             "formation": "4-4-2"
         }
-    })).unwrap();
+    }))
+    .unwrap();
     let Command::SetStartingXi(body) = command else {
         panic!("expected SetStartingXi command");
     };
@@ -77,7 +99,7 @@ fn react_command_wire_shape_deserializes() {
 }
 
 #[test]
-fn representative_server_events_round_trip() {
+fn every_event_variant_round_trips() {
     let career_id = Uuid::new_v4();
     let manager_id = Uuid::new_v4();
     let match_id = Uuid::new_v4();
@@ -109,7 +131,7 @@ fn representative_server_events_round_trip() {
     roundtrip_event(ServerEvent::GameTimeChanged(GameTimeChangedBody {
         career_year: 2026,
         career_month: 8,
-        career_day: 1,
+        career_day: 24,
         revision: 13,
     }));
     roundtrip_event(ServerEvent::ReadyStateChanged(ReadyStateChangedBody {
@@ -117,22 +139,23 @@ fn representative_server_events_round_trip() {
         is_ready: true,
         other_manager_ready: false,
     }));
+
     roundtrip_event(ServerEvent::MatchOpened(MatchOpenedBody {
         match_id,
-        fixture_id: Uuid::new_v4(),
-        home_club_id: Uuid::new_v4(),
-        away_club_id: Uuid::new_v4(),
+        fixture_id: "fpl-fixture-2026-08-24-che-ars".into(),
+        home_club_id: "fpl-club-che".into(),
+        away_club_id: "fpl-club-ars".into(),
     }));
     roundtrip_event(ServerEvent::MatchEventBatch(MatchEventBatchBody {
         match_id,
-        from_seq: 1,
-        to_seq: 1,
-        events: vec![serde_json::json!({ "type": "goal", "minute": 10 })],
+        from_seq: 0,
+        to_seq: 3,
+        events: vec![serde_json::json!({"kind": "goal", "minute": 12})],
     }));
     roundtrip_event(ServerEvent::MatchState(MatchStateBody {
         match_id,
-        phase: "first_half".into(),
-        match_second: 600,
+        phase: "second_half".into(),
+        match_second: 3105,
         home_score: 1,
         away_score: 0,
     }));
@@ -140,63 +163,72 @@ fn representative_server_events_round_trip() {
         match_id,
         home_score: 2,
         away_score: 1,
-        report: serde_json::json!({ "possession": [55, 45] }),
+        report: serde_json::json!({"possession": {"home": 55, "away": 45}}),
     }));
     roundtrip_event(ServerEvent::ServerNotice(ServerNoticeBody {
         severity: ServerNoticeSeverity::Warning,
-        message_key: "server.maintenance".into(),
+        message_key: "server.maintenance_soon".into(),
     }));
     roundtrip_event(ServerEvent::Ping);
     roundtrip_event(ServerEvent::Pong);
 }
 
 #[test]
-fn command_envelope_round_trips_and_uses_its_message_id_as_command_id() {
-    let message_id = Uuid::new_v4();
+fn command_envelope_round_trips_and_preserves_expected_revision() {
     let envelope = Envelope {
         protocol_version: CURRENT_VERSIONS.protocol_version,
-        message_id,
+        message_id: Uuid::new_v4(),
         kind: MessageKind::Command,
         career_id: Uuid::new_v4(),
         manager_id: Uuid::new_v4(),
         expected_revision: Some(42),
         payload: EnvelopePayload::Command(Command::MarkReady(MarkReadyBody {})),
     };
-
     let json = serde_json::to_string(&envelope).unwrap();
     let parsed: Envelope = serde_json::from_str(&json).unwrap();
-    assert_eq!(parsed.command_id(), message_id);
     assert_eq!(parsed.expected_revision, Some(42));
+    assert_eq!(parsed.command_id(), envelope.message_id);
+    assert!(matches!(parsed.kind, MessageKind::Command));
 }
 
 #[test]
-fn version_compatibility_requires_an_exact_match() {
-    let current = CURRENT_VERSIONS.to_owned_set();
-    assert!(current.is_compatible_with(&current));
-
-    let mut incompatible = current.clone();
-    incompatible.protocol_version += 1;
-    assert!(!current.is_compatible_with(&incompatible));
+fn version_sets_compare_by_full_equality() {
+    let a = CURRENT_VERSIONS.to_owned_set();
+    let mut b = a.clone();
+    assert!(a.is_compatible_with(&b));
+    b.protocol_version += 1;
+    assert!(!a.is_compatible_with(&b));
 }
 
 #[test]
 fn ruleset_version_participates_in_compatibility() {
-    let current = CURRENT_VERSIONS
-        .to_owned_set()
-        .with_ruleset(RulesetVersion {
-            ruleset_id: "england-2026-27-v1".into(),
-            ruleset_version: 1,
-        });
-    let incompatible = current.clone().with_ruleset(RulesetVersion {
+    let base = CURRENT_VERSIONS.to_owned_set().with_ruleset(RulesetVersion {
+        ruleset_id: "england-2026-27-v1".into(),
+        ruleset_version: 1,
+    });
+    let bumped_ruleset = CURRENT_VERSIONS.to_owned_set().with_ruleset(RulesetVersion {
         ruleset_id: "england-2026-27-v1".into(),
         ruleset_version: 2,
     });
 
-    assert!(!current.is_compatible_with(&incompatible));
+    assert!(base.is_compatible_with(&base.clone()));
+    assert!(!base.is_compatible_with(&bumped_ruleset));
 }
 
 #[test]
-fn legacy_version_set_without_a_ruleset_still_deserializes() {
+fn version_set_without_a_ruleset_still_round_trips() {
+    let versions = CURRENT_VERSIONS.to_owned_set();
+    assert_eq!(versions.ruleset, None);
+    let json = serde_json::to_string(&versions).unwrap();
+    let parsed: crate::VersionSet = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed, versions);
+}
+
+#[test]
+fn pre_ruleset_version_set_json_still_deserializes() {
+    // Guards forward-compatibility: a VersionSet serialized before the
+    // `ruleset` field existed (no field present at all) must still parse,
+    // defaulting `ruleset` to None rather than failing.
     let legacy = serde_json::json!({
         "app_version": "0.1.0",
         "protocol_version": 1,
@@ -205,7 +237,6 @@ fn legacy_version_set_without_a_ruleset_still_deserializes() {
         "match_engine_version": "albion-engine-v1",
         "rating_model_version": "albion-rating-v1"
     });
-
-    let parsed = serde_json::from_value::<crate::VersionSet>(legacy).unwrap();
+    let parsed: crate::VersionSet = serde_json::from_value(legacy).unwrap();
     assert_eq!(parsed.ruleset, None);
 }
