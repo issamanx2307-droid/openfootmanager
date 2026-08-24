@@ -24,6 +24,7 @@ export default function MultiplayerLobby() {
     disconnected: "การเชื่อมต่อขาดหาย กรุณาเชื่อมต่อใหม่", back: "← กลับสู่สโมสร", title: "เล่นร่วมกัน", secret: "รหัสเข้าร่วม",
     hostUrl: "URL ของโฮสต์", host: "เป็นโฮสต์", join: "เข้าร่วม", reconnect: "เชื่อมต่อเดิม", connectedAt: "เชื่อมต่อสำเร็จ · revision", ready: "พร้อมดำเนินเกม",
     tactics: "แท็กติก", formation: "แผนการเล่น", mentality: "แนวทาง", applyTactics: "บันทึกแท็กติก", tacticsSent: "ส่งแท็กติกไปยังเซิร์ฟเวอร์แล้ว",
+    training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
     rejected: "Command rejected: refresh the view and try again", readyState: "Ready state updated; waiting for the other manager",
@@ -33,6 +34,7 @@ export default function MultiplayerLobby() {
     disconnected: "Connection lost. Please reconnect.", back: "← Back to club", title: "Play Together", secret: "Join code",
     hostUrl: "Host URL", host: "Host game", join: "Join game", reconnect: "Reconnect", connectedAt: "Connected · revision", ready: "Ready to continue",
     tactics: "Tactics", formation: "Formation", mentality: "Approach", applyTactics: "Save tactics", tacticsSent: "Tactics sent to the server.",
+    training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
   };
   const game = useGameStore((state) => state.gameState);
   const client = useRef(new AlbionServerClient());
@@ -45,6 +47,8 @@ export default function MultiplayerLobby() {
   const [busy, setBusy] = useState(false);
   const [formation, setFormation] = useState("4-3-3");
   const [mentality, setMentality] = useState("balanced");
+  const [trainingIntensity, setTrainingIntensity] = useState(60);
+  const [trainingFocus, setTrainingFocus] = useState("tactical");
 
   useEffect(() => () => {
     client.current.disconnect();
@@ -146,6 +150,16 @@ export default function MultiplayerLobby() {
     }
   };
 
+  const applyTraining = () => {
+    if (!session) return;
+    try {
+      client.current.sendCommand(session, { SetTrainingPlan: { weekly_intensity: trainingIntensity, team_focus: trainingFocus } });
+      setMessage(copy.trainingSent);
+    } catch {
+      setMessage(copy.disconnected);
+    }
+  };
+
   return <main className="min-h-screen bg-navy-900 text-white p-6 sm:p-10">
     <div className="mx-auto max-w-xl space-y-5 rounded-2xl bg-navy-800 p-6 shadow-xl">
       <button type="button" onClick={() => navigate("/dashboard")} className="text-accent-300 hover:text-accent-100">{copy.back}</button>
@@ -170,6 +184,12 @@ export default function MultiplayerLobby() {
           <label>{copy.formation}<input value={formation} onChange={(event) => setFormation(event.target.value)} className="ml-2 rounded bg-navy-800 p-2" /></label>
           <label>{copy.mentality}<select value={mentality} onChange={(event) => setMentality(event.target.value)} className="ml-2 rounded bg-navy-800 p-2"><option value="balanced">Balanced</option><option value="attacking">Attacking</option><option value="defensive">Defensive</option><option value="possession">Possession</option><option value="counter">Counter</option><option value="high_press">High press</option></select></label>
           <button type="button" onClick={applyTactics} className="w-fit rounded bg-accent-500 px-3 py-2 font-bold">{copy.applyTactics}</button>
+        </fieldset>
+        <fieldset className="mt-4 grid gap-2 rounded border border-navy-600 p-3">
+          <legend className="px-1 font-bold">{copy.training}</legend>
+          <label>{copy.intensity}<input type="range" min="0" max="100" value={trainingIntensity} onChange={(event) => setTrainingIntensity(Number(event.target.value))} className="ml-2 align-middle" /><output className="ml-2">{trainingIntensity}</output></label>
+          <label>{copy.focus}<select value={trainingFocus} onChange={(event) => setTrainingFocus(event.target.value)} className="ml-2 rounded bg-navy-800 p-2"><option value="physical">Physical</option><option value="technical">Technical</option><option value="tactical">Tactical</option><option value="defending">Defending</option><option value="attacking">Attacking</option><option value="recovery">Recovery</option></select></label>
+          <button type="button" onClick={applyTraining} className="w-fit rounded bg-accent-500 px-3 py-2 font-bold">{copy.applyTraining}</button>
         </fieldset>
         {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
       </section>}

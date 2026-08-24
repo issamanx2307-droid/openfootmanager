@@ -348,3 +348,8 @@ lobby, which sends `SetTactics` through the authoritative WebSocket command
 lane. This is the first core club-management mutation exposed in the desktop
 server flow after Ready, alongside the existing server ownership/revision
 checks.
+
+Phase 9 update: the same server-owned flow now exposes weekly training
+intensity and team focus through `SetTrainingPlan`. Both tactics and training
+mutations therefore share the authenticated/revisioned WebSocket route rather
+than the legacy desktop-local command path.
