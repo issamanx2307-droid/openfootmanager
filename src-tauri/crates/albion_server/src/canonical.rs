@@ -73,6 +73,16 @@ impl CanonicalCareer {
                     "awayTeam": team_name(&fixture.away_team_id),
                 })
             });
+        let squad = self.game.players.iter()
+            .filter(|player| player.team_id.as_deref() == Some(team_id.as_str()))
+            .map(|player| json!({
+                "id": player.id,
+                "name": player.match_name,
+                "position": format!("{:?}", player.position),
+                "condition": player.condition,
+                "injured": player.injury.is_some(),
+            }))
+            .collect::<Vec<_>>();
         Ok(json!({
             "currentDate": self.game.clock.current_date.format("%Y-%m-%d").to_string(),
             "club": {
@@ -87,6 +97,7 @@ impl CanonicalCareer {
                 "intensity": format!("{:?}", team.training_intensity),
             },
             "nextFixture": next_fixture,
+            "squad": squad,
         }))
     }
 

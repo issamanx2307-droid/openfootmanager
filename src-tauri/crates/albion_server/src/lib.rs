@@ -1051,6 +1051,15 @@ mod tests {
     }
 
     #[test]
+    fn manager_dashboard_squad_is_limited_to_the_controlled_club() {
+        let (game, manager_a, _, _, _) = two_manager_live_game();
+        let career = CanonicalCareer::new(game);
+        let squad = career.manager_dashboard(manager_a).unwrap()["squad"].as_array().unwrap().clone();
+        assert_eq!(squad.len(), 11);
+        assert!(squad.iter().all(|player| player["id"].as_str().is_some_and(|id| id.starts_with("a-"))));
+    }
+
+    #[test]
     fn human_live_match_pauses_until_the_disconnected_manager_returns() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
         let mut session = CareerSession::new(
