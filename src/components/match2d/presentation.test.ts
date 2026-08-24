@@ -69,10 +69,21 @@ describe("2D match presentation", () => {
     const clips = compilePresentationTimeline([
       event(12, "Pass", "Home"),
       event(8, "Goal", "Away", "AttackingBox"),
-      event(15, "Shot", "Home", "AttackingCentre"),
+      event(15, "ShotOffTarget", "Home", "AttackingCentre"),
     ]);
     expect(clips.map((clip) => clip.event.minute)).toEqual([8, 12, 15]);
     expect(filterPresentationTimeline(clips, "key").map((clip) => clip.event.event_type)).toEqual(["Goal"]);
-    expect(filterPresentationTimeline(clips, "extended").map((clip) => clip.event.event_type)).toEqual(["Goal", "Shot"]);
+    expect(filterPresentationTimeline(clips, "extended").map((clip) => clip.event.event_type)).toEqual(["Goal", "ShotOffTarget"]);
+  });
+
+  it("classifies the canonical Rust shooting and set-piece event names", () => {
+    const clips = compilePresentationTimeline([
+      event(7, "PassCompleted", "Home"),
+      event(8, "ShotOnTarget", "Home", "AttackingCentre"),
+      event(9, "ShotSaved", "Away", "DefensiveBox"),
+      event(10, "Corner", "Home", "AttackingRight"),
+    ]);
+    expect(filterPresentationTimeline(clips, "key").map((clip) => clip.event.event_type)).toEqual(["ShotOnTarget", "ShotSaved"]);
+    expect(filterPresentationTimeline(clips, "extended").map((clip) => clip.event.event_type)).toEqual(["ShotOnTarget", "ShotSaved", "Corner"]);
   });
 });

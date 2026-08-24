@@ -10,6 +10,7 @@ import { EventFeed, MatchStats, Lineups } from "./MatchPanels";
 import MatchScreenLayout from "./MatchScreenLayout";
 import { SubPanel } from "./SubPanel";
 import Match2DRenderer from "../match2d/Match2DRenderer";
+import { MATCH_2D_CONFIG, type CameraMode } from "../match2d/config";
 import type { HighlightMode } from "../match2d/types";
 import {
   Play, Pause, FastForward, SkipForward,
@@ -51,6 +52,9 @@ export default function MatchLive({
   const [showSubPanel, setShowSubPanel] = useState(false);
   const [highlightMode, setHighlightMode] = useState<HighlightMode>("full");
   const [showPlayerNames, setShowPlayerNames] = useState(false);
+  const [replayEvent, setReplayEvent] = useState<MatchEvent | null>(null);
+  const [cameraMode, setCameraMode] = useState<CameraMode>("full");
+  const [cameraZoom, setCameraZoom] = useState(1);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eventFeedRef = useRef<HTMLDivElement>(null);
   // Track phases we've already signaled to avoid double-firing
@@ -72,8 +76,10 @@ export default function MatchLive({
   const isFinished = snapshot.phase === "Finished";
   const rendererSpeed: 1 | 2 | 4 = speed === "fast" ? 4 : speed === "slow" ? 1 : 2;
   const match2dCopy = i18n.language.startsWith("th")
-    ? { title: "มุมมองแมตช์ 2D", key: "สำคัญ", extended: "ขยาย", full: "ทั้งหมด", showNames: "แสดงชื่อนักเตะ", hideNames: "ซ่อนชื่อนักเตะ" }
-    : { title: "2D Match View", key: "Key", extended: "Extended", full: "Full", showNames: "Show player names", hideNames: "Hide player names" };
+    ? { title: "มุมมองแมตช์ 2D", key: "สำคัญ", extended: "ขยาย", full: "ทั้งหมด", showNames: "แสดงชื่อนักเตะ", hideNames: "ซ่อนชื่อนักเตะ", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด", highlights: "ไฮไลต์การแข่งขัน", fullPitch: "เต็มสนาม", followBall: "ตามบอล", zoom: "ซูม" }
+    : { title: "2D Match View", key: "Key", extended: "Extended", full: "Full", showNames: "Show player names", hideNames: "Hide player names", replayLatest: "Replay latest highlight", stopReplay: "Return to live view", highlights: "Match highlights", fullPitch: "Full pitch", followBall: "Follow ball", zoom: "Zoom" };
+  const replayableEvents = importantEvents.filter((event) => ["Goal", "PenaltyGoal", "PenaltyMiss", "ShotOnTarget", "ShotSaved", "RedCard", "SecondYellow"].includes(event.event_type));
+  const latestReplayableEvent = replayableEvents.length > 0 ? replayableEvents[replayableEvents.length - 1] : null;
 
   // Reads only `lastResult` for phase transitions, which is sound because step_many stops on
   // entering any phase that needs the manager — so a half time, shootout or finish is always the
@@ -304,8 +310,11 @@ export default function MatchLive({
               awayColor={awayTeamColor}
               speed={rendererSpeed}
               highlightMode={highlightMode}
-              reducedMotion={!isRunning || speed === "paused"}
+              reducedMotion={(!isRunning || speed === "paused") && !replayEvent}
               showNames={showPlayerNames}
+              replayEvent={replayEvent}
+              cameraMode={cameraMode}
+              zoom={cameraZoom}
             />
           </section>
           <div className="flex bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-700 transition-colors duration-300">
@@ -379,7 +388,7 @@ export default function MatchLive({
           {/* User Controls */}
           <div className="p-4 border-b border-gray-200 dark:border-navy-700 flex flex-col gap-2">
             <h3 className="text-xs font-heading font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">{match2dCopy.title}</h3>
-            <div className="grid grid-cols-3 gap-1" role="group" aria-label="Match highlights">
+            <fieldset className="grid grid-cols-3 gap-1" aria-label={match2dCopy.highlights}>
               {(["key", "extended", "full"] as HighlightMode[]).map((mode) => (
                 <button
                   key={mode}
@@ -390,7 +399,7 @@ export default function MatchLive({
                   {match2dCopy[mode]}
                 </button>
               ))}
-            </div>
+            </fieldset>
             <button
               type="button"
               onClick={() => setShowPlayerNames((visible) => !visible)}
@@ -399,6 +408,22 @@ export default function MatchLive({
             >
               {showPlayerNames ? match2dCopy.hideNames : match2dCopy.showNames}
             </button>
+            {replayEvent ? (
+              <button type="button" onClick={() => setReplayEvent(null)} className="rounded bg-accent-500 px-2 py-1.5 text-left text-xs font-semibold text-white">
+                {match2dCopy.stopReplay}
+              </button>
+            ) : latestReplayableEvent && (
+              <button type="button" onClick={() => setReplayEvent(latestReplayableEvent)} className="rounded bg-accent-500 px-2 py-1.5 text-left text-xs font-semibold text-white">
+                {match2dCopy.replayLatest}
+              </button>
+            )}
+            <fieldset className="grid grid-cols-2 gap-1" aria-label={match2dCopy.title}>
+              <button type="button" onClick={() => setCameraMode("full")} aria-pressed={cameraMode === "full"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "full" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.fullPitch}</button>
+              <button type="button" onClick={() => setCameraMode("follow-ball")} aria-pressed={cameraMode === "follow-ball"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "follow-ball" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.followBall}</button>
+            </fieldset>
+            <label className="text-xs text-gray-700 dark:text-gray-200">{match2dCopy.zoom}
+              <input className="ml-2 align-middle" type="range" min={MATCH_2D_CONFIG.camera.minZoom} max={MATCH_2D_CONFIG.camera.maxZoom} step="0.1" value={cameraZoom} onChange={(event) => setCameraZoom(Number(event.target.value))} />
+            </label>
           </div>
 
           {!isSpectator && userSide && (
@@ -454,17 +479,23 @@ export default function MatchLive({
               {importantEvents
                 .filter(e => ["Goal", "PenaltyGoal", "YellowCard", "RedCard", "SecondYellow", "Substitution", "PenaltyMiss", "Injury"].includes(e.event_type))
                 .slice(-12).reverse()
-                .map((evt, i) => {
+                .map((evt) => {
                   const display = getEventDisplay(evt);
                   return (
-                    <div key={i} className="flex items-center gap-2 text-xs">
+                    <button
+                      key={`${evt.minute}-${evt.event_type}-${evt.player_id ?? "unknown"}-${evt.secondary_player_id ?? "none"}`}
+                      type="button"
+                      onClick={() => setReplayEvent(evt)}
+                      className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:hover:bg-navy-700"
+                      aria-label={`${evt.minute}' ${evt.event_type}`}
+                    >
                       <span className="text-gray-600 dark:text-gray-500 tabular-nums w-6 text-right font-heading">{evt.minute}'</span>
                       <span>{display.icon}</span>
                       <span className={`${display.color} font-medium truncate`}>{getPlayerName(snapshot, evt.player_id)}</span>
                       <Badge variant={evt.side === "Home" ? "primary" : "accent"} size="sm">
                         {evt.side === "Home" ? snapshot.home_team.name.substring(0, 3) : snapshot.away_team.name.substring(0, 3)}
                       </Badge>
-                    </div>
+                    </button>
                   );
                 })}
               {importantEvents.length === 0 && <p className="text-gray-600 dark:text-gray-500 text-xs">{t('match.noEventsYet')}</p>}

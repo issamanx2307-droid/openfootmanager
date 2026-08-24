@@ -36,21 +36,21 @@ function mirror(point: PitchPoint): PitchPoint {
 }
 
 function eventImportance(event: MatchEvent): PresentationClip["importance"] {
-  if (["Goal", "PenaltyGoal", "PenaltyMiss", "RedCard", "SecondYellow", "Save"].includes(event.event_type)) return "key";
-  if (["Shot", "Corner", "FreeKick", "Substitution", "YellowCard", "Injury"].includes(event.event_type)) return "extended";
+  if (["Goal", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal", "ShootoutMiss", "RedCard", "SecondYellow", "ShotOnTarget", "ShotSaved"].includes(event.event_type)) return "key";
+  if (["ShotOffTarget", "ShotBlocked", "Corner", "FreeKick", "Substitution", "YellowCard", "Injury", "Cross"].includes(event.event_type)) return "extended";
   return "normal";
 }
 
 function eventDuration(event: MatchEvent): number {
-  if (["Goal", "PenaltyGoal", "PenaltyMiss", "Shot", "Save"].includes(event.event_type)) return 900;
-  if (["LongPass", "ThroughBall", "Cross"].includes(event.event_type)) return 720;
-  if (["Tackle", "Interception", "Foul"].includes(event.event_type)) return 420;
+  if (["Goal", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal", "ShootoutMiss", "ShotOnTarget", "ShotOffTarget", "ShotBlocked", "ShotSaved"].includes(event.event_type)) return 900;
+  if (["PassCompleted", "PassIntercepted", "Cross", "Corner", "FreeKick"].includes(event.event_type)) return 720;
+  if (["Tackle", "Interception", "DribbleTackled", "Foul"].includes(event.event_type)) return 420;
   return 560;
 }
 
 function trajectoryForEvent(event: MatchEvent): MatchPresentationFrame["ballTrajectory"] {
   if (["Cross", "Corner", "FreeKick"].includes(event.event_type)) return "arc";
-  if (["Shot", "Goal", "PenaltyGoal", "PenaltyMiss", "Save"].includes(event.event_type)) return "shot";
+  if (["ShotOnTarget", "ShotOffTarget", "ShotBlocked", "ShotSaved", "Goal", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal", "ShootoutMiss"].includes(event.event_type)) return "shot";
   return "ground";
 }
 
@@ -139,7 +139,7 @@ export function presentationFrame(
     };
   }
   const playbackMs = elapsedMs % totalDuration;
-  const activeClip = clips.find((clip) => playbackMs >= clip.startMs && playbackMs < clip.startMs + clip.durationMs) ?? clips.at(-1) ?? null;
+  const activeClip = clips.find((clip) => playbackMs >= clip.startMs && playbackMs < clip.startMs + clip.durationMs) ?? clips[clips.length - 1] ?? null;
   if (!activeClip) {
     return {
       players,

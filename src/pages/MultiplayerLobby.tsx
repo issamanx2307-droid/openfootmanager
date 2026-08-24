@@ -11,7 +11,13 @@ import {
   loadAlbionSession,
   saveAlbionSession,
   type AlbionSession,
+  type AlbionServerEvent,
+  type AlbionViewCache,
 } from "../services/albionServerService";
+import {
+  EMPTY_ALBION_LIVE_MATCH,
+  reduceAlbionLiveMatch,
+} from "../services/albionMatchPresentation";
 import { useGameStore } from "../store/gameStore";
 
 type ManagerDashboard = {
@@ -187,9 +193,7 @@ export default function MultiplayerLobby() {
   const [bidAmounts, setBidAmounts] = useState<Record<string, string>>({});
   const [contractWages, setContractWages] = useState<Record<string, string>>({});
   const [contractYears, setContractYears] = useState<Record<string, string>>({});
-  const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
-  const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
-  const [liveEvents, setLiveEvents] = useState<string[]>([]);
+  const [livePresentation, setLivePresentation] = useState(EMPTY_ALBION_LIVE_MATCH);
   const dashboardView = readManagerDashboard(dashboard);
 
   useEffect(() => () => {
@@ -220,6 +224,18 @@ export default function MultiplayerLobby() {
     return <main className="min-h-screen p-8 bg-navy-900 text-white">{copy.noCareer}</main>;
   }
 
+  const handleServerEvent = (event: AlbionServerEvent, cache: AlbionViewCache) => {
+    if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
+    if (event.type === "StateDelta") setDashboard((previous: unknown) => applyDashboardDelta(previous, event.body?.changes));
+    if (event.type === "CommandRejected") setMessage(formatAlbionProtocolError(event.body?.error, thai));
+    if (event.type === "ReadyStateChanged") setMessage(copy.readyState);
+    if (["MatchOpened", "MatchState", "MatchEventBatch", "MatchFinished"].includes(event.type)) {
+      setLivePresentation((previous) => reduceAlbionLiveMatch(previous, event));
+    }
+    if (event.type === "MatchOpened") setMessage(copy.matchOpened);
+    if (event.type === "MatchFinished") setMessage(copy.matchFinished);
+  };
+
   const connect = async (url: string) => {
     const versions = await client.current.version(url);
     const joined = await client.current.join(url, {
@@ -228,31 +244,7 @@ export default function MultiplayerLobby() {
       club_id: managerClubId,
       client_versions: versions,
     });
-    client.current.connect(url, joined, (event, cache) => {
-      if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
-      if (event.type === "StateDelta") setDashboard((previous: unknown) => applyDashboardDelta(previous, event.body?.changes));
-      if (event.type === "CommandRejected") setMessage(formatAlbionProtocolError(event.body?.error, thai));
-      if (event.type === "ReadyStateChanged") setMessage(copy.readyState);
-      if (event.type === "MatchOpened") {
-        const matchId = event.body?.match_id;
-        if (typeof matchId === "string") setLiveMatchId(matchId);
-        setMessage(copy.matchOpened);
-      }
-      if (event.type === "MatchState") {
-        const body = event.body;
-        if (typeof body?.phase === "string" && typeof body.match_second === "number" && typeof body.home_score === "number" && typeof body.away_score === "number") {
-          setLiveState({ phase: body.phase, second: body.match_second, home: body.home_score, away: body.away_score });
-        }
-      }
-      const batchEvents = event.body?.events;
-      if (event.type === "MatchEventBatch" && Array.isArray(batchEvents)) {
-        setLiveEvents((previous) => [...previous, ...batchEvents.map((item) => formatAlbionLiveEvent(item, thai))].slice(-6));
-      }
-      if (event.type === "MatchFinished") {
-        setLiveMatchId(null);
-        setMessage(copy.matchFinished);
-      }
-    });
+    client.current.connect(url, joined, handleServerEvent);
     saveAlbionSession({ ...joined, server_url: url });
     setSession(joined);
     setMessage(copy.connected(joined.slot));
@@ -290,30 +282,7 @@ export default function MultiplayerLobby() {
     try {
       const versions = await client.current.version(stored.server_url);
       const restored = await client.current.reconnect(stored.server_url, stored.reconnect_token, versions);
-      client.current.connect(stored.server_url, restored, (event, cache) => {
-        if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
-      if (event.type === "StateDelta") setDashboard((previous: unknown) => applyDashboardDelta(previous, event.body?.changes));
-      if (event.type === "CommandRejected") setMessage(formatAlbionProtocolError(event.body?.error, thai));
-        if (event.type === "MatchOpened") {
-          const matchId = event.body?.match_id;
-          if (typeof matchId === "string") setLiveMatchId(matchId);
-          setMessage(copy.matchOpened);
-        }
-        if (event.type === "MatchState") {
-          const body = event.body;
-          if (typeof body?.phase === "string" && typeof body.match_second === "number" && typeof body.home_score === "number" && typeof body.away_score === "number") {
-            setLiveState({ phase: body.phase, second: body.match_second, home: body.home_score, away: body.away_score });
-          }
-        }
-        const batchEvents = event.body?.events;
-        if (event.type === "MatchEventBatch" && Array.isArray(batchEvents)) {
-          setLiveEvents((previous) => [...previous, ...batchEvents.map((item) => formatAlbionLiveEvent(item, thai))].slice(-6));
-        }
-        if (event.type === "MatchFinished") {
-          setLiveMatchId(null);
-          setMessage(copy.matchFinished);
-        }
-      });
+      client.current.connect(stored.server_url, restored, handleServerEvent);
       setSession(restored);
       setMessage(copy.restored);
     } catch {
@@ -377,11 +346,11 @@ export default function MultiplayerLobby() {
   };
 
   const applyLiveFormation = () => {
-    if (!session || !liveMatchId) return;
+    if (!session || !livePresentation.matchId) return;
     try {
       client.current.sendCommand(session, {
         ApplyLiveMatchCommand: {
-          match_id: liveMatchId,
+          match_id: livePresentation.matchId,
           command: { type: "ChangeFormation", body: { formation } },
         },
       });
@@ -449,11 +418,11 @@ export default function MultiplayerLobby() {
           <label>{copy.focus}<select value={trainingFocus} onChange={(event) => setTrainingFocus(event.target.value)} className="ml-2 rounded bg-navy-800 p-2">{["physical", "technical", "tactical", "defending", "attacking", "recovery"].map((value) => <option key={value} value={value}>{localizedCanonicalLabel(value, thai)}</option>)}</select></label>
           <button type="button" onClick={applyTraining} className="w-fit rounded bg-accent-500 px-3 py-2 font-bold">{copy.applyTraining}</button>
         </fieldset>
-        {liveMatchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
+        {livePresentation.matchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
-          {liveState && <p aria-live="polite">{copy.score}: {liveState.home}–{liveState.away} · {Math.floor(liveState.second / 60)}′ · {liveState.phase}</p>}
+          <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {livePresentation.phase ?? ""}</p>
           <button type="button" onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold">{copy.liveFormation}: {formation}</button>
-          {liveEvents.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{liveEvents.map((event, index) => <li key={index}>{event}</li>)}</ul></div>}
+          {livePresentation.events.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{livePresentation.events.slice(-6).map((event) => <li key={`${event.minute}-${event.event_type}-${event.player_id ?? "unknown"}-${event.secondary_player_id ?? "none"}`}>{formatAlbionLiveEvent(event, thai)}</li>)}</ul></div>}
         </fieldset>}
         {dashboardView && <section className="mt-4 rounded border border-navy-600 p-3" aria-label={copy.clubView}>
           <h2 className="font-bold">{copy.clubView} · {dashboardView.club.name}</h2>

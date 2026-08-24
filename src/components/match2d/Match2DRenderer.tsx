@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import type { MatchSnapshot } from "../match/types";
+import type { MatchEvent, MatchSnapshot } from "../match/types";
 import { presentationFrame } from "./presentation";
+import { MATCH_2D_CONFIG, type CameraMode } from "./config";
 import type { HighlightMode, PitchPoint, PresentationPlayer } from "./types";
 
 type Match2DRendererProps = {
@@ -11,6 +12,10 @@ type Match2DRendererProps = {
   highlightMode: HighlightMode;
   reducedMotion?: boolean;
   showNames?: boolean;
+  /** A viewer-selected server event. This changes presentation playback only. */
+  replayEvent?: MatchEvent | null;
+  cameraMode?: CameraMode;
+  zoom?: number;
 };
 
 function toCanvas(point: PitchPoint, width: number, height: number): [number, number] {
@@ -79,7 +84,8 @@ function drawPlayer(
   if (showNames) {
     context.font = `${Math.max(9, radius * 0.75)}px Inter, sans-serif`;
     context.fillStyle = "#f8fafc";
-    context.fillText(presentationPlayer.player.name.split(" ").at(-1) ?? presentationPlayer.player.name, x, y - radius - 8);
+    const names = presentationPlayer.player.name.split(" ");
+    context.fillText(names[names.length - 1] ?? presentationPlayer.player.name, x, y - radius - 8);
   }
   context.restore();
 }
@@ -92,6 +98,9 @@ export default function Match2DRenderer({
   highlightMode,
   reducedMotion = false,
   showNames = false,
+  replayEvent = null,
+  cameraMode = "full",
+  zoom = MATCH_2D_CONFIG.camera.minZoom,
 }: Match2DRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startedAt = useRef<number | null>(null);
@@ -102,6 +111,7 @@ export default function Match2DRenderer({
     const context = canvas.getContext("2d");
     if (!context) return undefined;
     let frameId = 0;
+    startedAt.current = null;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
@@ -116,18 +126,33 @@ export default function Match2DRenderer({
       if (startedAt.current === null) startedAt.current = now;
       const rect = canvas.getBoundingClientRect();
       const elapsed = reducedMotion ? 0 : (now - startedAt.current) * speed;
-      const frame = presentationFrame(snapshot, elapsed, highlightMode);
+      const frame = presentationFrame(
+        replayEvent ? { ...snapshot, events: [replayEvent] } : snapshot,
+        elapsed,
+        replayEvent ? "full" : highlightMode,
+      );
       context.clearRect(0, 0, rect.width, rect.height);
+      const boundedZoom = Math.max(MATCH_2D_CONFIG.camera.minZoom, Math.min(MATCH_2D_CONFIG.camera.maxZoom, zoom));
+      const activeZoom = cameraMode === "follow-ball" ? Math.max(boundedZoom, MATCH_2D_CONFIG.camera.dynamicZoom) : boundedZoom;
+      const [focusX, focusY] = cameraMode === "follow-ball"
+        ? toCanvas(frame.ball, rect.width, rect.height)
+        : [rect.width / 2, rect.height / 2];
+      context.save();
+      context.translate(rect.width / 2, rect.height / 2);
+      context.scale(activeZoom, activeZoom);
+      context.translate(-focusX, -focusY);
       drawPitch(context, rect.width, rect.height);
-      frame.players.forEach((player) => drawPlayer(
-        context,
-        player,
-        rect.width,
-        rect.height,
-        player.side === "Home" ? homeColor : awayColor,
-        showNames,
-        player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
-      ));
+      frame.players.forEach((player) => {
+        drawPlayer(
+          context,
+          player,
+          rect.width,
+          rect.height,
+          player.side === "Home" ? homeColor : awayColor,
+          showNames,
+          player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
+        );
+      });
       const [ballX, ballY] = toCanvas(frame.ball, rect.width, rect.height);
       if (frame.activeClip && frame.ballTrajectory !== "ground") {
         const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, rect.width, rect.height);
@@ -148,6 +173,7 @@ export default function Match2DRenderer({
       context.arc(ballX, ballY, Math.max(4, Math.min(rect.width, rect.height) * 0.011), 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      context.restore();
       if (frame.activeClip && ["Goal", "PenaltyGoal", "RedCard", "Substitution"].includes(frame.activeClip.event.event_type)) {
         context.fillStyle = "rgba(15, 23, 42, 0.7)";
         context.fillRect(12, 12, 150, 28);
@@ -162,7 +188,7 @@ export default function Match2DRenderer({
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [awayColor, highlightMode, homeColor, reducedMotion, showNames, snapshot, speed]);
+  }, [awayColor, cameraMode, highlightMode, homeColor, reducedMotion, replayEvent, showNames, snapshot, speed, zoom]);
 
   return <canvas ref={canvasRef} aria-label="2D live match pitch" className="block h-full min-h-80 w-full bg-emerald-800" />;
 }
