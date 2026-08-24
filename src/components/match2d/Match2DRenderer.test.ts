@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fitPitchViewport } from "./Match2DRenderer";
+import { fitPitchViewport, shouldShowEventOverlay } from "./Match2DRenderer";
 
 describe("fitPitchViewport", () => {
   it("letterboxes a wide container without stretching the pitch", () => {
@@ -19,5 +19,13 @@ describe("fitPitchViewport", () => {
       width: 600,
       height: 388.57142857142856,
     });
+  });
+
+  it("shows an event cue for cards, injuries and substitutions", () => {
+    const event = { minute: 61, side: "Home" as const, zone: "MidfieldCentre", player_id: "p1", secondary_player_id: null };
+    expect(shouldShowEventOverlay({ ...event, event_type: "YellowCard" })).toBe(true);
+    expect(shouldShowEventOverlay({ ...event, event_type: "Injury" })).toBe(true);
+    expect(shouldShowEventOverlay({ ...event, event_type: "Substitution" })).toBe(true);
+    expect(shouldShowEventOverlay({ ...event, event_type: "PassCompleted" })).toBe(false);
   });
 });

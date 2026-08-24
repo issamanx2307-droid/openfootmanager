@@ -27,6 +27,16 @@ type Match2DRendererProps = {
 
 type PitchViewport = { x: number; y: number; width: number; height: number };
 
+const OVERLAY_EVENT_TYPES = new Set([
+  "Goal", "PenaltyGoal", "PenaltyMiss", "RedCard", "SecondYellow",
+  "YellowCard", "Injury", "Substitution",
+]);
+
+/** Keeps short-lived cues aligned with the event classes players need to notice. */
+export function shouldShowEventOverlay(event: MatchEvent): boolean {
+  return OVERLAY_EVENT_TYPES.has(event.event_type);
+}
+
 /** Fits the canonical football-pitch ratio inside any Match Centre viewport. */
 export function fitPitchViewport(width: number, height: number): PitchViewport {
   const aspectRatio = MATCH_2D_CONFIG.pitch.aspectRatio;
@@ -383,7 +393,7 @@ export default function Match2DRenderer({
         drawDebugPitchGuides(context, pitchViewport.width, pitchViewport.height, frame);
       }
       context.restore();
-      if (frame.activeClip && ["Goal", "PenaltyGoal", "RedCard", "Substitution"].includes(frame.activeClip.event.event_type)) {
+      if (frame.activeClip && shouldShowEventOverlay(frame.activeClip.event)) {
         const label = eventLabel(frame.activeClip.event);
         context.fillStyle = "rgba(15, 23, 42, 0.7)";
         context.font = "bold 13px Inter, sans-serif";

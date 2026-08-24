@@ -723,3 +723,8 @@ goalkeeper ID in that event. The renderer therefore identifies the existing
 defending goalkeeper marker and moves it toward the interpolated shot position.
 This is a deterministic visual interpretation of the authoritative event only;
 focused coverage confirms the goalkeeper closes the distance to the live ball.
+
+2D event-cue update: yellow cards, injuries and penalty misses now receive the
+same short-lived localized Canvas overlay as goals, red cards and substitutions.
+Their persistent marker badge remains derived from the authoritative snapshot;
+the overlay is only a timing cue while the event clip plays.
