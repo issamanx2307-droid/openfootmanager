@@ -341,10 +341,18 @@ Core game flow requires no console/DB editing.
 - non-color state;
 - reduced motion;
 - contrast;
-- 1280×720 checks.
+- 1280×720 checks;
+- deployment seam: configurable CORS origins, standalone Linux server config,
+  persistent career path and health/readiness probes;
+- Oracle smoke deployment with HTTPS WebSocket proxy, restart/reconnect and
+  SQLite backup verification.
 
 ## Acceptance
-Core E2E completable in both English and Thai without major clipped/blocked UI.
+Core E2E completable in both English and Thai without major clipped/blocked UI;
+the same authoritative multiplayer core can run from a clean Linux service
+environment and be reached through an HTTPS WebSocket endpoint. Production
+account authentication and multi-career tenancy remain out of scope for this
+phase.
 
 ---
 

@@ -21,12 +21,13 @@ use albion_protocol::{
 };
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Query, State};
-use axum::http::StatusCode;
+use axum::http::{header, HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+use tower_http::cors::{Any, AllowOrigin, CorsLayer};
 use uuid::Uuid;
 use ofm_core::live_match_manager::LiveMatchSession;
 
@@ -99,7 +100,39 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/session/join", post(join))
         .route("/api/v1/session/reconnect", post(reconnect))
         .route("/ws", get(websocket))
+        .layer(cors_layer())
         .with_state(state)
+}
+
+/// CORS is permissive for the private desktop/LAN default. Oracle or another
+/// hosted deployment can restrict it with a comma-separated allow-list such
+/// as `https://play.example.com,tauri://localhost`.
+fn cors_layer() -> CorsLayer {
+    let configured = std::env::var("ALBION_CORS_ORIGINS").unwrap_or_default();
+    let origins = configured
+        .split(',')
+        .map(str::trim)
+        .filter(|origin| !origin.is_empty() && *origin != "*")
+        .filter_map(|origin| match origin.parse::<HeaderValue>() {
+            Ok(value) => Some(value),
+            Err(_) => {
+                eprintln!("Ignoring invalid ALBION_CORS_ORIGINS entry: {origin}");
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if origins.is_empty() {
+        CorsLayer::permissive()
+    } else {
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::list(origins))
+            .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+            .allow_headers([header::CONTENT_TYPE])
+            .allow_private_network(true)
+            .allow_credentials(false)
+            .expose_headers(Any)
+    }
 }
 
 async fn healthz() -> StatusCode {
@@ -820,7 +853,9 @@ mod tests {
     use axum::body::Body;
     use axum::body::to_bytes;
     use axum::http::Request;
-    use axum::http::header::CONTENT_TYPE;
+    use axum::http::header::{
+        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_REQUEST_METHOD, CONTENT_TYPE, ORIGIN,
+    };
     use chrono::{TimeZone, Utc};
     use db::game_database::GameDatabase;
     use db::game_persistence::GamePersistenceWriter;
@@ -839,6 +874,28 @@ mod tests {
 
     fn session() -> CareerSession {
         CareerSession::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"))
+    }
+
+    #[tokio::test]
+    async fn cors_allows_private_client_preflight_by_default() {
+        let response = router(AppState::new(ServerConfig::private_career(
+            Uuid::new_v4(),
+            "private-secret",
+        )))
+        .oneshot(
+            Request::builder()
+                .method(Method::OPTIONS)
+                .uri("/api/v1/session/join")
+                .header(ORIGIN, "tauri://localhost")
+                .header(ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+        assert!(response.status().is_success());
+        assert_eq!(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(), "*");
     }
 
     fn join_request(manager_id: Uuid, club_id: Uuid) -> JoinRequest {

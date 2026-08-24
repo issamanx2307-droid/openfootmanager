@@ -543,3 +543,11 @@ no horizontal overflow.
 Phase 10 update: the app shell now sets the document `lang` attribute from the
 chosen locale. Screen readers therefore receive `th` for the Thai main menu
 and Settings flow instead of the former English document language.
+
+Deployment preparation update: the standalone server now applies configurable
+CORS origins through `ALBION_CORS_ORIGINS` while retaining a permissive private
+LAN default. Oracle deployment instructions cover `ALBION_BIND`,
+`ALBION_JOIN_SECRET`, `ALBION_SAVE`, systemd, health/readiness probes, HTTPS
+WebSocket proxying and SQLite backup/restart smoke checks. This is preparation
+for the first single-career Oracle VM, not account authentication or
+multi-career tenancy.
