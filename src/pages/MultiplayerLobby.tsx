@@ -390,7 +390,7 @@ export default function MultiplayerLobby() {
     <div className="mx-auto max-w-xl space-y-5 rounded-2xl bg-navy-800 p-6 shadow-xl">
       <button type="button" onClick={() => navigate("/dashboard")} className="text-accent-300 hover:text-accent-100">{copy.back}</button>
       <h1 className="font-heading text-3xl font-bold">{copy.title}</h1>
-      <p className="text-gray-300">{message}</p>
+      <p className="text-gray-300" role="status" aria-live="polite" aria-atomic="true">{message}</p>
       <label className="block">{copy.secret}
         <input value={joinSecret} onChange={(event) => setJoinSecret(event.target.value)} className="mt-1 w-full rounded bg-navy-700 p-3" type="password" />
       </label>
@@ -414,7 +414,7 @@ export default function MultiplayerLobby() {
         </fieldset>
         <fieldset className="mt-4 grid gap-2 rounded border border-navy-600 p-3">
           <legend className="px-1 font-bold">{copy.training}</legend>
-          <label>{copy.intensity}<input type="range" min="0" max="100" value={trainingIntensity} onChange={(event) => setTrainingIntensity(Number(event.target.value))} className="ml-2 align-middle" /><output className="ml-2">{trainingIntensity}</output></label>
+          <label>{copy.intensity}<input type="range" min="0" max="100" value={trainingIntensity} aria-valuetext={`${trainingIntensity}%`} onChange={(event) => setTrainingIntensity(Number(event.target.value))} className="ml-2 align-middle" /><output className="ml-2">{trainingIntensity}</output></label>
           <label>{copy.focus}<select value={trainingFocus} onChange={(event) => setTrainingFocus(event.target.value)} className="ml-2 rounded bg-navy-800 p-2">{["physical", "technical", "tactical", "defending", "attacking", "recovery"].map((value) => <option key={value} value={value}>{localizedCanonicalLabel(value, thai)}</option>)}</select></label>
           <button type="button" onClick={applyTraining} className="w-fit rounded bg-accent-500 px-3 py-2 font-bold">{copy.applyTraining}</button>
         </fieldset>
@@ -442,7 +442,7 @@ export default function MultiplayerLobby() {
           <div className="mt-3 border-t border-navy-600 pt-3 text-sm">
             <p className="font-semibold">{copy.squad} · {copy.startingXi}: {startingXiPlayerIds.length}/11 {copy.selected}</p>
             {dashboardView.squad.length > 0
-              ? <><ul className="mt-1 divide-y divide-navy-600">{dashboardView.squad.map((player) => <li key={player.id} className="flex justify-between py-1"><label className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={startingXiPlayerIds.includes(player.id)} disabled={player.injured || (!startingXiPlayerIds.includes(player.id) && startingXiPlayerIds.length >= 11)} onChange={() => toggleStartingXiPlayer(player.id)} /><span>{player.name} · {player.position}</span></label><span>{player.injured ? "⚠" : `${player.condition}%`}</span></li>)}</ul>{dashboardView.nextFixture && <button type="button" onClick={applyStartingXi} disabled={startingXiPlayerIds.length !== 11} className="mt-2 rounded bg-accent-500 px-3 py-2 font-bold disabled:opacity-50">{copy.saveStartingXi}</button>}</>
+              ? <><ul className="mt-1 divide-y divide-navy-600">{dashboardView.squad.map((player) => <li key={player.id} className="flex justify-between py-1"><label className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={startingXiPlayerIds.includes(player.id)} disabled={player.injured || (!startingXiPlayerIds.includes(player.id) && startingXiPlayerIds.length >= 11)} aria-describedby={`player-status-${player.id}`} onChange={() => toggleStartingXiPlayer(player.id)} /><span>{player.name} · {player.position}</span></label><span id={`player-status-${player.id}`}>{player.injured ? "⚠" : `${player.condition}%`}</span></li>)}</ul>{dashboardView.nextFixture && <button type="button" onClick={applyStartingXi} disabled={startingXiPlayerIds.length !== 11} className="mt-2 rounded bg-accent-500 px-3 py-2 font-bold disabled:opacity-50">{copy.saveStartingXi}</button>}</>
               : <p className="text-gray-300">{copy.noPlayers}</p>}
           </div>
           <div className="mt-3 border-t border-navy-600 pt-3 text-sm">

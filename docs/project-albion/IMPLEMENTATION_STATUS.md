@@ -497,3 +497,8 @@ Phase 10 update: canonical `CommandRejected` events now display their stable
 error code as actionable English or Thai copy in the lobby, including stale
 state, invalid line-ups, budget limits and unavailable match commands. No
 server prose is trusted or shown; the focused service test covers both locales.
+
+Phase 10 update: the private-play lobby now announces connection and command
+status through an atomic polite live region. Training intensity has a textual
+range value, while every starting-XI checkbox describes the player's condition
+or injury state in addition to its visible non-colour indicator.
