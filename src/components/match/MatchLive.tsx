@@ -55,6 +55,7 @@ export default function MatchLive({
   const [replayEvent, setReplayEvent] = useState<MatchEvent | null>(null);
   const [cameraMode, setCameraMode] = useState<CameraMode>("full");
   const [cameraZoom, setCameraZoom] = useState(1);
+  const [rendererAvailable, setRendererAvailable] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eventFeedRef = useRef<HTMLDivElement>(null);
   // Track phases we've already signaled to avoid double-firing
@@ -76,10 +77,11 @@ export default function MatchLive({
   const isFinished = snapshot.phase === "Finished";
   const rendererSpeed: 1 | 2 | 4 = speed === "fast" ? 4 : speed === "slow" ? 1 : 2;
   const match2dCopy = i18n.language.startsWith("th")
-    ? { title: "มุมมองแมตช์ 2D", key: "สำคัญ", extended: "ขยาย", full: "ทั้งหมด", showNames: "แสดงชื่อนักเตะ", hideNames: "ซ่อนชื่อนักเตะ", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด", highlights: "ไฮไลต์การแข่งขัน", fullPitch: "เต็มสนาม", followBall: "ตามบอล", zoom: "ซูม" }
-    : { title: "2D Match View", key: "Key", extended: "Extended", full: "Full", showNames: "Show player names", hideNames: "Hide player names", replayLatest: "Replay latest highlight", stopReplay: "Return to live view", highlights: "Match highlights", fullPitch: "Full pitch", followBall: "Follow ball", zoom: "Zoom" };
+    ? { title: "มุมมองแมตช์ 2D", key: "สำคัญ", extended: "ขยาย", full: "ทั้งหมด", showNames: "แสดงชื่อนักเตะ", hideNames: "ซ่อนชื่อนักเตะ", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด", highlights: "ไฮไลต์การแข่งขัน", fullPitch: "เต็มสนาม", followBall: "ตามบอล", zoom: "ซูม", unavailable: "ไม่สามารถเปิดมุมมอง 2D ได้ ใช้คำบรรยายและสถิติการแข่งขันต่อได้ตามปกติ" }
+    : { title: "2D Match View", key: "Key", extended: "Extended", full: "Full", showNames: "Show player names", hideNames: "Hide player names", replayLatest: "Replay latest highlight", stopReplay: "Return to live view", highlights: "Match highlights", fullPitch: "Full pitch", followBall: "Follow ball", zoom: "Zoom", unavailable: "The 2D view is unavailable. Commentary and match statistics remain available." };
   const replayableEvents = importantEvents.filter((event) => ["Goal", "PenaltyGoal", "PenaltyMiss", "ShotOnTarget", "ShotSaved", "RedCard", "SecondYellow"].includes(event.event_type));
   const latestReplayableEvent = replayableEvents.length > 0 ? replayableEvents[replayableEvents.length - 1] : null;
+  const handleRendererUnavailable = useCallback(() => setRendererAvailable(false), []);
 
   // Reads only `lastResult` for phase transitions, which is sound because step_many stops on
   // entering any phase that needs the manager — so a half time, shootout or finish is always the
@@ -304,7 +306,7 @@ export default function MatchLive({
         {/* Left Panel: Event Feed + Stats */}
         <div className="flex-1 flex flex-col">
           <section className="h-[min(46vh,34rem)] min-h-80 border-b border-gray-200 bg-emerald-950 dark:border-navy-700">
-            <Match2DRenderer
+            {rendererAvailable ? <Match2DRenderer
               snapshot={snapshot}
               homeColor={homeTeamColor}
               awayColor={awayTeamColor}
@@ -315,7 +317,8 @@ export default function MatchLive({
               replayEvent={replayEvent}
               cameraMode={cameraMode}
               zoom={cameraZoom}
-            />
+              onRendererUnavailable={handleRendererUnavailable}
+            /> : <p role="alert" className="p-5 text-sm text-white">{match2dCopy.unavailable}</p>}
           </section>
           <div className="flex bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-700 transition-colors duration-300">
             {([

@@ -16,6 +16,7 @@ type Match2DRendererProps = {
   replayEvent?: MatchEvent | null;
   cameraMode?: CameraMode;
   zoom?: number;
+  onRendererUnavailable?: () => void;
 };
 
 function toCanvas(point: PitchPoint, width: number, height: number): [number, number] {
@@ -101,6 +102,7 @@ export default function Match2DRenderer({
   replayEvent = null,
   cameraMode = "full",
   zoom = MATCH_2D_CONFIG.camera.minZoom,
+  onRendererUnavailable,
 }: Match2DRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startedAt = useRef<number | null>(null);
@@ -109,7 +111,10 @@ export default function Match2DRenderer({
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const context = canvas.getContext("2d");
-    if (!context) return undefined;
+    if (!context) {
+      onRendererUnavailable?.();
+      return undefined;
+    }
     let frameId = 0;
     startedAt.current = null;
     const resize = () => {
@@ -188,7 +193,7 @@ export default function Match2DRenderer({
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [awayColor, cameraMode, highlightMode, homeColor, reducedMotion, replayEvent, showNames, snapshot, speed, zoom]);
+  }, [awayColor, cameraMode, highlightMode, homeColor, onRendererUnavailable, reducedMotion, replayEvent, showNames, snapshot, speed, zoom]);
 
   return <canvas ref={canvasRef} aria-label="2D live match pitch" className="block h-full min-h-80 w-full bg-emerald-800" />;
 }
