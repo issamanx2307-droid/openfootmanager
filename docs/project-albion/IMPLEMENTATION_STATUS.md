@@ -353,3 +353,8 @@ Phase 9 update: the same server-owned flow now exposes weekly training
 intensity and team focus through `SetTrainingPlan`. Both tactics and training
 mutations therefore share the authenticated/revisioned WebSocket route rather
 than the legacy desktop-local command path.
+
+Phase 9 update: `MatchOpened` now activates a small server-backed live-match
+controller in the lobby. It consumes the canonical match ID and sends the
+typed `ApplyLiveMatchCommand`/`ChangeFormation` command, completing the first
+desktop-to-live-match tactical path without local simulation.
