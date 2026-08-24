@@ -159,7 +159,7 @@ export default function MultiplayerLobby() {
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "กำลังรอเซิร์ฟเวอร์ยืนยันคำสั่ง", liveAccepted: "เซิร์ฟเวอร์ยอมรับคำสั่ง กำลังใช้กับแมตช์", liveApplied: "ใช้คำสั่งกับแมตช์แล้ว", liveRejected: "เซิร์ฟเวอร์ปฏิเสธคำสั่งระหว่างแข่ง", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด", presentationSpeed: "ความเร็วภาพถ่ายทอดสด",
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
-    events: "เหตุการณ์ล่าสุด",
+    events: "เหตุการณ์ล่าสุด", possession: "การครองบอล",
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
     finance: "การเงิน",
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
@@ -179,7 +179,7 @@ export default function MultiplayerLobby() {
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Waiting for the server to confirm the command.", liveAccepted: "Server accepted the command; applying it to the match.", liveApplied: "Command applied to the match.", liveRejected: "Server rejected the live-match command.", replayLatest: "Replay latest highlight", stopReplay: "Return to live view", presentationSpeed: "Presentation speed",
     matchFinished: "Match finished", score: "Score",
-    events: "Latest events",
+    events: "Latest events", possession: "Possession",
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
     finance: "Finances",
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
@@ -214,6 +214,10 @@ export default function MultiplayerLobby() {
   const requiresIntermissionReady = needsAlbionIntermissionReady(livePresentation.phase);
   const replayableEvents = livePresentation.events.filter(isReplayableAlbionEvent);
   const latestReplayableEvent = replayableEvents[replayableEvents.length - 1] ?? null;
+  const homePossession = Number.isFinite(livePresentation.snapshot?.home_possession_pct)
+    ? livePresentation.snapshot?.home_possession_pct ?? 50 : 50;
+  const awayPossession = Number.isFinite(livePresentation.snapshot?.away_possession_pct)
+    ? livePresentation.snapshot?.away_possession_pct ?? 50 : 50;
   const dashboardView = readManagerDashboard(dashboard);
 
   useEffect(() => () => {
@@ -476,6 +480,14 @@ export default function MultiplayerLobby() {
         {livePresentation.matchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
           <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {livePresentation.phase ?? ""}</p>
+          {livePresentation.snapshot && <div aria-label={copy.possession} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs">
+            <span className="font-semibold text-emerald-300">{homePossession.toFixed(0)}%</span>
+            <div className="flex h-2 overflow-hidden rounded bg-navy-700" aria-hidden="true">
+              <span className="bg-emerald-500" style={{ width: `${Math.max(0, Math.min(100, homePossession))}%` }} />
+              <span className="bg-indigo-500" style={{ width: `${Math.max(0, Math.min(100, awayPossession))}%` }} />
+            </div>
+            <span className="font-semibold text-indigo-300">{awayPossession.toFixed(0)}%</span>
+          </div>}
           <fieldset className="flex gap-1" aria-label={copy.presentationSpeed}>
             {LIVE_PRESENTATION_SPEEDS.map((speed) => <button key={speed} type="button" onClick={() => setLivePresentationSpeed(speed)} aria-pressed={livePresentationSpeed === speed} className={`rounded px-2 py-1 text-xs font-bold ${livePresentationSpeed === speed ? "bg-primary-500 text-white" : "bg-navy-700 text-gray-200"}`}>{speed}×</button>)}
           </fieldset>

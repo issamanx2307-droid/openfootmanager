@@ -621,6 +621,11 @@ local presentation speed in the multiplayer Match Centre.  This changes only
 Canvas timeline playback on that client; it is neither sent to nor applied by
 the authoritative server clock.
 
+2D/multiplayer acceptance update: the multiplayer Match Centre now displays
+the home/away possession split directly from the authoritative MatchState
+snapshot, with numeric percentages and a labelled bar.  It does not derive
+possession from client event timing or Canvas state.
+
 2D/multiplayer acceptance update: the server suite now contains a single
 two-human full-match regression.  It opens a canonical fixture, applies a
 server-authorized substitution from the bench, observes the half-time ready
