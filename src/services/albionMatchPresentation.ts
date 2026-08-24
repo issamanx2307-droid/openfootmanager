@@ -37,6 +37,15 @@ export function needsAlbionIntermissionReady(phase: string | null): boolean {
   return phase === "HalfTime" || phase === "ExtraTimeHalfTime";
 }
 
+const REPLAYABLE_EVENT_TYPES = new Set([
+  "Goal", "PenaltyGoal", "PenaltyMiss", "ShotOnTarget", "ShotSaved", "RedCard", "SecondYellow",
+]);
+
+/** Local replay may only reuse a semantic event already published by the server. */
+export function isReplayableAlbionEvent(event: MatchEvent): boolean {
+  return REPLAYABLE_EVENT_TYPES.has(event.event_type);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

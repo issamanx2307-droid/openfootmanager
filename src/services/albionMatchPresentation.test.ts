@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_ALBION_LIVE_MATCH, needsAlbionIntermissionReady, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
+import { EMPTY_ALBION_LIVE_MATCH, isReplayableAlbionEvent, needsAlbionIntermissionReady, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
 
 const opened = { type: "MatchOpened", body: { match_id: "match-1" } };
 const goal = { minute: 12, event_type: "Goal", side: "Home", zone: "AttackingBox", player_id: "p-9", secondary_player_id: null };
@@ -47,5 +47,10 @@ describe("Albion live-match presentation adapter", () => {
     expect(needsAlbionIntermissionReady("HalfTime")).toBe(true);
     expect(needsAlbionIntermissionReady("ExtraTimeHalfTime")).toBe(true);
     expect(needsAlbionIntermissionReady("SecondHalf")).toBe(false);
+  });
+
+  it("replays only already-published important events", () => {
+    expect(isReplayableAlbionEvent(goal)).toBe(true);
+    expect(isReplayableAlbionEvent({ ...goal, event_type: "PassCompleted" })).toBe(false);
   });
 });

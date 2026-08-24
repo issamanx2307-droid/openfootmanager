@@ -610,6 +610,12 @@ then becomes `accepted` and only `applied` when the authoritative `MatchState`
 arrives.  A matching rejection is rendered as rejected.  No client-side
 formation or renderer state is changed optimistically.
 
+2D/multiplayer acceptance update: the multiplayer Match Centre now offers a
+local-only replay of already-published goals, penalties, key shots/saves and
+red-card events.  The replay reuses the authoritative semantic event in the
+existing Canvas presentation layer and can be closed to return safely to the
+current live state; it never invokes or pauses match simulation.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new
