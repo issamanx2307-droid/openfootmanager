@@ -33,6 +33,7 @@ ofm_core = { path = "crates/ofm_core" }
 engine = { path = "crates/engine" }
 db = { path = "crates/db" }
 albion_rules = { path = "crates/albion_rules" }
+albion_server = { path = "crates/albion_server" }
 chrono = "0.4.44"
 rand = "0.10"
 semver = "1"
@@ -81,7 +82,7 @@ codegen-units = 1
 strip = "debuginfo"
 
 [features]
-mcp = ["dep:rmcp", "dep:axum", "dep:tower", "dep:tokio", "dep:tokio-util"]
+mcp = ["dep:rmcp", "dep:tower", "dep:tokio-util"]
 # Forwards to `db/save-snapshots`. Enable with `tauri dev -f save-snapshots`
 # (or via the `ofm-dev-snap` alias from shell.nix) to write a date-stamped
 # copy of each save's `.db` before every overwrite. Dev-only.
@@ -94,7 +95,6 @@ optional = true
 
 [dependencies.axum]
 version = "0.8"
-optional = true
 
 [dependencies.tower]
 version = "0.5"
@@ -102,8 +102,7 @@ optional = true
 
 [dependencies.tokio]
 version = "1"
-features = ["net", "rt-multi-thread", "macros", "signal"]
-optional = true
+features = ["net", "rt-multi-thread", "macros", "signal", "time"]
 
 [dependencies.tokio-util]
 version = "0.7"

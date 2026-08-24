@@ -15,6 +15,9 @@ const SAVE_MANAGER_UNAVAILABLE_ERROR: &str = "be.error.saveManagerUnavailable";
 /// Tauri-managed wrapper around SaveManager.
 pub struct SaveManagerState(pub Mutex<SaveManager>);
 
+/// Owns the bundled authoritative-server task while a desktop host session is active.
+pub struct AlbionHostState(pub Mutex<Option<tokio::task::JoinHandle<()>>>);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Must run before the webview is built: on Linux, WebKitGTK and the graphics driver read the
@@ -39,6 +42,7 @@ pub fn run() {
                 .build(),
         )
         .manage(state_manager.clone())
+        .manage(Arc::new(AlbionHostState(Mutex::new(None))))
         .setup(move |app| {
             use tauri::Manager as TauriManager;
 
@@ -198,6 +202,8 @@ pub fn run() {
             get_nations,
             get_fpl_data_source_status,
             update_fpl_data_source,
+            start_albion_host,
+            stop_albion_host,
             get_albion_snapshot_status,
             import_albion_snapshot,
             start_new_game,

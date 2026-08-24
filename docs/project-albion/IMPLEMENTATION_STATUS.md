@@ -283,6 +283,13 @@ cache; it never treats frontend state as authoritative. Focused tests cover
 snapshot/revision updates and stale-revision resync behavior. Existing Tauri
 screens have not yet been switched over, so Phase 9 remains in progress.
 
+Phase 9 update: the desktop now owns a bundled host lifecycle. Starting a host
+checkpoints the active indexed save, opens that exact SQLite career in
+`albion_server`, binds an ephemeral loopback port and returns its URL to the
+React service layer; stopping the host aborts only that owned task. This makes
+the forthcoming host/join lobby able to use a real canonical server rather
+than a manually launched console process.
+
 Phase 8 update: a server-level human-v-human regression now builds playable
 eleven-player squads for both claimed clubs, drives both managers through the
 Ready barrier, verifies one canonical `MatchOpened`, then advances the server

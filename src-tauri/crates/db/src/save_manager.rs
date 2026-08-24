@@ -199,6 +199,16 @@ impl SaveManager {
         Ok(saves)
     }
 
+    /// Resolves an indexed career to its SQLite database without exposing the
+    /// save directory layout to desktop callers.
+    pub fn database_path(&mut self, save_id: &str) -> Result<PathBuf, String> {
+        self.ensure_save_index_ready()?;
+        let entry = self.save_index.list_saves().iter()
+            .find(|entry| entry.id == save_id)
+            .ok_or_else(|| save_not_found_error(save_id))?;
+        Ok(self.saves_dir.join(&entry.db_filename))
+    }
+
     /// Create a new save from the current in-memory Game state.
     /// Returns the save_id.
     pub fn create_save(&mut self, game: &Game, save_name: &str) -> Result<String, String> {
