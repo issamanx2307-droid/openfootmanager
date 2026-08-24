@@ -1,33 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  collectMissingKeys,
-  type LocaleTree,
-} from "../i18n/i18nTestHelpers";
-import cs from "../i18n/locales/cs.json";
-import de from "../i18n/locales/de.json";
+import { type LocaleTree } from "../i18n/i18nTestHelpers";
 import en from "../i18n/locales/en.json";
-import es from "../i18n/locales/es.json";
-import fr from "../i18n/locales/fr.json";
-import itLocale from "../i18n/locales/it.json";
-import ptBR from "../i18n/locales/pt-BR.json";
-import pt from "../i18n/locales/pt.json";
-import ru from "../i18n/locales/ru.json";
-import tr from "../i18n/locales/tr.json";
-import zhCN from "../i18n/locales/zh-CN.json";
 
 const LOCALES: Record<string, LocaleTree> = {
-  cs,
-  de,
   en,
-  es,
-  fr,
-  it: itLocale,
-  pt,
-  "pt-BR": ptBR,
-  ru,
-  tr,
-  "zh-CN": zhCN,
 };
 
 const REQUIRED_KEYS = [
@@ -167,13 +144,5 @@ describe("backend i18n locale coverage", () => {
     }, {});
 
     expect(missingKeysByLocale).toEqual({});
-  });
-
-  it("keeps zh-CN aligned with the English translation key set", () => {
-    expect(collectMissingKeys(en, zhCN)).toEqual([]);
-  });
-
-  it("keeps ru aligned with the English translation key set", () => {
-    expect(collectMissingKeys(en, ru)).toEqual([]);
   });
 });

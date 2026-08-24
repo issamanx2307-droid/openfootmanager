@@ -1,18 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import cs from "../../../i18n/locales/cs.json";
-import de from "../../../i18n/locales/de.json";
 import en from "../../../i18n/locales/en.json";
-import es from "../../../i18n/locales/es.json";
-import fr from "../../../i18n/locales/fr.json";
-import itIT from "../../../i18n/locales/it.json";
-import ptBR from "../../../i18n/locales/pt-BR.json";
-import pt from "../../../i18n/locales/pt.json";
-import ru from "../../../i18n/locales/ru.json";
-import tr from "../../../i18n/locales/tr.json";
-import zhCN from "../../../i18n/locales/zh-CN.json";
 
-const LOCALE_BUNDLES = { cs, de, en, es, fr, it: itIT, pt, "pt-BR": ptBR, ru, tr, "zh-CN": zhCN };
+const LOCALE_BUNDLES = { en };
 import {
   PLAY_STYLES,
   buildParticipantSpec,
@@ -370,8 +360,8 @@ describe("PLAY_STYLES", () => {
 
   it("has a translation in every supported locale for every style it offers", () => {
     // LabeledSelect renders raw option values unless given labels, so every
-    // style must resolve through playStyles.* — and in all 11 locales, not
-    // just English, or a missing entry ships as a raw enum name.
+    // Package editor currently uses the English schema labels. Each offered
+    // style must resolve through playStyles.* instead of shipping as a raw enum.
     for (const [code, bundle] of Object.entries(LOCALE_BUNDLES)) {
       for (const style of PLAY_STYLES) {
         const label = bundle.common.playStyles[style as keyof typeof bundle.common.playStyles];

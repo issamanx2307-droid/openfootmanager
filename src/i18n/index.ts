@@ -4,16 +4,6 @@ import resourcesToBackend from "i18next-resources-to-backend";
 
 export const SUPPORTED_LANGUAGES = [
   { code: "en", labelKey: "settings.languages.en" },
-  { code: "es", labelKey: "settings.languages.es" },
-  { code: "pt", labelKey: "settings.languages.pt" },
-  { code: "fr", labelKey: "settings.languages.fr" },
-  { code: "de", labelKey: "settings.languages.de" },
-  { code: "it", labelKey: "settings.languages.it" },
-  { code: "ru", labelKey: "settings.languages.ru" },
-  { code: "pt-BR", labelKey: "settings.languages.ptBR" },
-  { code: "zh-CN", labelKey: "settings.languages.zhCN" },
-  { code: "cs", labelKey: "settings.languages.cs" },
-  { code: "tr", labelKey: "settings.languages.tr" },
   { code: "th", labelKey: "settings.languages.th", nativeLabel: "ไทย" },
 ] as const;
 
@@ -23,8 +13,6 @@ const SUPPORTED_CODES = new Map(
     language.code,
   ]),
 );
-
-const SIMPLIFIED_CHINESE_LOCALES = new Set(["zh", "zh-cn", "zh-sg", "zh-my"]);
 
 type TranslationResource = Record<string, unknown>;
 
@@ -57,13 +45,6 @@ export function resolveSupportedLanguage(locale: string): string {
   const normalized = locale.trim().replace(/_/g, "-").toLowerCase();
   const exactMatch = SUPPORTED_CODES.get(normalized);
   if (exactMatch) return exactMatch;
-
-  if (
-    SIMPLIFIED_CHINESE_LOCALES.has(normalized) ||
-    normalized.startsWith("zh-hans")
-  ) {
-    return "zh-CN";
-  }
 
   const base = normalized.split("-")[0];
   return SUPPORTED_CODES.get(base) ?? "en";
