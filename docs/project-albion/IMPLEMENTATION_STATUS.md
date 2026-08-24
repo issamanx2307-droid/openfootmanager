@@ -564,3 +564,21 @@ script, consistent SQLite online-backup script and public probe script. The
 only deployment-specific remaining work is to supply the Oracle VM, DNS name,
 career database and private join secret, then execute the documented smoke
 test.
+
+2D Enhanced Match Renderer update: the local Match Centre now uses a
+presentation-only Canvas renderer over the existing authoritative snapshot,
+with deterministic formation placement, half-time mirroring, canonical event
+timeline playback, replay, camera/zoom and a persisted reduced-motion setting.
+The multiplayer protocol now includes a read-only engine snapshot in every
+`MatchState`, so a host, guest or reconnecting client can rebuild the same
+score, line-ups, cards, substitutions and event history without a client
+simulation. The client validates this payload, deduplicates ordered event
+batches, and falls back to the commentary/stat view if Canvas is unavailable.
+
+Verification for this slice: `cargo test -p albion_protocol -p albion_server
+--quiet` (8 + 27 tests), `cargo test -p openfootmanager
+commands::settings::tests --quiet` (4 tests), and focused Vitest renderer,
+adapter, settings and MatchSimulation suites. The end-to-end two-human
+acceptance scenario in `10_2D_ENHANCED_MATCH_RENDERER.md` still remains in
+progress; in particular, visual QA across two browser/desktop clients and the
+developer diagnostics overlay are not yet accepted as complete.
