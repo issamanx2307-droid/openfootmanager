@@ -666,3 +666,8 @@ rather than stretching the grass and player coordinates. Camera clipping and
 all normalized player/ball transforms use that fitted viewport. Unit coverage
 checks both wide and tall containers, while the renderer remains resolution-
 independent.
+
+2D pitch update: the professional pitch geometry now includes a centre spot
+and penalty arcs as well as the existing centre circle, penalty areas, six-
+yard boxes, penalty spots, corner arcs, goals and mowing bands. These are
+Canvas-only visual markings and have no match-engine meaning.

@@ -62,6 +62,9 @@ function drawPitch(context: CanvasRenderingContext2D, width: number, height: num
   context.arc(width / 2, height / 2, height * 0.13, 0, Math.PI * 2);
   context.stroke();
   context.fillStyle = line;
+  context.beginPath();
+  context.arc(width / 2, height / 2, Math.max(1.5, width * 0.003), 0, Math.PI * 2);
+  context.fill();
   for (const direction of [1, -1]) {
     const spotX = direction === 1 ? marginX + pitchWidth * 0.11 : width - marginX - pitchWidth * 0.11;
     context.beginPath();
@@ -75,6 +78,14 @@ function drawPitch(context: CanvasRenderingContext2D, width: number, height: num
     context.strokeRect(left, height * 0.24, pitchWidth * 0.16, height * 0.52);
     const sixLeft = direction === 1 ? marginX : width - marginX - pitchWidth * 0.07;
     context.strokeRect(sixLeft, height * 0.36, pitchWidth * 0.07, height * 0.28);
+    const penaltySpotX = direction === 1 ? marginX + pitchWidth * 0.11 : width - marginX - pitchWidth * 0.11;
+    context.beginPath();
+    if (direction === 1) {
+      context.arc(penaltySpotX, height / 2, height * 0.13, -0.82, 0.82);
+    } else {
+      context.arc(penaltySpotX, height / 2, height * 0.13, Math.PI - 0.82, Math.PI + 0.82);
+    }
+    context.stroke();
   }
   for (const [x, y, start] of [[marginX, marginY, 0], [width - marginX, marginY, Math.PI / 2], [width - marginX, height - marginY, Math.PI], [marginX, height - marginY, Math.PI * 1.5]] as const) {
     context.beginPath();
