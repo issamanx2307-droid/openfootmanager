@@ -1,6 +1,6 @@
 //! Canonical game mutations performed by the authoritative command lane.
 
-use albion_protocol::command::{Command, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody, SubmitContractOfferBody, SubmitTransferBidBody};
+use albion_protocol::command::{Command, RespondTransferOfferBody, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody, SubmitContractOfferBody, SubmitTransferBidBody, TransferOfferResponse};
 use albion_protocol::ErrorCode;
 use chrono::Datelike;
 use domain::team::{PlayStyle, TrainingFocus, TrainingIntensity};
@@ -166,6 +166,7 @@ impl CanonicalCareer {
             Command::SetStartingXi(body) => self.set_starting_xi(manager_id, body),
             Command::SetTrainingPlan(body) => self.set_training_plan(manager_id, body),
             Command::SubmitTransferBid(body) => self.submit_transfer_bid(manager_id, body),
+            Command::RespondTransferOffer(body) => self.respond_transfer_offer(manager_id, body),
             Command::SubmitContractOffer(body) => self.submit_contract_offer(manager_id, body),
             _ => Err(ErrorCode::MatchCommandNotAllowed),
         }
@@ -303,6 +304,39 @@ impl CanonicalCareer {
         }))
     }
 
+    fn respond_transfer_offer(
+        &mut self,
+        manager_id: Uuid,
+        body: &RespondTransferOfferBody,
+    ) -> Result<Value, ErrorCode> {
+        let team_id = self.controlled_team_id(manager_id)?;
+        let player_id = self
+            .game
+            .players
+            .iter()
+            .find(|player| {
+                player.team_id.as_deref() == Some(team_id.as_str())
+                    && player.transfer_offers.iter().any(|offer| offer.id == body.offer_id.to_string())
+            })
+            .map(|player| player.id.clone())
+            .ok_or(ErrorCode::AuthInvalid)?;
+        match body.response {
+            TransferOfferResponse::Accept => self.with_manager_context(manager_id, |game| {
+                ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id.to_string(), true)
+            })?,
+            TransferOfferResponse::Reject => self.with_manager_context(manager_id, |game| {
+                ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id.to_string(), false)
+            })?,
+            TransferOfferResponse::Counter => {
+                let fee = whole_currency(body.counter_upfront_minor.ok_or(ErrorCode::InsufficientTransferBudget)?)?;
+                self.with_manager_context(manager_id, |game| {
+                    ofm_core::transfers::counter_offer(game, &player_id, &body.offer_id.to_string(), fee)
+                })?;
+            }
+        }
+        Ok(json!({ "playerId": player_id, "offerId": body.offer_id, "response": format!("{:?}", body.response) }))
+    }
+
     fn with_manager_context<T>(
         &mut self,
         manager_id: Uuid,
@@ -387,6 +421,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use domain::league::{Fixture, FixtureCompetition, FixtureStatus, League};
     use domain::manager::Manager;
+    use domain::player::{Player, PlayerAttributes, Position, TransferOffer, TransferOfferStatus};
     use domain::team::Team;
     use ofm_core::clock::GameClock;
 
@@ -472,5 +507,32 @@ mod tests {
         }));
         assert_eq!(result.unwrap_err(), ErrorCode::InsufficientTransferBudget);
         assert_eq!(career.game().teams[0].finance, before);
+    }
+
+    #[test]
+    fn manager_can_reject_an_incoming_transfer_offer_canonically() {
+        let (mut career, manager_id) = career();
+        let buyer_id = Uuid::new_v4();
+        career.game.teams.push(Team::new(
+            buyer_id.to_string(), "Buyer".into(), "BUY".into(), "England".into(), "Buyer".into(), "Ground".into(), 20_000,
+        ));
+        let offer_id = Uuid::new_v4();
+        let team_id = career.game.teams[0].id.clone();
+        let mut player = Player::new(
+            Uuid::new_v4().to_string(), "Player".into(), "Test Player".into(), "1995-01-01".into(), "ENG".into(), Position::Midfielder,
+            PlayerAttributes { pace: 60, stamina: 60, strength: 60, agility: 60, passing: 60, shooting: 60, tackling: 60, dribbling: 60, defending: 60, positioning: 60, vision: 60, decisions: 60, composure: 60, aggression: 60, teamwork: 60, leadership: 60, handling: 20, reflexes: 20, aerial: 60 },
+        );
+        player.team_id = Some(team_id);
+        player.transfer_offers.push(TransferOffer {
+            id: offer_id.to_string(), from_team_id: buyer_id.to_string(), fee: 1_000_000, wage_offered: 0,
+            last_manager_fee: None, negotiation_round: 0, suggested_counter_fee: None,
+            status: TransferOfferStatus::Pending, date: "2026-07-01".into(), registration_date: None,
+        });
+        career.game.players.push(player);
+
+        career.apply(manager_id, &Command::RespondTransferOffer(RespondTransferOfferBody {
+            offer_id, response: TransferOfferResponse::Reject, counter_upfront_minor: None,
+        })).unwrap();
+        assert_eq!(career.game.players[0].transfer_offers[0].status, TransferOfferStatus::Rejected);
     }
 }

@@ -374,3 +374,9 @@ Phase 8/9 documentation: `PRIVATE_LAN_PLAY.md` now gives the executable
 host/join/reconnect flow for the bundled lobby, including the LAN/Tailscale URL
 substitution, firewall expectation, version mismatch behavior and live-match
 disconnect policy.
+
+Phase 8 update: `RespondTransferOffer` is now implemented in the canonical
+command dispatcher (accept, reject and counter), locating the offer only on
+the acting manager's club before calling the existing transfer rules. Focused
+coverage creates a real incoming offer and verifies a canonical rejection is
+persisted in the player offer state.
