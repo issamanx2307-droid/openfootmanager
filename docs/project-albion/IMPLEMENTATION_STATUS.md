@@ -342,3 +342,9 @@ Phase 10 update: the multiplayer core flow now has an English/Thai copy layer
 for all visible lobby actions, session outcomes and ready-barrier feedback.
 This prevents the initial Thai-only lobby from blocking the English acceptance
 flow while the rest of the large legacy locale is translated incrementally.
+
+Phase 9 update: multiplayer users can now set formation and approach from the
+lobby, which sends `SetTactics` through the authoritative WebSocket command
+lane. This is the first core club-management mutation exposed in the desktop
+server flow after Ready, alongside the existing server ownership/revision
+checks.
