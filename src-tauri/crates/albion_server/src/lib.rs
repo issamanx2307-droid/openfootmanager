@@ -666,9 +666,13 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use domain::manager::Manager;
     use domain::team::Team;
+    use futures_util::{SinkExt, StreamExt};
+    use std::future::IntoFuture;
     use ofm_core::clock::GameClock;
     use ofm_core::game::Game;
     use tower::ServiceExt;
+    use tokio_tungstenite::connect_async;
+    use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
     fn session() -> CareerSession {
         CareerSession::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"))
@@ -844,6 +848,51 @@ mod tests {
         assert_eq!(restored.manager_id, manager_id);
         assert_eq!(restored.slot, joined.slot);
         assert_eq!(restored.reconnect_token, joined.reconnect_token);
+    }
+
+    #[tokio::test]
+    async fn two_websocket_clients_receive_hello_and_duplicate_ready_is_safe() {
+        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let (token_a, token_b, manager_a) = {
+            let mut session = state.0.lock().unwrap();
+            let manager_a = Uuid::new_v4();
+            let joined_a = session.join(join_request(manager_a, Uuid::new_v4())).unwrap();
+            let joined_b = session.join(join_request(Uuid::new_v4(), Uuid::new_v4())).unwrap();
+            (joined_a.reconnect_token, joined_b.reconnect_token, manager_a)
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(axum::serve(listener, router(state.clone())).into_future());
+        let (mut client_a, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_a}")).await.unwrap();
+        let (mut client_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
+
+        for client in [&mut client_a, &mut client_b] {
+            let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("server must send hello") };
+            assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::Hello(_)));
+        }
+        let (career_id, protocol_version) = {
+            let session = state.0.lock().unwrap();
+            (session.config.career_id, session.config.versions.protocol_version)
+        };
+        let ready = Envelope {
+            protocol_version,
+            message_id: Uuid::new_v4(),
+            kind: MessageKind::Command,
+            career_id,
+            manager_id: manager_a,
+            expected_revision: None,
+            payload: EnvelopePayload::Command(Command::MarkReady(MarkReadyBody {})),
+        };
+        let message = serde_json::to_string(&ready).unwrap();
+        client_a.send(TungsteniteMessage::Text(message.clone().into())).await.unwrap();
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else { panic!("ready needs acknowledgement") };
+        assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::CommandAck(_)));
+        let Some(Ok(TungsteniteMessage::Text(_))) = client_a.next().await else { panic!("ready state event must follow acknowledgement") };
+        client_a.send(TungsteniteMessage::Text(message.into())).await.unwrap();
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else { panic!("duplicate needs acknowledgement") };
+        let ServerEvent::CommandAck(ack) = serde_json::from_str::<ServerEvent>(&text).unwrap() else { panic!("duplicate must replay ack") };
+        assert_eq!(ack.applied_revision, 1);
+        server.abort();
     }
 
     #[test]
