@@ -14,6 +14,9 @@ export interface AppSettings {
   ui_scale: "small" | "normal" | "large" | "xlarge";
   high_contrast: boolean;
   reduced_motion: boolean;
+  match_camera_mode: "full" | "follow-ball";
+  match_highlight_mode: "key" | "extended" | "full";
+  show_match_player_names: boolean;
 }
 
 export interface CurrencyDefinition {
@@ -41,6 +44,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   ui_scale: "normal",
   high_contrast: false,
   reduced_motion: false,
+  match_camera_mode: "full",
+  match_highlight_mode: "full",
+  show_match_player_names: false,
 };
 
 const DEFAULT_CURRENCY: CurrencyDefinition = {

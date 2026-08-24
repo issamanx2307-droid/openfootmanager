@@ -26,6 +26,13 @@ pub struct AppSettings {
     /// Presentation preference only; never changes simulation pacing or state.
     #[serde(default)]
     pub reduced_motion: bool,
+    /// Local-only 2D presentation preferences. These never reach the match engine.
+    #[serde(default = "default_match_camera_mode")]
+    pub match_camera_mode: String,
+    #[serde(default = "default_match_highlight_mode")]
+    pub match_highlight_mode: String,
+    #[serde(default)]
+    pub show_match_player_names: bool,
     /// When true, the Continue button rolls forward several days until the next
     /// event (user match, blocker, transfer deadline, high-priority inbox).
     #[serde(default)]
@@ -45,6 +52,8 @@ fn default_language() -> String {
 fn default_ui_scale() -> String {
     "normal".to_string()
 }
+fn default_match_camera_mode() -> String { "full".to_string() }
+fn default_match_highlight_mode() -> String { "full".to_string() }
 
 impl Default for AppSettings {
     fn default() -> Self {
@@ -60,6 +69,9 @@ impl Default for AppSettings {
             ui_scale: "normal".to_string(),
             high_contrast: false,
             reduced_motion: false,
+            match_camera_mode: default_match_camera_mode(),
+            match_highlight_mode: default_match_highlight_mode(),
+            show_match_player_names: false,
             continue_to_next_event: false,
         }
     }

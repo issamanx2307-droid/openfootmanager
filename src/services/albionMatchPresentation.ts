@@ -64,7 +64,7 @@ export function readAlbionMatchSnapshot(value: unknown): MatchSnapshot | null {
   if (typeof phase !== "string" || typeof currentMinute !== "number" || typeof homeScore !== "number" || typeof awayScore !== "number"
     || (possession !== "Home" && possession !== "Away") || typeof ballZone !== "string" || !validTeam(homeTeam) || !validTeam(awayTeam)
     || !Array.isArray(events) || !Array.isArray(sentOff)) return null;
-  return value as MatchSnapshot;
+  return value as unknown as MatchSnapshot;
 }
 
 /**

@@ -20,6 +20,9 @@ const DEFAULT_SETTINGS = {
   ui_scale: "normal",
   high_contrast: false,
   reduced_motion: false,
+  match_camera_mode: "full",
+  match_highlight_mode: "full",
+  show_match_player_names: false,
 } as const;
 
 const SUPPORTED_CURRENCIES = [
@@ -150,6 +153,23 @@ describe("useSettingsStore", () => {
       },
     });
     expect(useSettingsStore.getState().currency).toEqual(SUPPORTED_CURRENCIES[2]);
+  });
+
+  it("persists presentation preferences without changing match simulation settings", async () => {
+    vi.mocked(invoke).mockResolvedValue(undefined);
+
+    await useSettingsStore.getState().updateSettings({
+      match_camera_mode: "follow-ball",
+      match_highlight_mode: "key",
+      show_match_player_names: true,
+    });
+
+    expect(useSettingsStore.getState().settings).toMatchObject({
+      match_camera_mode: "follow-ball",
+      match_highlight_mode: "key",
+      show_match_player_names: true,
+      match_speed: "normal",
+    });
   });
 
   it("rolls back the local update when saving fails and reports the error", async () => {

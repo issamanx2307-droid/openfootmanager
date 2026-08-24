@@ -50,10 +50,10 @@ export default function MatchLive({
   const [activePanel, setActivePanel] = useState<ActivePanel>("events");
   const [isRunning, setIsRunning] = useState(true);
   const [showSubPanel, setShowSubPanel] = useState(false);
-  const [highlightMode, setHighlightMode] = useState<HighlightMode>("full");
-  const [showPlayerNames, setShowPlayerNames] = useState(false);
+  const [highlightMode, setHighlightMode] = useState<HighlightMode>(settings.match_highlight_mode);
+  const [showPlayerNames, setShowPlayerNames] = useState(settings.show_match_player_names);
   const [replayEvent, setReplayEvent] = useState<MatchEvent | null>(null);
-  const [cameraMode, setCameraMode] = useState<CameraMode>("full");
+  const [cameraMode, setCameraMode] = useState<CameraMode>(settings.match_camera_mode);
   const [cameraZoom, setCameraZoom] = useState(1);
   const [rendererAvailable, setRendererAvailable] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,6 +86,7 @@ export default function MatchLive({
   const replayableEvents = importantEvents.filter((event) => ["Goal", "PenaltyGoal", "PenaltyMiss", "ShotOnTarget", "ShotSaved", "RedCard", "SecondYellow"].includes(event.event_type));
   const latestReplayableEvent = replayableEvents.length > 0 ? replayableEvents[replayableEvents.length - 1] : null;
   const handleRendererUnavailable = useCallback(() => setRendererAvailable(false), []);
+  const savePresentationPreference = useSettingsStore((state) => state.updateSettings);
 
   // Reads only `lastResult` for phase transitions, which is sound because step_many stops on
   // entering any phase that needs the manager — so a half time, shootout or finish is always the
@@ -402,7 +403,10 @@ export default function MatchLive({
                 <button
                   key={mode}
                   type="button"
-                  onClick={() => setHighlightMode(mode)}
+                  onClick={() => {
+                    setHighlightMode(mode);
+                    void savePresentationPreference({ match_highlight_mode: mode });
+                  }}
                   className={`rounded px-2 py-1.5 text-[10px] font-heading uppercase tracking-wide ${highlightMode === mode ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-navy-700 dark:text-gray-300"}`}
                 >
                   {match2dCopy[mode]}
@@ -411,7 +415,11 @@ export default function MatchLive({
             </fieldset>
             <button
               type="button"
-              onClick={() => setShowPlayerNames((visible) => !visible)}
+              onClick={() => {
+                const next = !showPlayerNames;
+                setShowPlayerNames(next);
+                void savePresentationPreference({ show_match_player_names: next });
+              }}
               className="rounded bg-gray-100 px-2 py-1.5 text-left text-xs text-gray-700 dark:bg-navy-700 dark:text-gray-200"
               aria-pressed={showPlayerNames}
             >
@@ -427,8 +435,8 @@ export default function MatchLive({
               </button>
             )}
             <fieldset className="grid grid-cols-2 gap-1" aria-label={match2dCopy.title}>
-              <button type="button" onClick={() => setCameraMode("full")} aria-pressed={cameraMode === "full"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "full" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.fullPitch}</button>
-              <button type="button" onClick={() => setCameraMode("follow-ball")} aria-pressed={cameraMode === "follow-ball"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "follow-ball" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.followBall}</button>
+              <button type="button" onClick={() => { setCameraMode("full"); void savePresentationPreference({ match_camera_mode: "full" }); }} aria-pressed={cameraMode === "full"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "full" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.fullPitch}</button>
+              <button type="button" onClick={() => { setCameraMode("follow-ball"); void savePresentationPreference({ match_camera_mode: "follow-ball" }); }} aria-pressed={cameraMode === "follow-ball"} className={`rounded px-2 py-1.5 text-xs ${cameraMode === "follow-ball" ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-700 dark:bg-navy-700 dark:text-gray-200"}`}>{match2dCopy.followBall}</button>
             </fieldset>
             <label className="text-xs text-gray-700 dark:text-gray-200">{match2dCopy.zoom}
               <input className="ml-2 align-middle" type="range" min={MATCH_2D_CONFIG.camera.minZoom} max={MATCH_2D_CONFIG.camera.maxZoom} step="0.1" value={cameraZoom} onChange={(event) => setCameraZoom(Number(event.target.value))} />
