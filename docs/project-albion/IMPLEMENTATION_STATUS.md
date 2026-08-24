@@ -616,6 +616,11 @@ red-card events.  The replay reuses the authoritative semantic event in the
 existing Canvas presentation layer and can be closed to return safely to the
 current live state; it never invokes or pauses match simulation.
 
+2D/multiplayer acceptance update: host and guest can now choose 1×, 2× or 4×
+local presentation speed in the multiplayer Match Centre.  This changes only
+Canvas timeline playback on that client; it is neither sent to nor applied by
+the authoritative server clock.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new

@@ -43,6 +43,8 @@ type LiveCommandState = {
   status: "pending" | "accepted" | "applied" | "rejected";
 };
 
+const LIVE_PRESENTATION_SPEEDS = [1, 2, 4] as const;
+
 function readManagerDashboard(value: unknown): ManagerDashboard | null {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
@@ -155,7 +157,7 @@ export default function MultiplayerLobby() {
     hostUrl: "URL ของโฮสต์", host: "เป็นโฮสต์", join: "เข้าร่วม", reconnect: "เชื่อมต่อเดิม", connectedAt: "เชื่อมต่อสำเร็จ · revision", ready: "พร้อมดำเนินเกม", readySecondHalf: "พร้อมเริ่มครึ่งต่อไป", matchInProgress: "การแข่งขันกำลังดำเนินอยู่",
     tactics: "แท็กติก", formation: "แผนการเล่น", mentality: "แนวทาง", applyTactics: "บันทึกแท็กติก", tacticsSent: "ส่งแท็กติกไปยังเซิร์ฟเวอร์แล้ว",
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
-    liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "กำลังรอเซิร์ฟเวอร์ยืนยันคำสั่ง", liveAccepted: "เซิร์ฟเวอร์ยอมรับคำสั่ง กำลังใช้กับแมตช์", liveApplied: "ใช้คำสั่งกับแมตช์แล้ว", liveRejected: "เซิร์ฟเวอร์ปฏิเสธคำสั่งระหว่างแข่ง", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด",
+    liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "กำลังรอเซิร์ฟเวอร์ยืนยันคำสั่ง", liveAccepted: "เซิร์ฟเวอร์ยอมรับคำสั่ง กำลังใช้กับแมตช์", liveApplied: "ใช้คำสั่งกับแมตช์แล้ว", liveRejected: "เซิร์ฟเวอร์ปฏิเสธคำสั่งระหว่างแข่ง", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด", presentationSpeed: "ความเร็วภาพถ่ายทอดสด",
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
     events: "เหตุการณ์ล่าสุด",
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
@@ -175,7 +177,7 @@ export default function MultiplayerLobby() {
     hostUrl: "Host URL", host: "Host game", join: "Join game", reconnect: "Reconnect", connectedAt: "Connected · revision", ready: "Ready to continue", readySecondHalf: "Ready for the next half", matchInProgress: "Match in progress",
     tactics: "Tactics", formation: "Formation", mentality: "Approach", applyTactics: "Save tactics", tacticsSent: "Tactics sent to the server.",
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
-    liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Waiting for the server to confirm the command.", liveAccepted: "Server accepted the command; applying it to the match.", liveApplied: "Command applied to the match.", liveRejected: "Server rejected the live-match command.", replayLatest: "Replay latest highlight", stopReplay: "Return to live view",
+    liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Waiting for the server to confirm the command.", liveAccepted: "Server accepted the command; applying it to the match.", liveApplied: "Command applied to the match.", liveRejected: "Server rejected the live-match command.", replayLatest: "Replay latest highlight", stopReplay: "Return to live view", presentationSpeed: "Presentation speed",
     matchFinished: "Match finished", score: "Score",
     events: "Latest events",
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
@@ -206,6 +208,7 @@ export default function MultiplayerLobby() {
   const [contractYears, setContractYears] = useState<Record<string, string>>({});
   const [livePresentation, setLivePresentation] = useState(EMPTY_ALBION_LIVE_MATCH);
   const [liveCommand, setLiveCommand] = useState<LiveCommandState | null>(null);
+  const [livePresentationSpeed, setLivePresentationSpeed] = useState<1 | 2 | 4>(2);
   const [liveReplayEvent, setLiveReplayEvent] = useState<MatchEvent | null>(null);
   const liveCommandRef = useRef<LiveCommandState | null>(null);
   const requiresIntermissionReady = needsAlbionIntermissionReady(livePresentation.phase);
@@ -247,14 +250,14 @@ export default function MultiplayerLobby() {
     if (event.type === "StateDelta") setDashboard((previous: unknown) => applyDashboardDelta(previous, event.body?.changes));
     if (event.type === "CommandRejected") {
       setMessage(formatAlbionProtocolError(event.body?.error, thai));
-      if (event.body?.command_id === currentLiveCommand?.commandId) {
+      if (currentLiveCommand && event.body?.command_id === currentLiveCommand.commandId) {
         const rejected = { commandId: currentLiveCommand.commandId, status: "rejected" } as const;
         liveCommandRef.current = rejected;
         setLiveCommand(rejected);
         setMessage(copy.liveRejected);
       }
     }
-    if (event.type === "CommandAck" && event.body?.command_id === currentLiveCommand?.commandId) {
+    if (event.type === "CommandAck" && currentLiveCommand && event.body?.command_id === currentLiveCommand.commandId) {
       const accepted = { commandId: currentLiveCommand.commandId, status: "accepted" } as const;
       liveCommandRef.current = accepted;
       setLiveCommand(accepted);
@@ -473,11 +476,14 @@ export default function MultiplayerLobby() {
         {livePresentation.matchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
           <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {livePresentation.phase ?? ""}</p>
+          <fieldset className="flex gap-1" aria-label={copy.presentationSpeed}>
+            {LIVE_PRESENTATION_SPEEDS.map((speed) => <button key={speed} type="button" onClick={() => setLivePresentationSpeed(speed)} aria-pressed={livePresentationSpeed === speed} className={`rounded px-2 py-1 text-xs font-bold ${livePresentationSpeed === speed ? "bg-primary-500 text-white" : "bg-navy-700 text-gray-200"}`}>{speed}×</button>)}
+          </fieldset>
           <button type="button" disabled={liveCommand?.status === "pending" || liveCommand?.status === "accepted"} onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold disabled:opacity-60">{copy.liveFormation}: {formation}</button>
           {liveCommand && <p className="text-sm text-gray-300" aria-live="polite">{liveCommand.status === "pending" ? copy.liveSent : liveCommand.status === "accepted" ? copy.liveAccepted : liveCommand.status === "applied" ? copy.liveApplied : copy.liveRejected}</p>}
           {liveReplayEvent ? <button type="button" onClick={() => setLiveReplayEvent(null)} className="w-fit rounded bg-accent-500 px-3 py-2 text-sm font-bold">{copy.stopReplay}</button>
             : latestReplayableEvent && <button type="button" onClick={() => setLiveReplayEvent(latestReplayableEvent)} className="w-fit rounded bg-accent-500 px-3 py-2 text-sm font-bold">{copy.replayLatest}</button>}
-          {livePresentation.snapshot && <div className="h-72 overflow-hidden rounded border border-navy-600"><Match2DRenderer snapshot={livePresentation.snapshot} homeColor="#10b981" awayColor="#6366f1" speed={2} highlightMode="full" reducedMotion={reducedMotion} replayEvent={liveReplayEvent} ariaLabel={t("match.twoD.pitch")} /></div>}
+          {livePresentation.snapshot && <div className="h-72 overflow-hidden rounded border border-navy-600"><Match2DRenderer snapshot={livePresentation.snapshot} homeColor="#10b981" awayColor="#6366f1" speed={livePresentationSpeed} highlightMode="full" reducedMotion={reducedMotion} replayEvent={liveReplayEvent} ariaLabel={t("match.twoD.pitch")} /></div>}
           {livePresentation.events.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{livePresentation.events.slice(-6).map((event) => <li key={`${event.minute}-${event.event_type}-${event.player_id ?? "unknown"}-${event.secondary_player_id ?? "none"}`}>{isReplayableAlbionEvent(event) ? <button type="button" onClick={() => setLiveReplayEvent(event)} className="text-left underline decoration-dotted">{formatAlbionLiveEvent(event, thai)}</button> : formatAlbionLiveEvent(event, thai)}</li>)}</ul></div>}
         </fieldset>}
         {dashboardView && <section className="mt-4 rounded border border-navy-600 p-3" aria-label={copy.clubView}>

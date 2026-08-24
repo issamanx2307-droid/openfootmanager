@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { MatchEvent } from "../components/match/types";
 
 import { EMPTY_ALBION_LIVE_MATCH, isReplayableAlbionEvent, needsAlbionIntermissionReady, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
 
 const opened = { type: "MatchOpened", body: { match_id: "match-1" } };
-const goal = { minute: 12, event_type: "Goal", side: "Home", zone: "AttackingBox", player_id: "p-9", secondary_player_id: null };
+const goal: MatchEvent = { minute: 12, event_type: "Goal", side: "Home", zone: "AttackingBox", player_id: "p-9", secondary_player_id: null };
 
 describe("Albion live-match presentation adapter", () => {
   it("keeps only canonical engine events", () => {
