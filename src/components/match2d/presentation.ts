@@ -79,6 +79,41 @@ function trajectoryForEvent(event: MatchEvent): MatchPresentationFrame["ballTraj
   return "ground";
 }
 
+function moveTowards(from: PitchPoint, to: PitchPoint, amount: number): PitchPoint {
+  return {
+    x: from.x + (to.x - from.x) * amount,
+    y: from.y + (to.y - from.y) * amount,
+  };
+}
+
+/**
+ * Event payloads identify participants but not per-tick coordinates. These
+ * small, deterministic offsets make those semantic actions legible without
+ * inventing an additional football simulation.
+ */
+function applySemanticPlayerMovement(
+  players: PresentationPlayer[],
+  clip: PresentationClip,
+  ball: PitchPoint,
+  progress: number,
+): PresentationPlayer[] {
+  const eventType = clip.event.event_type;
+  const actorMovement = eventType === "Dribble" ? 0.8
+    : ["Tackle", "Interception", "DribbleTackled", "PassIntercepted"].includes(eventType) ? 0.55
+      : ["Cross", "PassCompleted", "Corner", "FreeKick"].includes(eventType) ? 0.25 : 0.12;
+  const targetMovement = ["PassCompleted", "Cross", "Corner", "FreeKick"].includes(eventType) ? 0.38
+    : ["Tackle", "Interception", "DribbleTackled", "PassIntercepted"].includes(eventType) ? 0.25 : 0.08;
+  return players.map((player) => {
+    if (player.id === clip.event.player_id) {
+      return { ...player, point: moveTowards(player.point, ball, actorMovement * progress) };
+    }
+    if (player.id === clip.event.secondary_player_id) {
+      return { ...player, point: moveTowards(player.point, clip.ballTo, targetMovement * progress) };
+    }
+    return player;
+  });
+}
+
 export function zonePoint(zone: string, side: PresentationSide = "Home"): PitchPoint {
   const base = ZONES[zone] ?? HOME_BALL;
   return side === "Home" ? base : mirror(base);
@@ -188,12 +223,13 @@ export function presentationFrame(
   }
   const progress = Math.max(0, Math.min(1, (playbackMs - activeClip.startMs) / activeClip.durationMs));
   const eased = progress * progress * (3 - 2 * progress);
-  return {
-    players,
-    ball: {
+  const ball = {
       x: activeClip.ballFrom.x + (activeClip.ballTo.x - activeClip.ballFrom.x) * eased,
       y: activeClip.ballFrom.y + (activeClip.ballTo.y - activeClip.ballFrom.y) * eased,
-    },
+    };
+  return {
+    players: applySemanticPlayerMovement(players, activeClip, ball, eased),
+    ball,
     activeClip,
     ballTrajectory: trajectoryForEvent(activeClip.event),
     actorPlayerId: activeClip.event.player_id,

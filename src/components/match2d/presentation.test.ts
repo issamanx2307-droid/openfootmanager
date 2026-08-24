@@ -4,6 +4,7 @@ import type { EnginePlayerData, MatchEvent } from "../match/types";
 import {
   compilePresentationTimeline,
   filterPresentationTimeline,
+  presentationFrame,
   resolveTeamPositions,
   zonePoint,
 } from "./presentation";
@@ -94,5 +95,19 @@ describe("2D match presentation", () => {
     ]);
     expect(filterPresentationTimeline(clips, "key").map((clip) => clip.event.event_type)).toEqual(["ShotOnTarget", "ShotSaved"]);
     expect(filterPresentationTimeline(clips, "extended").map((clip) => clip.event.event_type)).toEqual(["ShotOnTarget", "ShotSaved", "Corner"]);
+  });
+
+  it("moves only semantic event participants in the presentation frame", () => {
+    const players = [player("gk", "Goalkeeper"), player("runner", "Forward"), player("receiver", "Forward")];
+    const input = {
+      home_team: { id: "home", name: "Home", formation: "4-3-3", play_style: "Balanced", players },
+      away_team: { id: "away", name: "Away", formation: "4-3-3", play_style: "Balanced", players: [player("away-gk", "Goalkeeper")] },
+      sent_off: [], ball_zone: "MidfieldCentre", current_minute: 20,
+      events: [{ ...event(10, "Dribble", "Home", "AttackingCentre"), player_id: "runner", secondary_player_id: "receiver" }],
+    };
+    const start = presentationFrame(input, 0);
+    const mid = presentationFrame(input, 280);
+    expect(mid.players.find((item) => item.id === "runner")?.point).not.toEqual(start.players.find((item) => item.id === "runner")?.point);
+    expect(mid.players.find((item) => item.id === "gk")?.point).toEqual(start.players.find((item) => item.id === "gk")?.point);
   });
 });
