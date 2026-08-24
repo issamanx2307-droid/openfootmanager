@@ -407,3 +407,7 @@ Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin
 output such as the canonical side identifier.
+
+Phase 10 update: the dashboard entry point for private multiplayer now uses
+the shared locale catalogue, so its label follows the active English or Thai
+language instead of remaining hard-coded in Thai.
