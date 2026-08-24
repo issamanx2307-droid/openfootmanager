@@ -754,3 +754,10 @@ reached the Main Menu without console warnings or errors. The remaining final
 acceptance evidence is visual QA of an actual native host and guest client in
 a shared live fixture; browser demo mode intentionally has no native career
 data and cannot substitute for that scenario.
+
+Native-build verification update: after correcting the Tactical camera label
+reference, the full `npx tauri build --debug --no-bundle` workflow completed
+successfully. It ran the strict TypeScript build, Vite production build and
+Rust/Tauri link, producing `src-tauri/target/debug/openfootmanager.exe`. This
+confirms the desktop client can be built from the current branch; it does not
+replace the remaining two-native-client visual acceptance scenario.
