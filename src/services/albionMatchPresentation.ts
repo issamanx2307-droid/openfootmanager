@@ -86,13 +86,17 @@ export function reduceAlbionLiveMatch(
   if (event.type === "MatchState"
     && typeof body.phase === "string" && typeof body.match_second === "number"
     && typeof body.home_score === "number" && typeof body.away_score === "number") {
+    const snapshot = readAlbionMatchSnapshot(body.snapshot) ?? current.snapshot;
     return {
       ...current,
       phase: body.phase,
       matchSecond: body.match_second,
       homeScore: body.home_score,
       awayScore: body.away_score,
-      snapshot: readAlbionMatchSnapshot(body.snapshot) ?? current.snapshot,
+      snapshot,
+      // A reconnect receives a complete read-only engine snapshot. Replacing
+      // the timeline here makes a fresh client immediately match the host.
+      events: snapshot?.events ?? current.events,
     };
   }
   if (event.type === "MatchEventBatch" && typeof body.from_seq === "number" && typeof body.to_seq === "number" && Array.isArray(body.events)) {

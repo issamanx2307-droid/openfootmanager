@@ -32,4 +32,14 @@ describe("Albion live-match presentation adapter", () => {
     );
     expect(reduceAlbionLiveMatch(state, opened).events).toEqual([expect.objectContaining({ event_type: "Goal" })]);
   });
+
+  it("rebuilds the event timeline from an authoritative reconnect snapshot", () => {
+    const snapshot = { phase: "FirstHalf", current_minute: 12, home_score: 1, away_score: 0, possession: "Home", ball_zone: "AttackingBox", home_team: { name: "Home", formation: "4-3-3", players: [] }, away_team: { name: "Away", formation: "4-3-3", players: [] }, events: [goal], sent_off: [] };
+    const reconnected = reduceAlbionLiveMatch(
+      reduceAlbionLiveMatch(EMPTY_ALBION_LIVE_MATCH, opened),
+      { type: "MatchState", body: { match_id: "match-1", phase: "FirstHalf", match_second: 720, home_score: 1, away_score: 0, snapshot } },
+    );
+    expect(reconnected.events).toEqual([goal]);
+    expect(reconnected.snapshot).toMatchObject({ current_minute: 12 });
+  });
 });
