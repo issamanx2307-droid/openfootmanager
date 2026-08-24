@@ -12,7 +12,7 @@
 //! exact values. See the scenario-test notes in the PR for the path to full
 //! determinism.
 
-use chrono::{TimeZone, Utc};
+use chrono::{Datelike, TimeZone, Utc};
 use domain::league::FixtureStatus;
 use domain::manager::Manager;
 use ofm_core::clock::GameClock;
@@ -279,6 +279,21 @@ fn full_season_holds_invariants() {
         games_played > 0,
         "a full season should have played some matches"
     );
+}
+
+/// Phase-12 soak gate: ten calendar years through the real daily pipeline.
+/// Checking every month keeps the failure location useful without weakening
+/// the long-run coverage to a final-state-only assertion.
+#[test]
+fn ten_season_soak_preserves_game_invariants() {
+    let mut game = make_scenario_game(10_042);
+    assert_game_invariants(&game);
+
+    for month in 0..(10 * 12) {
+        advance_days(&mut game, 31);
+        assert_game_invariants(&game);
+        assert!(game.clock.current_date.year() >= 2026, "clock regressed in soak month {month}");
+    }
 }
 
 /// AI clubs must remain operational over multiple seasons: every non-user club
