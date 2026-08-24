@@ -83,6 +83,19 @@ impl CanonicalCareer {
                 "injured": player.injury.is_some(),
             }))
             .collect::<Vec<_>>();
+        let inbox = self.game.messages.iter()
+            .filter(|message| message.context.team_id.as_deref().is_none_or(|id| id == team_id))
+            .rev()
+            .take(5)
+            .map(|message| json!({
+                "id": message.id,
+                "subject": message.subject,
+                "sender": message.sender,
+                "date": message.date,
+                "read": message.read,
+                "priority": format!("{:?}", message.priority),
+            }))
+            .collect::<Vec<_>>();
         Ok(json!({
             "currentDate": self.game.clock.current_date.format("%Y-%m-%d").to_string(),
             "club": {
@@ -98,6 +111,7 @@ impl CanonicalCareer {
             },
             "nextFixture": next_fixture,
             "squad": squad,
+            "inbox": inbox,
         }))
     }
 
@@ -455,6 +469,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use domain::league::{Fixture, FixtureCompetition, FixtureStatus, League};
     use domain::manager::Manager;
+    use domain::message::{InboxMessage, MessageCategory, MessageContext, MessagePriority};
     use domain::player::{Player, PlayerAttributes, Position, TransferOffer, TransferOfferStatus};
     use domain::team::Team;
     use ofm_core::clock::GameClock;
@@ -541,6 +556,25 @@ mod tests {
         assert_eq!(view["nextFixture"]["competition"], "Test League");
         assert!(view.get("players").is_none());
         assert!(view.get("managers").is_none());
+    }
+
+    #[test]
+    fn manager_dashboard_inbox_excludes_another_clubs_private_message() {
+        let (mut career, manager_id) = career();
+        let own_team_id = career.game.teams[0].id.clone();
+        let message = |id: &str, subject: &str, team_id: String| InboxMessage {
+            id: id.into(), subject: subject.into(), body: "body".into(), sender: "Board".into(),
+            sender_role: "Board".into(), date: "2026-07-01".into(), read: false,
+            category: MessageCategory::System, priority: MessagePriority::Normal, actions: vec![],
+            context: MessageContext { team_id: Some(team_id), ..Default::default() },
+            subject_key: None, body_key: None, sender_key: None, sender_role_key: None,
+            i18n_params: Default::default(),
+        };
+        career.game.messages.push(message("own", "Own message", own_team_id));
+        career.game.messages.push(message("other", "Other message", Uuid::new_v4().to_string()));
+        let inbox = career.manager_dashboard(manager_id).unwrap()["inbox"].as_array().unwrap().clone();
+        assert_eq!(inbox.len(), 1);
+        assert_eq!(inbox[0]["subject"], "Own message");
     }
 
     #[test]

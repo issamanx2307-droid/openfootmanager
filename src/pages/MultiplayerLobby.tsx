@@ -19,6 +19,7 @@ type ManagerDashboard = {
   training?: { focus: string; intensity: string };
   nextFixture?: { date: string; competition: string; homeTeam: string; awayTeam: string };
   squad: Array<{ id: string; name: string; position: string; condition: number; injured: boolean }>;
+  inbox: Array<{ id: string; subject: string; sender: string; date: string; read: boolean; priority: string }>;
 };
 
 function readManagerDashboard(value: unknown): ManagerDashboard | null {
@@ -50,7 +51,15 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
       ? [{ id: player.id, name: player.name, position: player.position, condition: player.condition, injured: player.injured }]
       : [];
   }) : [];
-  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad };
+  const inbox = Array.isArray(record.inbox) ? record.inbox.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const message = item as Record<string, unknown>;
+    return typeof message.id === "string" && typeof message.subject === "string" && typeof message.sender === "string"
+      && typeof message.date === "string" && typeof message.read === "boolean" && typeof message.priority === "string"
+      ? [{ id: message.id, subject: message.subject, sender: message.sender, date: message.date, read: message.read, priority: message.priority }]
+      : [];
+  }) : [];
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad, inbox };
 }
 
 function applyDashboardDelta(value: unknown, changes: unknown): unknown {
@@ -100,6 +109,7 @@ export default function MultiplayerLobby() {
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
     squad: "ทีมของฉัน", noPlayers: "ยังไม่มีข้อมูลนักเตะ",
+    inbox: "กล่องข้อความ", noMessages: "ยังไม่มีข้อความ",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
@@ -117,6 +127,7 @@ export default function MultiplayerLobby() {
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
     squad: "My squad", noPlayers: "No player data available",
+    inbox: "Inbox", noMessages: "No messages",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
@@ -357,6 +368,12 @@ export default function MultiplayerLobby() {
             {dashboardView.squad.length > 0
               ? <ul className="mt-1 divide-y divide-navy-600">{dashboardView.squad.map((player) => <li key={player.id} className="flex justify-between py-1"><span>{player.name} · {player.position}</span><span>{player.injured ? "⚠" : `${player.condition}%`}</span></li>)}</ul>
               : <p className="text-gray-300">{copy.noPlayers}</p>}
+          </div>
+          <div className="mt-3 border-t border-navy-600 pt-3 text-sm">
+            <p className="font-semibold">{copy.inbox}</p>
+            {dashboardView.inbox.length > 0
+              ? <ul className="mt-1 divide-y divide-navy-600">{dashboardView.inbox.map((message) => <li key={message.id} className="py-1"><span className={message.read ? "" : "font-semibold"}>{message.subject}</span><span className="ml-2 text-xs text-gray-300">{message.sender} · {message.date}</span></li>)}</ul>
+              : <p className="text-gray-300">{copy.noMessages}</p>}
           </div>
         </section>}
       </section>}

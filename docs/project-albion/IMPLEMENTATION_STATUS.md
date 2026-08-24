@@ -437,6 +437,11 @@ position, condition and injury marker). The server regression builds two
 eleven-player clubs and proves manager A receives exactly its own 11-player
 roster, not the opponent's roster or hidden attributes.
 
+Phase 9 update: a compact canonical inbox now renders the five latest relevant
+message summaries in the lobby. The manager-specific server filter exposes
+only messages for the controlled club (plus global messages), with a
+regression proving another club's private message is omitted.
+
 Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin
