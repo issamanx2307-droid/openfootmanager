@@ -382,11 +382,26 @@ export default function Match2DRenderer({
         context.stroke();
         context.restore();
       }
-      context.fillStyle = "#ffffff";
-      context.strokeStyle = "#111827";
+      const ballRadius = Math.max(4, Math.min(pitchViewport.width, pitchViewport.height) * 0.011);
+      const ballStyle = frame.ballState === "save" ? "#fb923c"
+        : frame.ballState === "penalty" ? "#facc15"
+          : frame.ballState === "restart" ? "#93c5fd"
+            : frame.ballState === "loose" ? "#cbd5e1" : "#ffffff";
+      if (frame.ballState === "out-of-play") {
+        context.save();
+        context.strokeStyle = "#fb7185";
+        context.lineWidth = 2;
+        context.setLineDash([3, 2]);
+        context.beginPath();
+        context.arc(ballX, ballY, ballRadius + 3, 0, Math.PI * 2);
+        context.stroke();
+        context.restore();
+      }
+      context.fillStyle = ballStyle;
+      context.strokeStyle = frame.ballState === "penalty" ? "#7c2d12" : "#111827";
       context.lineWidth = 1.5;
       context.beginPath();
-      context.arc(ballX, ballY, Math.max(4, Math.min(pitchViewport.width, pitchViewport.height) * 0.011), 0, Math.PI * 2);
+      context.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
       context.fill();
       context.stroke();
       if (rendererDebugEnabled()) {

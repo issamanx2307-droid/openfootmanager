@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EnginePlayerData, MatchEvent } from "../match/types";
 import {
   compilePresentationTimeline,
+  ballStateForEvent,
   filterPresentationTimeline,
   presentationFrame,
   playerVisualStatus,
@@ -97,6 +98,16 @@ describe("2D match presentation", () => {
     ]);
     expect(filterPresentationTimeline(clips, "key").map((clip) => clip.event.event_type)).toEqual(["ShotOnTarget", "ShotSaved"]);
     expect(filterPresentationTimeline(clips, "extended").map((clip) => clip.event.event_type)).toEqual(["ShotOnTarget", "ShotSaved", "Corner"]);
+  });
+
+  it("maps authoritative event facts to distinct ball presentation states", () => {
+    expect(ballStateForEvent(event(1, "PassCompleted", "Home"))).toBe("passing");
+    expect(ballStateForEvent(event(2, "Cross", "Home"))).toBe("crossing");
+    expect(ballStateForEvent(event(3, "ShotSaved", "Away"))).toBe("save");
+    expect(ballStateForEvent(event(4, "Tackle", "Away"))).toBe("loose");
+    expect(ballStateForEvent(event(5, "FreeKick", "Home"))).toBe("restart");
+    expect(ballStateForEvent(event(6, "PenaltyGoal", "Home"))).toBe("penalty");
+    expect(ballStateForEvent(event(7, "ShotOffTarget", "Away"))).toBe("out-of-play");
   });
 
   it("moves only semantic event participants in the presentation frame", () => {

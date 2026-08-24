@@ -5,6 +5,7 @@ export const PRESENTATION_VERSION = "albion-2d-1";
 export type PitchPoint = { x: number; y: number };
 export type PresentationSide = "Home" | "Away";
 export type HighlightMode = "key" | "extended" | "full";
+export type BallPresentationState = "controlled" | "passing" | "crossing" | "shot" | "loose" | "save" | "out-of-play" | "restart" | "penalty";
 
 export type PresentationPlayer = {
   id: string;
@@ -36,6 +37,7 @@ export type MatchPresentationFrame = {
   ball: PitchPoint;
   activeClip: PresentationClip | null;
   ballTrajectory: "ground" | "arc" | "shot";
+  ballState: BallPresentationState;
   actorPlayerId: string | null;
   targetPlayerId: string | null;
 };

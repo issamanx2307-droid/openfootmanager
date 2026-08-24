@@ -735,3 +735,9 @@ shallow support while the defending side narrows toward the event's ball side.
 The original formation remains dominant, preventing the common “all players
 chase the ball” artifact. This adjustment is interpolation-only and does not
 create player locations, possession, or outcomes in the engine.
+
+2D ball-state update: the renderer now maps canonical events into explicit
+controlled, passing, crossing, shot, loose, save, restart, penalty and
+out-of-play ball states. Distinct colour/ring treatment makes saves, restarts,
+penalties and shots that leave play readable while retaining the existing
+event-derived trajectory. No physics or game state is added to the client.

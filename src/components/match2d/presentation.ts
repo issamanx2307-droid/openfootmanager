@@ -1,6 +1,7 @@
 import { buildFormationSlots } from "../match/FormationPitch";
 import type { EnginePlayerData, MatchEvent } from "../match/types";
 import type {
+  BallPresentationState,
   HighlightMode,
   MatchPresentationFrame,
   MatchPresentationInput,
@@ -97,6 +98,19 @@ function trajectoryForEvent(event: MatchEvent): MatchPresentationFrame["ballTraj
   if (["Cross", "Corner", "FreeKick"].includes(event.event_type)) return "arc";
   if (["ShotOnTarget", "ShotOffTarget", "ShotBlocked", "ShotSaved", "Goal", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal", "ShootoutMiss"].includes(event.event_type)) return "shot";
   return "ground";
+}
+
+/** Maps existing engine event facts into display-only ball treatment. */
+export function ballStateForEvent(event: MatchEvent): BallPresentationState {
+  if (["PenaltyAwarded", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal", "ShootoutMiss"].includes(event.event_type)) return "penalty";
+  if (event.event_type === "ShotSaved") return "save";
+  if (["ShotOffTarget", "HalfTime", "FullTime"].includes(event.event_type)) return "out-of-play";
+  if (["Cross", "Corner"].includes(event.event_type)) return "crossing";
+  if (["ShotOnTarget", "ShotOffTarget", "ShotBlocked", "Goal"].includes(event.event_type)) return "shot";
+  if (["GoalKick", "FreeKick", "KickOff", "SecondHalfStart"].includes(event.event_type)) return "restart";
+  if (["Tackle", "Interception", "DribbleTackled", "PassIntercepted", "Clearance", "Foul"].includes(event.event_type)) return "loose";
+  if (event.event_type === "PassCompleted") return "passing";
+  return "controlled";
 }
 
 function moveTowards(from: PitchPoint, to: PitchPoint, amount: number): PitchPoint {
@@ -293,6 +307,7 @@ export function presentationFrame(
       ball: zonePoint(input.ball_zone),
       activeClip: null,
       ballTrajectory: "ground",
+      ballState: "controlled",
       actorPlayerId: null,
       targetPlayerId: null,
     };
@@ -305,6 +320,7 @@ export function presentationFrame(
       ball: zonePoint(input.ball_zone),
       activeClip: null,
       ballTrajectory: "ground",
+      ballState: "controlled",
       actorPlayerId: null,
       targetPlayerId: null,
     };
@@ -321,6 +337,7 @@ export function presentationFrame(
     ball,
     activeClip,
     ballTrajectory: trajectoryForEvent(activeClip.event),
+    ballState: ballStateForEvent(activeClip.event),
     actorPlayerId: activeClip.event.player_id,
     targetPlayerId: activeClip.event.secondary_player_id,
   };
