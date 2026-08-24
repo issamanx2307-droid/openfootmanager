@@ -358,3 +358,8 @@ Phase 9 update: `MatchOpened` now activates a small server-backed live-match
 controller in the lobby. It consumes the canonical match ID and sends the
 typed `ApplyLiveMatchCommand`/`ChangeFormation` command, completing the first
 desktop-to-live-match tactical path without local simulation.
+
+Phase 9 update: the live controller now also renders canonical score, elapsed
+minute and phase from `MatchState`, announces them politely for assistive
+technology, and exits the live-control state on `MatchFinished`. The desktop
+therefore displays server output rather than deriving its own match clock.

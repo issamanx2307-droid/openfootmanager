@@ -26,6 +26,7 @@ export default function MultiplayerLobby() {
     tactics: "แท็กติก", formation: "แผนการเล่น", mentality: "แนวทาง", applyTactics: "บันทึกแท็กติก", tacticsSent: "ส่งแท็กติกไปยังเซิร์ฟเวอร์แล้ว",
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "ส่งคำสั่งระหว่างแข่งไปยังเซิร์ฟเวอร์แล้ว",
+    matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
     rejected: "Command rejected: refresh the view and try again", readyState: "Ready state updated; waiting for the other manager",
@@ -37,6 +38,7 @@ export default function MultiplayerLobby() {
     tactics: "Tactics", formation: "Formation", mentality: "Approach", applyTactics: "Save tactics", tacticsSent: "Tactics sent to the server.",
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Live-match command sent to the server.",
+    matchFinished: "Match finished", score: "Score",
   };
   const game = useGameStore((state) => state.gameState);
   const client = useRef(new AlbionServerClient());
@@ -52,6 +54,7 @@ export default function MultiplayerLobby() {
   const [trainingIntensity, setTrainingIntensity] = useState(60);
   const [trainingFocus, setTrainingFocus] = useState("tactical");
   const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
+  const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
 
   useEffect(() => () => {
     client.current.disconnect();
@@ -84,6 +87,16 @@ export default function MultiplayerLobby() {
         const matchId = event.body?.match_id;
         if (typeof matchId === "string") setLiveMatchId(matchId);
         setMessage(copy.matchOpened);
+      }
+      if (event.type === "MatchState") {
+        const body = event.body;
+        if (typeof body?.phase === "string" && typeof body.match_second === "number" && typeof body.home_score === "number" && typeof body.away_score === "number") {
+          setLiveState({ phase: body.phase, second: body.match_second, home: body.home_score, away: body.away_score });
+        }
+      }
+      if (event.type === "MatchFinished") {
+        setLiveMatchId(null);
+        setMessage(copy.matchFinished);
       }
     });
     saveAlbionSession({ ...joined, server_url: url });
@@ -129,6 +142,16 @@ export default function MultiplayerLobby() {
           const matchId = event.body?.match_id;
           if (typeof matchId === "string") setLiveMatchId(matchId);
           setMessage(copy.matchOpened);
+        }
+        if (event.type === "MatchState") {
+          const body = event.body;
+          if (typeof body?.phase === "string" && typeof body.match_second === "number" && typeof body.home_score === "number" && typeof body.away_score === "number") {
+            setLiveState({ phase: body.phase, second: body.match_second, home: body.home_score, away: body.away_score });
+          }
+        }
+        if (event.type === "MatchFinished") {
+          setLiveMatchId(null);
+          setMessage(copy.matchFinished);
         }
       });
       setSession(restored);
@@ -219,6 +242,7 @@ export default function MultiplayerLobby() {
         </fieldset>
         {liveMatchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
+          {liveState && <p aria-live="polite">{copy.score}: {liveState.home}–{liveState.away} · {Math.floor(liveState.second / 60)}′ · {liveState.phase}</p>}
           <button type="button" onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold">{copy.liveFormation}: {formation}</button>
         </fieldset>}
         {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
