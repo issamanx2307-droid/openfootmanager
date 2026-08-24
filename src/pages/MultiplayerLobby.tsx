@@ -24,6 +24,7 @@ type ManagerDashboard = {
   inbox: Array<{ id: string; subject: string; sender: string; date: string; read: boolean; priority: string }>;
   incomingTransferOffers: Array<{ offerId: string; playerName: string; fromClub: string; fee: number }>;
   transferTargets: Array<{ id: string; name: string; position: string; marketValue: number }>;
+  freeAgents: Array<{ id: string; name: string; position: string }>;
 };
 
 function readManagerDashboard(value: unknown): ManagerDashboard | null {
@@ -80,7 +81,11 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
     return typeof player.id === "string" && typeof player.name === "string" && typeof player.position === "string" && typeof player.marketValue === "number"
       ? [{ id: player.id, name: player.name, position: player.position, marketValue: player.marketValue }] : [];
   }) : [];
-  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, finance: clubRecord.finance, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, startingXiPlayerIds, squad, inbox, incomingTransferOffers, transferTargets };
+  const freeAgents = Array.isArray(record.freeAgents) ? record.freeAgents.flatMap((item) => {
+    if (!item || typeof item !== "object") return []; const player = item as Record<string, unknown>;
+    return typeof player.id === "string" && typeof player.name === "string" && typeof player.position === "string" ? [{ id: player.id, name: player.name, position: player.position }] : [];
+  }) : [];
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, finance: clubRecord.finance, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, startingXiPlayerIds, squad, inbox, incomingTransferOffers, transferTargets, freeAgents };
 }
 
 function applyDashboardDelta(value: unknown, changes: unknown): unknown {
@@ -142,7 +147,7 @@ export default function MultiplayerLobby() {
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
     squad: "ทีมของฉัน", noPlayers: "ยังไม่มีข้อมูลนักเตะ", startingXi: "11 ตัวจริง", selected: "เลือกแล้ว", saveStartingXi: "บันทึก 11 ตัวจริง", startingXiSent: "ส่ง 11 ตัวจริงไปยังเซิร์ฟเวอร์แล้ว", selectEleven: "กรุณาเลือกนักเตะ 11 คนที่พร้อมลงเล่น",
     inbox: "กล่องข้อความ", noMessages: "ยังไม่มีข้อความ",
-    transferOffers: "ข้อเสนอซื้อ", accept: "รับข้อเสนอ", reject: "ปฏิเสธ", transferResponseSent: "ส่งคำตอบข้อเสนอแล้ว", transferTargets: "รายชื่อขาย", bid: "ยื่นข้อเสนอ", bidSent: "ส่งข้อเสนอซื้อแล้ว",
+    transferOffers: "ข้อเสนอซื้อ", accept: "รับข้อเสนอ", reject: "ปฏิเสธ", transferResponseSent: "ส่งคำตอบข้อเสนอแล้ว", transferTargets: "รายชื่อขาย", bid: "ยื่นข้อเสนอ", bidSent: "ส่งข้อเสนอซื้อแล้ว", freeAgents: "นักเตะว่าง", offerContract: "เสนอค่าเหนื่อย", contractSent: "ส่งข้อเสนอสัญญาแล้ว",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
@@ -162,7 +167,7 @@ export default function MultiplayerLobby() {
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
     squad: "My squad", noPlayers: "No player data available", startingXi: "Starting XI", selected: "selected", saveStartingXi: "Save starting XI", startingXiSent: "Starting XI sent to the server.", selectEleven: "Select exactly 11 fit players first.",
     inbox: "Inbox", noMessages: "No messages",
-    transferOffers: "Transfer offers", accept: "Accept offer", reject: "Reject", transferResponseSent: "Transfer response sent.", transferTargets: "Transfer-listed players", bid: "Bid", bidSent: "Transfer bid sent.",
+    transferOffers: "Transfer offers", accept: "Accept offer", reject: "Reject", transferResponseSent: "Transfer response sent.", transferTargets: "Transfer-listed players", bid: "Bid", bidSent: "Transfer bid sent.", freeAgents: "Free agents", offerContract: "Offer wage", contractSent: "Contract offer sent.",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
@@ -180,6 +185,7 @@ export default function MultiplayerLobby() {
   const [trainingFocus, setTrainingFocus] = useState("tactical");
   const [startingXiPlayerIds, setStartingXiPlayerIds] = useState<string[]>([]);
   const [bidAmounts, setBidAmounts] = useState<Record<string, string>>({});
+  const [contractWages, setContractWages] = useState<Record<string, string>>({});
   const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
   const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
   const [liveEvents, setLiveEvents] = useState<string[]>([]);
@@ -403,6 +409,11 @@ export default function MultiplayerLobby() {
       setMessage(copy.bidSent);
     } catch { setMessage(copy.disconnected); }
   };
+  const submitContractOffer = (playerId: string) => {
+    if (!session) return; const wage = Number(contractWages[playerId]);
+    if (!Number.isSafeInteger(wage) || wage < 0) return;
+    try { client.current.sendCommand(session, { SubmitContractOffer: { player_id: playerId, weekly_wage_minor: wage * 100, contract_end_year: 2029, contract_end_month: 6 } }); setMessage(copy.contractSent); } catch { setMessage(copy.disconnected); }
+  };
 
   return <main className="min-h-screen bg-navy-900 text-white p-6 sm:p-10">
     <div className="mx-auto max-w-xl space-y-5 rounded-2xl bg-navy-800 p-6 shadow-xl">
@@ -476,6 +487,7 @@ export default function MultiplayerLobby() {
           {dashboardView.transferTargets.length > 0 && <div className="mt-3 border-t border-navy-600 pt-3 text-sm">
             <p className="font-semibold">{copy.transferTargets}</p><ul className="mt-1 divide-y divide-navy-600">{dashboardView.transferTargets.map((player) => <li key={player.id} className="py-2"><p>{player.name} · {player.position} · {player.marketValue.toLocaleString()}</p><label className="mt-1 flex items-center gap-2"><input type="number" min="0" inputMode="numeric" value={bidAmounts[player.id] ?? ""} onChange={(event) => setBidAmounts((amounts) => ({ ...amounts, [player.id]: event.target.value }))} className="w-36 rounded bg-navy-800 p-1" /><button type="button" onClick={() => submitTransferBid(player.id)} className="rounded bg-accent-500 px-2 py-1 text-xs">{copy.bid}</button></label></li>)}</ul>
           </div>}
+          {dashboardView.freeAgents.length > 0 && <div className="mt-3 border-t border-navy-600 pt-3 text-sm"><p className="font-semibold">{copy.freeAgents}</p><ul className="mt-1 divide-y divide-navy-600">{dashboardView.freeAgents.map((player) => <li key={player.id} className="flex items-center justify-between gap-2 py-2"><span>{player.name} · {player.position}</span><label className="flex gap-2"><input type="number" min="0" inputMode="numeric" value={contractWages[player.id] ?? ""} onChange={(event) => setContractWages((wages) => ({ ...wages, [player.id]: event.target.value }))} className="w-28 rounded bg-navy-800 p-1" /><button type="button" onClick={() => submitContractOffer(player.id)} className="rounded bg-accent-500 px-2 py-1 text-xs">{copy.offerContract}</button></label></li>)}</ul></div>}
         </section>}
       </section>}
     </div>

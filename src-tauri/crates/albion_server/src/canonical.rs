@@ -123,6 +123,11 @@ impl CanonicalCareer {
                 "marketValue": player.market_value,
             }))
             .collect::<Vec<_>>();
+        let free_agents = self.game.players.iter()
+            .filter(|player| player.team_id.is_none() && !player.retired)
+            .take(12)
+            .map(|player| json!({ "id": player.id, "name": player.match_name, "position": format!("{:?}", player.position) }))
+            .collect::<Vec<_>>();
         Ok(json!({
             "currentDate": self.game.clock.current_date.format("%Y-%m-%d").to_string(),
             "club": {
@@ -142,6 +147,7 @@ impl CanonicalCareer {
             "inbox": inbox,
             "incomingTransferOffers": incoming_transfer_offers,
             "transferTargets": transfer_targets,
+            "freeAgents": free_agents,
         }))
     }
 
