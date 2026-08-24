@@ -156,7 +156,7 @@ pub struct MatchSnapshot {
 
 /// Competition-owned match-day substitution policy.  The engine receives a
 /// value at setup time rather than deciding a season-wide constant itself.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct SubstitutionRules {
     pub max_substitutes: u8,
     pub max_windows: u8,
@@ -190,7 +190,7 @@ pub struct PenaltyShootoutSnapshot {
 // PenaltyShootoutState — tracks penalty shootout progress
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[allow(dead_code)]
 struct PenaltyShootoutState {
     round: u8,
@@ -205,6 +205,7 @@ struct PenaltyShootoutState {
 // LiveMatchState — the core step-by-step simulation engine
 // ---------------------------------------------------------------------------
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveMatchState {
     // Teams (owned — subs mutate the player list)
     home: TeamData,

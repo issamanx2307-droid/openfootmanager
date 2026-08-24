@@ -387,6 +387,12 @@ disconnected manager prevents ticks/events; reconnecting that manager allows
 the same match to advance again. This covers the live pause behavior rather
 than only the Ready-barrier side of disconnect handling.
 
+Phase 8 update: the authoritative session checkpoint now includes every
+in-progress live match (field state and event sequence). A SQLite restart
+regression opens a human-v-human fixture, advances one server tick, recreates
+the session from the same save, and verifies the match identifier, minute and
+score are restored instead of opening a new fixture.
+
 Phase 9 update: the live match centre now consumes `MatchEventBatch` in
 addition to score/time state, retaining a short canonical event feed with
 polite assistive-technology announcements. This makes the streamed server

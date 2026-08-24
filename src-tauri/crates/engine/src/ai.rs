@@ -1,4 +1,5 @@
 use rand::{Rng, RngExt};
+use serde::{Deserialize, Serialize};
 
 use crate::live_match::{LiveMatchState, MatchCommand, MatchPhase};
 use crate::types::{PlayStyle, PlayerData, PlayerRole, Position, Side, Zone};
@@ -7,7 +8,7 @@ use crate::types::{PlayStyle, PlayerData, PlayerRole, Position, Side, Zone};
 // AiPersonality — determines decision-making style
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AiPersonality {
     /// Safe play: subs early for fatigue, incremental style changes.
     Pragmatist,
@@ -21,7 +22,7 @@ pub enum AiPersonality {
 // AI Manager profile — drives decision-making style
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiProfile {
     /// Team reputation 0–1000. Higher = more sophisticated decisions.
     pub reputation: u32,

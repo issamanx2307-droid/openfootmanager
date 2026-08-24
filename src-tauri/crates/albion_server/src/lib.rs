@@ -277,15 +277,25 @@ struct CareerSession {
     last_live_tick: Instant,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PersistedClaims {
     slots: HashMap<Uuid, ManagerSlot>,
     claimed_clubs: HashMap<Uuid, Uuid>,
+    #[serde(default)]
+    live_matches: HashMap<Uuid, ActiveLiveMatch>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 struct ActiveLiveMatch {
     session: LiveMatchSession,
     next_event_sequence: u64,
+}
+
+#[derive(Serialize)]
+struct PersistedClaimsRef<'a> {
+    slots: &'a HashMap<Uuid, ManagerSlot>,
+    claimed_clubs: &'a HashMap<Uuid, Uuid>,
+    live_matches: &'a HashMap<Uuid, ActiveLiveMatch>,
 }
 
 impl CareerSession {
@@ -293,13 +303,19 @@ impl CareerSession {
         let career = config.game.take().map(CanonicalCareer::new);
         let store = config.store.take();
         let persisted_session = config.persisted_session.take();
-        let restored_claims = persisted_session
+        let mut restored_claims = persisted_session
             .as_ref()
             .and_then(|state| serde_json::from_str::<PersistedClaims>(&state.claims_json).ok());
         let reconnect_tokens = persisted_session
             .as_ref()
             .and_then(|state| serde_json::from_str::<HashMap<String, Uuid>>(&state.reconnect_tokens_json).ok())
             .unwrap_or_default();
+        let mut live_matches = restored_claims
+            .as_mut()
+            .map_or_else(HashMap::new, |claims| std::mem::take(&mut claims.live_matches));
+        for active in live_matches.values_mut() {
+            active.session.reset_rng_after_restore();
+        }
         Self {
             config,
             revision: persisted_session.as_ref().map_or(0, |state| state.career_revision),
@@ -311,7 +327,7 @@ impl CareerSession {
             ready_managers: HashSet::new(),
             career,
             store,
-            live_matches: HashMap::new(),
+            live_matches,
             last_live_tick: Instant::now(),
         }
     }
@@ -407,9 +423,10 @@ impl CareerSession {
 
     fn persist_session_state(&self) -> Result<(), String> {
         let Some(store) = &self.store else { return Ok(()); };
-        let claims = PersistedClaims {
-            slots: self.slots.clone(),
-            claimed_clubs: self.claimed_clubs.clone(),
+        let claims = PersistedClaimsRef {
+            slots: &self.slots,
+            claimed_clubs: &self.claimed_clubs,
+            live_matches: &self.live_matches,
         };
         store.checkpoint_session_state(&PersistedSessionState {
             career_revision: self.revision,
@@ -725,6 +742,12 @@ impl CareerSession {
                 self.live_matches.insert(match_id, active);
             }
         }
+        if !events.is_empty() && self.persist_session_state().is_err() {
+            events.push(ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
+                severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                message_key: "server.liveMatchSaveFailed".into(),
+            }));
+        }
         events
     }
 
@@ -1019,6 +1042,35 @@ mod tests {
         assert_eq!(reconnected.reconnect_token, joined.reconnect_token);
         assert_eq!(reconnected.current_revision, 1);
         assert_eq!(restarted.claimed_clubs.get(&club_a), Some(&manager_a));
+    }
+
+    #[test]
+    fn restart_restores_an_in_progress_live_match_from_sqlite() {
+        let directory = tempdir().unwrap();
+        let path = directory.path().join("albion-live.db");
+        let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        let db = GameDatabase::open(&path).unwrap();
+        GamePersistenceWriter::write_game(&db, &game, "albion-live", "Albion Live").unwrap();
+        drop(db);
+
+        let mut original = CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
+        original.join(join_request(manager_a, club_a)).unwrap();
+        original.join(join_request(manager_b, club_b)).unwrap();
+        original.manager_connected(manager_a);
+        original.manager_connected(manager_b);
+        original.apply_command(manager_a, ready_envelope(&original, manager_a, Uuid::new_v4()));
+        original.apply_command(manager_b, ready_envelope(&original, manager_b, Uuid::new_v4()));
+        let match_id = *original.live_matches.keys().next().unwrap();
+        original.last_live_tick = Instant::now() - Duration::from_millis(501);
+        original.tick_live_matches();
+        let before = original.live_matches.get(&match_id).unwrap().session.snapshot();
+        drop(original);
+
+        let restarted = CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
+        let restored = restarted.live_matches.get(&match_id).expect("live match checkpoint").session.snapshot();
+        assert_eq!(restored.current_minute, before.current_minute);
+        assert_eq!(restored.home_score, before.home_score);
+        assert_eq!(restored.away_score, before.away_score);
     }
 
     #[tokio::test]

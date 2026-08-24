@@ -111,8 +111,10 @@ pub enum MatchMode {
 // LiveMatchSession — wraps LiveMatchState + metadata for Tauri layer
 // ---------------------------------------------------------------------------
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LiveMatchSession {
     pub match_state: LiveMatchState,
+    #[serde(skip, default = "restored_live_match_rng")]
     pub rng: StdRng,
     pub mode: MatchMode,
     /// Stable seed derived from the fixture identity; retained for replay/debug.
@@ -137,7 +139,20 @@ pub struct LiveMatchSession {
     pub ai_away: AiProfile,
 }
 
+fn restored_live_match_rng() -> StdRng {
+    // rand 0.10's StdRng has no serializable state. The persisted match state
+    // remains authoritative; this deterministic seed only supplies future ticks
+    // after a server restart.
+    StdRng::seed_from_u64(0)
+}
+
 impl LiveMatchSession {
+    /// Recreate the deterministic random stream after restoring a persisted
+    /// live state. The full field state is persisted separately.
+    pub fn reset_rng_after_restore(&mut self) {
+        self.rng = StdRng::seed_from_u64(self.match_seed);
+    }
+
     /// Step one minute and apply AI decisions for computer-controlled sides.
     pub fn step(&mut self) -> MinuteResult {
         let result = self.match_state.step_minute(&mut self.rng);
