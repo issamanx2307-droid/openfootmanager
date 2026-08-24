@@ -424,8 +424,8 @@ export default function Settings() {
           )}
 
           <SettingRow
-            label="FPL Core Insights"
-            description="github.com/olbauday/FPL-Core-Insights · Premier League source data"
+            label={t("settings.fplData")}
+            description={t("settings.fplDataDesc")}
           >
             <button
               type="button"
@@ -434,7 +434,7 @@ export default function Settings() {
               className="flex items-center gap-2 rounded-lg bg-primary-500/10 px-4 py-2 text-sm font-heading font-bold uppercase tracking-wider text-primary-600 transition-colors hover:bg-primary-500/20 disabled:cursor-wait disabled:opacity-70 dark:text-primary-400"
             >
               <Download className={isUpdatingFplData ? "h-4 w-4 animate-bounce" : "h-4 w-4"} />
-              {t("managerProfiles.saveConfirm.update", { name: "FPL Core Insights" })}
+              {t("settings.updateFplData")}
             </button>
           </SettingRow>
           {fplDataStatus?.updatedAt && (
@@ -444,8 +444,8 @@ export default function Settings() {
           )}
 
           <SettingRow
-            label="Albion data snapshot"
-            description="Import a published JSON snapshot. It becomes the baseline for new careers only."
+            label={t("settings.albionSnapshot")}
+            description={t("settings.albionSnapshotDesc")}
           >
             <button
               type="button"
@@ -454,11 +454,11 @@ export default function Settings() {
               className="flex items-center gap-2 rounded-lg bg-primary-500/10 px-4 py-2 text-sm font-heading font-bold uppercase tracking-wider text-primary-600 transition-colors hover:bg-primary-500/20 disabled:cursor-wait disabled:opacity-70 dark:text-primary-400"
             >
               <Upload className={isImportingSnapshot ? "h-4 w-4 animate-bounce" : "h-4 w-4"} />
-              Import snapshot
+              {t("settings.importSnapshot")}
             </button>
           </SettingRow>
           {snapshotStatus?.season && (
-            <p className="-mt-2 ml-1 text-xs text-primary-500">Snapshot ready: {snapshotStatus.season}</p>
+            <p className="-mt-2 ml-1 text-xs text-primary-500">{t("settings.snapshotReady", { season: snapshotStatus.season })}</p>
           )}
 
           <div className="border-t border-gray-200 dark:border-navy-600 pt-4 mt-2">

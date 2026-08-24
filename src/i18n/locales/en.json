@@ -1707,6 +1707,13 @@
   },
   "settings": {
     "title": "Settings",
+    "fplData": "FPL Core Insights",
+    "fplDataDesc": "github.com/olbauday/FPL-Core-Insights · Premier League source data",
+    "updateFplData": "Update FPL Core Insights",
+    "albionSnapshot": "Albion data snapshot",
+    "albionSnapshotDesc": "Import a published JSON snapshot. It becomes the baseline for new careers only.",
+    "importSnapshot": "Import snapshot",
+    "snapshotReady": "Snapshot ready: {{season}}",
     "display": "Display",
     "theme": "Theme",
     "themeDesc": "Choose how the app looks",

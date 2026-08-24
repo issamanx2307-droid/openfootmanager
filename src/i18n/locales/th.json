@@ -153,6 +153,13 @@
   },
   "settings": {
     "title": "การตั้งค่า",
+    "fplData": "FPL Core Insights",
+    "fplDataDesc": "github.com/olbauday/FPL-Core-Insights · ข้อมูลพรีเมียร์ลีก",
+    "updateFplData": "อัปเดต FPL Core Insights",
+    "albionSnapshot": "ชุดข้อมูล Albion",
+    "albionSnapshotDesc": "นำเข้า JSON ที่เผยแพร่เพื่อใช้เป็นข้อมูลตั้งต้นของ career ใหม่เท่านั้น",
+    "importSnapshot": "นำเข้าชุดข้อมูล",
+    "snapshotReady": "ชุดข้อมูลพร้อมแล้ว: {{season}}",
     "language": "ภาษา",
     "languageDesc": "เลือกภาษาที่แสดงในเกม",
     "appearance": "รูปลักษณ์",
