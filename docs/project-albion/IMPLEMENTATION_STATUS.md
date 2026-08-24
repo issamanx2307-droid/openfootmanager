@@ -703,3 +703,10 @@ Pitch and Follow Ball. It keeps the same authoritative pitch orientation while
 forcing readable role labels and the formation-shape guide for tactical
 inspection. Its state is persisted locally and does not synchronize to another
 manager or influence the engine.
+
+Regression update: the complete Vitest run currently exercises 189 files and
+reports 1,457 passing tests with 19 skips. Three legacy tests timed out only
+under the full parallel load (two Tactics-library tests and one Transfers
+workspace test); rerunning the two affected files passes all 52 tests. The
+authoritative `albion_server` suite passes all 29 tests, including the
+two-human full-match and reconnect regressions.
