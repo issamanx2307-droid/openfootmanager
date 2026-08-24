@@ -17,6 +17,7 @@ describe("resolveSupportedLanguage", () => {
     expect(resolveSupportedLanguage("tr-TR")).toBe("tr");
     expect(resolveSupportedLanguage("es-419")).toBe("es");
     expect(resolveSupportedLanguage("en-US")).toBe("en");
+    expect(resolveSupportedLanguage("th-TH")).toBe("th");
   });
 
   it("falls back to English for unsupported locales", () => {
@@ -45,5 +46,9 @@ describe("i18n lazy loading", () => {
 
     expect(i18n.language).toBe("ru");
     expect(i18n.hasResourceBundle("ru", "translation")).toBe(true);
+
+    await changeAppLanguage("th-TH");
+    expect(i18n.language).toBe("th");
+    expect(i18n.t("menu.newGame")).toBe("เริ่มเกมใหม่");
   });
 });

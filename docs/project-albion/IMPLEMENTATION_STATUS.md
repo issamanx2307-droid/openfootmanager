@@ -92,7 +92,7 @@ its working tree untouched.
 | 7 | AI managers | DONE |
 | 8 | Authoritative server | IN PROGRESS |
 | 9 | Desktop client migration | IN PROGRESS |
-| 10 | Thai + accessibility | NOT STARTED |
+| 10 | Thai + accessibility | IN PROGRESS |
 | 11 | Production snapshot | BLOCKED (external data pending) |
 | 12 | Balance, soak, hardening | NOT STARTED |
 | 13 | Release candidate checklist | NOT STARTED |
@@ -325,3 +325,9 @@ boundary: “Ready” serializes `MarkReady` over the authenticated WebSocket an
 the lobby reacts to broadcast Ready and MatchOpened events. This connects the
 desktop flow to the authoritative ready barrier instead of advancing local
 Tauri state.
+
+Phase 10 progress: Thai (`th-TH`) is now a first-class selectable language,
+including translated main-menu, dashboard navigation and settings essentials;
+all untranslated keys fall back safely to English while the remaining locale
+coverage is completed. The i18n lazy-load test verifies Thai locale resolution,
+bundle loading and a translated menu label.

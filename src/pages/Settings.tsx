@@ -240,7 +240,7 @@ export default function Settings() {
             >
               {SUPPORTED_LANGUAGES.map((lang) => (
                 <option key={lang.code} value={lang.code}>
-                  {t(lang.labelKey)}
+                  {"nativeLabel" in lang ? lang.nativeLabel : t(lang.labelKey)}
                 </option>
               ))}
             </Select>

@@ -1,0 +1,49 @@
+{
+  "app": { "name": "OpenFoot Manager", "publisher": "Sturdy Robot" },
+  "menu": {
+    "newGame": "เริ่มเกมใหม่",
+    "loadGame": "โหลดเกม",
+    "settings": "การตั้งค่า",
+    "exitGame": "ออกจากเกม",
+    "noSaves": "ไม่พบเกมที่บันทึกไว้",
+    "loadingSaves": "กำลังโหลดเกม...",
+    "delete": "ลบ",
+    "cancel": "ยกเลิก",
+    "mainMenu": "เมนูหลัก",
+    "worldEditor": "ตัวแก้ไขโลก"
+  },
+  "dashboard": {
+    "home": "หน้าแรก",
+    "inbox": "กล่องข้อความ",
+    "manager": "ผู้จัดการ",
+    "squad": "ทีม",
+    "tactics": "แท็กติก",
+    "training": "การฝึกซ้อม",
+    "staff": "ทีมงาน",
+    "finances": "การเงิน",
+    "transfers": "การย้ายทีม",
+    "players": "นักเตะ",
+    "managers": "ผู้จัดการ",
+    "teams": "สโมสร",
+    "tournaments": "การแข่งขัน",
+    "schedule": "ตารางแข่ง",
+    "news": "ข่าว",
+    "settings": "การตั้งค่า",
+    "exitToMenu": "กลับเมนูหลัก",
+    "continue": "ดำเนินต่อ",
+    "simulating": "กำลังประมวลผล...",
+    "loading": "กำลังโหลดข้อมูลเกม...",
+    "saveGame": "บันทึกเกม",
+    "saving": "กำลังบันทึก...",
+    "saved": "บันทึกแล้ว"
+  },
+  "settings": {
+    "title": "การตั้งค่า",
+    "language": "ภาษา",
+    "languageDesc": "เลือกภาษาที่แสดงในเกม",
+    "appearance": "รูปลักษณ์",
+    "gameplay": "การเล่นเกม",
+    "savesData": "เซฟและข้อมูล",
+    "languages": { "en": "อังกฤษ", "th": "ไทย" }
+  }
+}
