@@ -153,6 +153,27 @@
     "expandSidebar": "ขยายแถบด้านข้าง"
   },
   "match": {
+    "eventTypes": {
+      "Goal": "ประตู",
+      "PenaltyGoal": "ประตูจากจุดโทษ",
+      "PenaltyMiss": "พลาดจุดโทษ",
+      "YellowCard": "ใบเหลือง",
+      "RedCard": "ใบแดง",
+      "SecondYellow": "ใบเหลืองที่สอง",
+      "Substitution": "เปลี่ยนตัว",
+      "Injury": "บาดเจ็บ",
+      "KickOff": "เริ่มการแข่งขัน",
+      "HalfTime": "หมดครึ่งแรก",
+      "SecondHalfStart": "เริ่มครึ่งหลัง",
+      "FullTime": "จบการแข่งขัน",
+      "ShotSaved": "ผู้รักษาประตูเซฟ",
+      "ShotOffTarget": "ยิงไม่ตรงกรอบ",
+      "ShotBlocked": "ยิงติดบล็อก",
+      "Corner": "เตะมุม",
+      "FreeKick": "ฟรีคิก",
+      "Foul": "ฟาวล์",
+      "PenaltyAwarded": "ได้จุดโทษ"
+    },
     "twoD": {
       "title": "มุมมองแมตช์ 2D", "key": "สำคัญ", "extended": "ขยาย", "full": "ทั้งหมด",
       "showNames": "แสดงชื่อนักเตะ", "hideNames": "ซ่อนชื่อนักเตะ",

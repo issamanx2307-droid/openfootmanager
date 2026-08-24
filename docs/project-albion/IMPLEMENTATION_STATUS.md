@@ -646,3 +646,9 @@ non-behavioural lint violations in rules, server and snapshot code. A new
 31 days and passes in 8.30 seconds. The 100,000-match seed-42 sim-bench
 calibration was also executed. Remaining Phase 12 work is operational: clean
 machine/package verification and real two-machine private-network smoke.
+
+2D localization update: the Canvas event overlay now receives a localized
+label from its owning Match Centre instead of rendering a protocol event name.
+Thai translations for the full match event-type set were completed, including
+goal, penalty goal, red card and substitution. The H2H view uses its existing
+authoritative-event formatter; neither path changes canonical match data.

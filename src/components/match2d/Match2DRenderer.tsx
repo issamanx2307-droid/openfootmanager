@@ -20,6 +20,8 @@ type Match2DRendererProps = {
   onRendererUnavailable?: () => void;
   playerNumbers?: Readonly<Record<string, number>>;
   ariaLabel: string;
+  /** Localized label supplied by the owning match screen. */
+  eventLabel: (event: MatchEvent) => string;
 };
 
 function toCanvas(point: PitchPoint, width: number, height: number): [number, number] {
@@ -164,6 +166,7 @@ export default function Match2DRenderer({
   onRendererUnavailable,
   playerNumbers,
   ariaLabel,
+  eventLabel,
 }: Match2DRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startedAt = useRef<number | null>(null);
@@ -259,11 +262,12 @@ export default function Match2DRenderer({
       context.stroke();
       context.restore();
       if (frame.activeClip && ["Goal", "PenaltyGoal", "RedCard", "Substitution"].includes(frame.activeClip.event.event_type)) {
+        const label = eventLabel(frame.activeClip.event);
         context.fillStyle = "rgba(15, 23, 42, 0.7)";
-        context.fillRect(12, 12, 150, 28);
-        context.fillStyle = "#f8fafc";
         context.font = "bold 13px Inter, sans-serif";
-        context.fillText(`${frame.activeClip.event.minute}' ${frame.activeClip.event.event_type}`, 20, 31);
+        context.fillRect(12, 12, Math.max(150, context.measureText(label).width + 24), 28);
+        context.fillStyle = "#f8fafc";
+        context.fillText(label, 20, 31);
       }
       if (rendererDebugEnabled()) {
         context.fillStyle = "rgba(15, 23, 42, 0.82)";
@@ -280,7 +284,7 @@ export default function Match2DRenderer({
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [awayColor, cameraMode, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, showRoleLabels, snapshot, speed, zoom]);
+  }, [awayColor, cameraMode, eventLabel, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, showRoleLabels, snapshot, speed, zoom]);
 
   return <canvas ref={canvasRef} aria-label={ariaLabel} className="block h-full min-h-80 w-full bg-emerald-800" />;
 }

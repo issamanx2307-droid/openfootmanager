@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -147,6 +147,10 @@ export default function MultiplayerLobby() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const thai = i18n.language.startsWith("th");
+  const liveRendererEventLabel = useCallback(
+    (event: MatchEvent) => formatAlbionLiveEvent(event, thai),
+    [thai],
+  );
   const copy = i18n.language.startsWith("th") ? {
     initial: "เลือกเป็นโฮสต์หรือเข้าร่วมเกมส่วนตัว", noCareer: "ต้องเปิด career และเลือกสโมสรก่อนเริ่มเล่นร่วมกัน",
     rejected: "คำสั่งถูกปฏิเสธ: กรุณารีเฟรชข้อมูลแล้วลองใหม่", readyState: "อัปเดตสถานะพร้อมแล้ว รอผู้จัดการอีกฝ่าย",
@@ -495,7 +499,7 @@ export default function MultiplayerLobby() {
           {liveCommand && <p className="text-sm text-gray-300" aria-live="polite">{liveCommand.status === "pending" ? copy.liveSent : liveCommand.status === "accepted" ? copy.liveAccepted : liveCommand.status === "applied" ? copy.liveApplied : copy.liveRejected}</p>}
           {liveReplayEvent ? <button type="button" onClick={() => setLiveReplayEvent(null)} className="w-fit rounded bg-accent-500 px-3 py-2 text-sm font-bold">{copy.stopReplay}</button>
             : latestReplayableEvent && <button type="button" onClick={() => setLiveReplayEvent(latestReplayableEvent)} className="w-fit rounded bg-accent-500 px-3 py-2 text-sm font-bold">{copy.replayLatest}</button>}
-          {livePresentation.snapshot && <div className="h-72 overflow-hidden rounded border border-navy-600"><Match2DRenderer snapshot={livePresentation.snapshot} homeColor="#10b981" awayColor="#6366f1" speed={livePresentationSpeed} highlightMode="full" reducedMotion={reducedMotion} replayEvent={liveReplayEvent} ariaLabel={t("match.twoD.pitch")} /></div>}
+          {livePresentation.snapshot && <div className="h-72 overflow-hidden rounded border border-navy-600"><Match2DRenderer snapshot={livePresentation.snapshot} homeColor="#10b981" awayColor="#6366f1" speed={livePresentationSpeed} highlightMode="full" reducedMotion={reducedMotion} replayEvent={liveReplayEvent} ariaLabel={t("match.twoD.pitch")} eventLabel={liveRendererEventLabel} /></div>}
           {livePresentation.events.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{livePresentation.events.slice(-6).map((event) => <li key={`${event.minute}-${event.event_type}-${event.player_id ?? "unknown"}-${event.secondary_player_id ?? "none"}`}>{isReplayableAlbionEvent(event) ? <button type="button" onClick={() => setLiveReplayEvent(event)} className="text-left underline decoration-dotted">{formatAlbionLiveEvent(event, thai)}</button> : formatAlbionLiveEvent(event, thai)}</li>)}</ul></div>}
           {livePresentation.finished && livePresentation.report && <section className="rounded border border-navy-600 p-3" aria-label={copy.postMatch}>
             <h2 className="font-semibold">{copy.postMatch}</h2>

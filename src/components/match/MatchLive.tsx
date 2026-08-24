@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { GameStateData } from "../../store/gameStore";
 import { MatchSnapshot, MatchEvent, MinuteResult, SimSpeed, SPEED_MS, MINUTES_PER_TICK, FORMATIONS, isPersistableSpeed } from "./types";
-import { getEventDisplay, getPlayerName, makeTeamFallback, phaseLabel } from "./helpers";
+import { getEventDisplay, getEventTypeLabel, getPlayerName, makeTeamFallback, phaseLabel } from "./helpers";
 import { Badge, TeamLogo } from "../ui";
 import { useSettingsStore } from "../../store/settingsStore";
 import { EventFeed, MatchStats, Lineups } from "./MatchPanels";
@@ -43,6 +43,10 @@ export default function MatchLive({
   onHalfTime, onFullTime, onPenaltyShootout,
 }: MatchLiveProps) {
   const { t } = useTranslation();
+  const rendererEventLabel = useCallback(
+    (event: MatchEvent) => `${event.minute}' ${getEventTypeLabel(event.event_type, t)}`,
+    [t],
+  );
   const { settings } = useSettingsStore();
   const initialSpeed: SimSpeed = preferredSpeed
     ?? ((settings.match_speed === "slow" || settings.match_speed === "fast") ? settings.match_speed : "normal");
@@ -327,6 +331,7 @@ export default function MatchLive({
               onRendererUnavailable={handleRendererUnavailable}
               playerNumbers={playerNumbers}
               ariaLabel={match2dCopy.pitch}
+              eventLabel={rendererEventLabel}
             /> : <p role="alert" className="p-5 text-sm text-white">{match2dCopy.unavailable}</p>}
           </section>
           <div className="flex bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-700 transition-colors duration-300">
