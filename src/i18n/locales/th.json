@@ -137,6 +137,9 @@
     "multiplayer": "เล่นร่วมกัน",
     "saving": "กำลังบันทึก...",
     "saved": "บันทึกแล้ว",
+    "alerts": { "exhausted": "นักเตะ {{count}} คนมีสภาพวิกฤต (<25%)", "injuredStartingXi": "มีนักเตะเจ็บ {{count}} คนใน 11 ตัวจริง — เปลี่ยนตัว", "incompleteStartingXi": "11 ตัวจริงยังไม่ครบ — จัดทีมก่อน", "urgentUnread": "มีข้อความด่วนที่ยังไม่อ่าน {{count}} ข้อความ", "matchTodayStartingXi": "แข่งวันนี้! จัด 11 ตัวจริง", "financeCrisis": "การเงินวิกฤต — ยอดคงเหลือ {{balance}}, อยู่ได้ {{weeks}} สัปดาห์", "financeRunway": "เงินสดเหลือพอ {{count}} สัปดาห์", "wagePressure": "ค่าเหนื่อย {{percent}}% ของงบ" },
+    "unemployedBanner": "ขณะนี้คุณยังไม่มีสโมสร ข้อเสนองานอาจมาถึงในกล่องข้อความ",
+    "digestAdvancing": "กำลังเดินเวลา...", "digestDone": "เสร็จสิ้น", "digestClose": "ปิด", "digestEmpty": "ไม่มีรายการ", "digestQuietDay": "ไม่มีเหตุการณ์", "digestSimulating": "กำลังประมวลผล...", "digestMatchDay": "วันแข่งขัน", "digestMatchDayDesc": "นัดของคุณพร้อมให้เล่นแล้ว", "digestReturnHome": "กลับหน้าแรก", "digestBlocked": "ต้องดำเนินการ", "digestBlockedDesc": "มีเรื่องที่ต้องจัดการก่อนเดินเวลาต่อ", "digestViewIssues": "ดูปัญหา", "digestFired": "คุณถูกปลดจากตำแหน่ง", "digestContinueAnyway": "ดำเนินการต่อ", "digestStop": "หยุดการจำลอง", "digestStopping": "กำลังหยุด...", "digestStopped": "หยุดการจำลองแล้ว", "digestEventStop": "มีเหตุการณ์เกิดขึ้น", "digestEventStopDesc": "การเดินเวลาหยุดเพื่อให้คุณตรวจสอบก่อนดำเนินการต่อ", "digestEventInbox": "มีข้อความสำคัญมาถึง", "digestEventUserTransfer": "การย้ายทีมที่เกี่ยวกับสโมสรของคุณเสร็จสิ้น", "digestEventUserNews": "มีข่าวเกี่ยวกับสโมสรหรือนักเตะของคุณ", "digestEventTransferWindow": "ตลาดซื้อขายเปิดหรือวันปิดตลาด", "digestContinue": "ไปต่อ", "digestError": "การจำลองผิดพลาด",
     "collapseSidebar": "ย่อแถบด้านข้าง",
     "expandSidebar": "ขยายแถบด้านข้าง"
   },
