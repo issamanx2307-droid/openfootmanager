@@ -614,6 +614,23 @@ mod tests {
     }
 
     #[test]
+    fn manager_dashboard_exposes_only_public_transfer_target_fields() {
+        let (mut career, manager_id) = career();
+        let mut player = Player::new(
+            "fpl-listed-1".into(), "Listed Player".into(), "Listed Player".into(), "1998-01-01".into(), "ENG".into(), Position::Forward,
+            PlayerAttributes { pace: 60, stamina: 60, strength: 60, agility: 60, passing: 60, shooting: 60, tackling: 60, dribbling: 60, defending: 60, positioning: 60, vision: 60, decisions: 60, composure: 60, aggression: 60, teamwork: 60, leadership: 60, handling: 20, reflexes: 20, aerial: 60 },
+        );
+        player.transfer_listed = true;
+        player.market_value = 1_500_000;
+        career.game.players.push(player);
+        let target = &career.manager_dashboard(manager_id).unwrap()["transferTargets"][0];
+        assert_eq!(target["id"], "fpl-listed-1");
+        assert_eq!(target["marketValue"], 1_500_000);
+        assert!(target.get("attributes").is_none());
+        assert!(target.get("ovr").is_none());
+    }
+
+    #[test]
     fn transfer_bids_reject_non_integral_minor_currency_before_mutating() {
         let (mut career, manager_id) = career();
         let before = career.game().teams[0].finance;
