@@ -64,6 +64,10 @@ impl CanonicalCareer {
                 "formation": team.formation,
                 "playStyle": format!("{:?}", team.play_style),
             },
+            "training": {
+                "focus": format!("{:?}", team.training_focus),
+                "intensity": format!("{:?}", team.training_intensity),
+            }
         }))
     }
 
@@ -492,6 +496,8 @@ mod tests {
         let (career, manager_id) = career();
         let view = career.manager_dashboard(manager_id).unwrap();
         assert_eq!(view["club"]["name"], "Albion");
+        assert!(view["training"]["focus"].is_string());
+        assert!(view["training"]["intensity"].is_string());
         assert!(view.get("players").is_none());
         assert!(view.get("managers").is_none());
     }

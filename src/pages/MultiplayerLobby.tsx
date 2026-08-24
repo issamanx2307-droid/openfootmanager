@@ -15,7 +15,8 @@ import { useGameStore } from "../store/gameStore";
 
 type ManagerDashboard = {
   currentDate: string;
-  club: { name: string; formation: string; playStyle: string };
+  club: { id: string; name: string; formation: string; playStyle: string };
+  training?: { focus: string; intensity: string };
 };
 
 function readManagerDashboard(value: unknown): ManagerDashboard | null {
@@ -24,8 +25,27 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
   const club = record.club;
   if (typeof record.currentDate !== "string" || !club || typeof club !== "object") return null;
   const clubRecord = club as Record<string, unknown>;
-  if (typeof clubRecord.name !== "string" || typeof clubRecord.formation !== "string" || typeof clubRecord.playStyle !== "string") return null;
-  return { currentDate: record.currentDate, club: { name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle } };
+  if (typeof clubRecord.id !== "string" || typeof clubRecord.name !== "string" || typeof clubRecord.formation !== "string" || typeof clubRecord.playStyle !== "string") return null;
+  const trainingRecord = record.training;
+  const training = trainingRecord && typeof trainingRecord === "object"
+    && typeof (trainingRecord as Record<string, unknown>).focus === "string"
+    && typeof (trainingRecord as Record<string, unknown>).intensity === "string"
+    ? { focus: (trainingRecord as Record<string, string>).focus, intensity: (trainingRecord as Record<string, string>).intensity }
+    : undefined;
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training };
+}
+
+function applyDashboardDelta(value: unknown, changes: unknown): unknown {
+  const dashboard = readManagerDashboard(value);
+  if (!dashboard || !changes || typeof changes !== "object") return value;
+  const delta = changes as Record<string, unknown>;
+  if (delta.teamId !== dashboard.club.id) return value;
+  const next = { ...dashboard, club: { ...dashboard.club }, training: dashboard.training && { ...dashboard.training } };
+  if (typeof delta.formation === "string") next.club.formation = delta.formation;
+  if (typeof delta.mentality === "string") next.club.playStyle = delta.mentality;
+  if (typeof delta.teamFocus === "string") next.training = { focus: delta.teamFocus, intensity: next.training?.intensity ?? "" };
+  if (typeof delta.weeklyIntensity === "number") next.training = { focus: next.training?.focus ?? "", intensity: String(delta.weeklyIntensity) };
+  return next;
 }
 
 export default function MultiplayerLobby() {
@@ -106,6 +126,7 @@ export default function MultiplayerLobby() {
     });
     client.current.connect(url, joined, (event, cache) => {
       if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
+      if (event.type === "StateDelta") setDashboard((previous) => applyDashboardDelta(previous, event.body?.changes));
       if (event.type === "CommandRejected") setMessage(copy.rejected);
       if (event.type === "ReadyStateChanged") setMessage(copy.readyState);
       if (event.type === "MatchOpened") {
@@ -167,6 +188,7 @@ export default function MultiplayerLobby() {
       const restored = await client.current.reconnect(stored.server_url, stored.reconnect_token, versions);
       client.current.connect(stored.server_url, restored, (event, cache) => {
         if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
+        if (event.type === "StateDelta") setDashboard((previous) => applyDashboardDelta(previous, event.body?.changes));
         if (event.type === "MatchOpened") {
           const matchId = event.body?.match_id;
           if (typeof matchId === "string") setLiveMatchId(matchId);
@@ -286,6 +308,7 @@ export default function MultiplayerLobby() {
             <dt className="text-gray-300">{copy.date}</dt><dd>{dashboardView.currentDate}</dd>
             <dt className="text-gray-300">{copy.tactics}</dt><dd>{dashboardView.club.formation}</dd>
             <dt className="text-gray-300">{copy.playStyle}</dt><dd>{dashboardView.club.playStyle}</dd>
+            {dashboardView.training && <><dt className="text-gray-300">{copy.training}</dt><dd>{dashboardView.training.focus} · {dashboardView.training.intensity}</dd></>}
           </dl>
         </section>}
       </section>}
