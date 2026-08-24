@@ -113,6 +113,40 @@ describe("2D match presentation", () => {
     expect(mid.players.find((item) => item.id === "gk")?.point).toEqual(start.players.find((item) => item.id === "gk")?.point);
   });
 
+  it("brings the authoritative incoming substitute on from the touchline", () => {
+    const incoming = player("incoming", "Forward");
+    const input = {
+      home_team: { id: "home", name: "Home", formation: "4-3-3", play_style: "Balanced", players: [player("gk", "Goalkeeper"), incoming] },
+      away_team: { id: "away", name: "Away", formation: "4-3-3", play_style: "Balanced", players: [player("away-gk", "Goalkeeper")] },
+      sent_off: [], ball_zone: "MidfieldCentre", current_minute: 66,
+      events: [{ ...event(66, "Substitution", "Home"), player_id: "incoming", secondary_player_id: "outgoing" }],
+    };
+    const entering = presentationFrame(input, 0).players.find((item) => item.id === "incoming");
+    const settled = presentationFrame(input, 559).players.find((item) => item.id === "incoming");
+
+    expect(entering?.point.y).toBe(0.97);
+    expect(settled?.point.y).not.toBe(0.97);
+    expect(entering?.point.x).toBe(settled?.point.x);
+  });
+
+  it("moves the defending goalkeeper towards an authoritative save", () => {
+    const input = {
+      home_team: { id: "home", name: "Home", formation: "4-3-3", play_style: "Balanced", players: [player("home-gk", "Goalkeeper"), player("shooter", "Forward")] },
+      away_team: { id: "away", name: "Away", formation: "4-3-3", play_style: "Balanced", players: [player("away-gk", "Goalkeeper")] },
+      sent_off: [], ball_zone: "AttackingBox", current_minute: 31,
+      events: [{ ...event(31, "ShotSaved", "Home", "AttackingBox"), player_id: "shooter" }],
+    };
+    const startFrame = presentationFrame(input, 0);
+    const savingFrame = presentationFrame(input, 450);
+    const start = startFrame.players.find((item) => item.id === "away-gk");
+    const saving = savingFrame.players.find((item) => item.id === "away-gk");
+
+    expect(saving?.point).not.toEqual(start?.point);
+    expect(Math.abs((saving?.point.x ?? 0) - savingFrame.ball.x)).toBeLessThan(
+      Math.abs((start?.point.x ?? 0) - startFrame.ball.x),
+    );
+  });
+
   it("derives card and injury badges from authoritative snapshot facts", () => {
     const events = [event(64, "Injury", "Home")];
     events[0].player_id = "runner";

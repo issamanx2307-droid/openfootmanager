@@ -710,3 +710,16 @@ under the full parallel load (two Tactics-library tests and one Transfers
 workspace test); rerunning the two affected files passes all 52 tests. The
 authoritative `albion_server` suite passes all 29 tests, including the
 two-human full-match and reconnect regressions.
+
+2D substitution update: when an authoritative substitution event is replayed,
+the incoming player now enters from the appropriate touchline and eases into
+the already-authoritative formation slot. The outgoing player is not rendered
+again because the snapshot has already moved them to the bench. This makes the
+marker swap legible without inventing player state or sending data back to the
+engine. Focused presentation coverage verifies the incoming-player transition.
+
+2D save update: the engine records the shooter for a save but does not carry a
+goalkeeper ID in that event. The renderer therefore identifies the existing
+defending goalkeeper marker and moves it toward the interpolated shot position.
+This is a deterministic visual interpretation of the authoritative event only;
+focused coverage confirms the goalkeeper closes the distance to the live ball.

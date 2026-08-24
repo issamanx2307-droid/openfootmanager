@@ -134,17 +134,38 @@ function applySemanticPlayerMovement(
   progress: number,
 ): PresentationPlayer[] {
   const eventType = clip.event.event_type;
+  // The authoritative snapshot already has the incoming player in the XI and
+  // the outgoing player on the bench.  Let the incoming player walk in from
+  // the nearest touchline, rather than inventing a second on-pitch player or
+  // modifying the recorded substitution.
+  if (eventType === "Substitution") {
+    return players.map((player) => {
+      if (player.id !== clip.event.player_id) return player;
+      const touchline = {
+        x: player.point.x,
+        y: player.side === "Home" ? 0.97 : 0.03,
+      };
+      return { ...player, point: moveTowards(touchline, player.point, progress) };
+    });
+  }
   const actorMovement = eventType === "Dribble" ? 0.8
     : ["Tackle", "Interception", "DribbleTackled", "PassIntercepted"].includes(eventType) ? 0.55
       : ["Cross", "PassCompleted", "Corner", "FreeKick"].includes(eventType) ? 0.25 : 0.12;
   const targetMovement = ["PassCompleted", "Cross", "Corner", "FreeKick"].includes(eventType) ? 0.38
     : ["Tackle", "Interception", "DribbleTackled", "PassIntercepted"].includes(eventType) ? 0.25 : 0.08;
+  const goalkeeperMovement = eventType === "ShotSaved" ? 0.7
+    : ["ShotOnTarget", "Goal", "PenaltyGoal"].includes(eventType) ? 0.35 : 0;
   return players.map((player) => {
     if (player.id === clip.event.player_id) {
       return { ...player, point: moveTowards(player.point, ball, actorMovement * progress) };
     }
     if (player.id === clip.event.secondary_player_id) {
       return { ...player, point: moveTowards(player.point, clip.ballTo, targetMovement * progress) };
+    }
+    // The engine's save payload names the shooter, not the goalkeeper. Use
+    // the existing defensive goalkeeper marker as the visual participant.
+    if (goalkeeperMovement > 0 && player.goalkeeper && player.side !== clip.event.side) {
+      return { ...player, point: moveTowards(player.point, ball, goalkeeperMovement * progress) };
     }
     return player;
   });
