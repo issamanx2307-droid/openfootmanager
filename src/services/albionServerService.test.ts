@@ -6,6 +6,7 @@ import {
   formatAlbionLiveEvent,
   loadAlbionSession,
   saveAlbionSession,
+  serializeAlbionCommand,
 } from "./albionServerService";
 
 describe("applyAlbionServerEvent", () => {
@@ -38,6 +39,16 @@ describe("formatAlbionLiveEvent", () => {
     const event = { minute: 72, event_type: "Goal", side: "Home" };
     expect(formatAlbionLiveEvent(event, false)).toBe("72′ Goal · Home");
     expect(formatAlbionLiveEvent(event, true)).toBe("72′ ประตู · Home");
+  });
+});
+
+describe("serializeAlbionCommand", () => {
+  it("uses the internally tagged Rust command wire shape", () => {
+    expect(serializeAlbionCommand({ SetStartingXi: {
+      fixture_id: "fpl-fixture-1", player_ids: ["fpl-1"], formation: "4-3-3",
+    } })).toEqual({ type: "SetStartingXi", body: {
+      fixture_id: "fpl-fixture-1", player_ids: ["fpl-1"], formation: "4-3-3",
+    } });
   });
 });
 

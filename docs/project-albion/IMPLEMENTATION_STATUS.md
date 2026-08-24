@@ -486,3 +486,8 @@ players from the server-provided squad for the upcoming fixture. It sends only
 the selected stable IDs, fixture ID and formation through `SetStartingXi`; the
 server validates ownership, fitness and uniqueness, then returns the resulting
 selection in its state delta.
+
+Phase 9 update: `albionServerService` now serializes every ergonomic React
+command into the protocol's required internally-tagged `{ type, body }` wire
+form before WebSocket transmission. A focused regression covers the FPL-style
+starting-XI payload, so lobby actions no longer depend on an invalid enum shape.

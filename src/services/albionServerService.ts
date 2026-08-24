@@ -56,6 +56,16 @@ export type AlbionServerEvent = {
   body?: Record<string, unknown>;
 };
 
+/** Convert the ergonomic React command form into the Rust protocol's
+ * internally-tagged `{ type, body }` representation. */
+export function serializeAlbionCommand(command: unknown): unknown {
+  if (!command || typeof command !== "object" || Array.isArray(command)) return command;
+  const entries = Object.entries(command as Record<string, unknown>);
+  if (entries.length !== 1) return command;
+  const [type, body] = entries[0];
+  return { type, body };
+}
+
 export type AlbionViewCache = {
   revision: number;
   views: ReadonlyMap<string, unknown>;
@@ -170,7 +180,7 @@ export class AlbionServerClient {
       career_id: session.career_id,
       manager_id: session.manager_id,
       expected_revision: expectedRevision,
-      payload: command,
+      payload: serializeAlbionCommand(command),
     }));
   }
 
