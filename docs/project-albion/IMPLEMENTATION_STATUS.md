@@ -492,3 +492,8 @@ command into the protocol's required internally-tagged `{ type, body }` wire
 form before WebSocket transmission. A focused regression covers the FPL-style
 starting-XI payload, so lobby actions no longer depend on an invalid enum shape.
 The matching protocol regression deserializes that exact wire shape.
+
+Phase 10 update: canonical `CommandRejected` events now display their stable
+error code as actionable English or Thai copy in the lobby, including stale
+state, invalid line-ups, budget limits and unavailable match commands. No
+server prose is trusted or shown; the focused service test covers both locales.

@@ -79,6 +79,28 @@ const LIVE_EVENT_LABELS: Record<string, { en: string; th: string }> = {
   FullTime: { en: "Full time", th: "จบการแข่งขัน" }, KickOff: { en: "Kick-off", th: "เริ่มการแข่งขัน" },
 };
 
+const ERROR_LABELS: Record<string, { en: string; th: string }> = {
+  AUTH_INVALID: { en: "You cannot make that change for this club.", th: "คุณไม่มีสิทธิ์เปลี่ยนแปลงสโมสรนี้" },
+  PROTOCOL_INCOMPATIBLE: { en: "Your game version is incompatible with this host.", th: "เวอร์ชันเกมของคุณไม่ตรงกับโฮสต์" },
+  STALE_REVISION: { en: "The game changed. Your view has been refreshed; try again.", th: "เกมมีการเปลี่ยนแปลงแล้ว รีเฟรชข้อมูลและลองอีกครั้ง" },
+  CLUB_ALREADY_CONTROLLED: { en: "Another manager already controls this club.", th: "มีผู้จัดการคนอื่นคุมสโมสรนี้อยู่แล้ว" },
+  INVALID_LINEUP: { en: "Choose eleven unique, fit players.", th: "เลือกนักเตะที่พร้อมลงเล่น 11 คนและห้ามซ้ำ" },
+  TRANSFER_WINDOW_CLOSED: { en: "The transfer window is closed.", th: "ตลาดซื้อขายปิดอยู่" },
+  INSUFFICIENT_TRANSFER_BUDGET: { en: "The club does not have enough transfer budget.", th: "สโมสรมีงบซื้อขายไม่เพียงพอ" },
+  INSUFFICIENT_WAGE_BUDGET: { en: "The club does not have enough wage budget.", th: "สโมสรมีงบค่าเหนื่อยไม่เพียงพอ" },
+  REGISTRATION_INVALID: { en: "This registration is not valid.", th: "การลงทะเบียนนี้ไม่ถูกต้อง" },
+  MATCH_COMMAND_NOT_ALLOWED: { en: "That command is not available now.", th: "ยังใช้คำสั่งนี้ไม่ได้ในตอนนี้" },
+  SAVE_CORRUPT: { en: "The host save cannot be used.", th: "เซฟของโฮสต์ไม่สามารถใช้งานได้" },
+  SNAPSHOT_INVALID: { en: "The current data snapshot is invalid.", th: "ชุดข้อมูลปัจจุบันไม่ถูกต้อง" },
+};
+
+/** Localizes stable protocol error codes; the server deliberately sends no prose. */
+export function formatAlbionProtocolError(error: unknown, thai: boolean): string {
+  const code = error && typeof error === "object" && typeof (error as Record<string, unknown>).code === "string"
+    ? (error as Record<string, string>).code : "";
+  return ERROR_LABELS[code]?.[thai ? "th" : "en"] ?? (thai ? "คำสั่งถูกปฏิเสธ" : "Command rejected");
+}
+
 /** Formats only facts received in the canonical event stream. */
 export function formatAlbionLiveEvent(event: unknown, thai: boolean): string {
   if (!event || typeof event !== "object") return thai ? "เหตุการณ์การแข่งขัน" : "Match event";

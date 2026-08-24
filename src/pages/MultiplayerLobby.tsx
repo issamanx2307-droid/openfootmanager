@@ -7,6 +7,7 @@ import {
   AlbionServerClient,
   clearAlbionSession,
   formatAlbionLiveEvent,
+  formatAlbionProtocolError,
   loadAlbionSession,
   saveAlbionSession,
   type AlbionSession,
@@ -215,7 +216,7 @@ export default function MultiplayerLobby() {
     client.current.connect(url, joined, (event, cache) => {
       if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
       if (event.type === "StateDelta") setDashboard((previous) => applyDashboardDelta(previous, event.body?.changes));
-      if (event.type === "CommandRejected") setMessage(copy.rejected);
+      if (event.type === "CommandRejected") setMessage(formatAlbionProtocolError(event.body?.error, thai));
       if (event.type === "ReadyStateChanged") setMessage(copy.readyState);
       if (event.type === "MatchOpened") {
         const matchId = event.body?.match_id;
@@ -276,7 +277,8 @@ export default function MultiplayerLobby() {
       const restored = await client.current.reconnect(stored.server_url, stored.reconnect_token, versions);
       client.current.connect(stored.server_url, restored, (event, cache) => {
         if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
-        if (event.type === "StateDelta") setDashboard((previous) => applyDashboardDelta(previous, event.body?.changes));
+      if (event.type === "StateDelta") setDashboard((previous) => applyDashboardDelta(previous, event.body?.changes));
+      if (event.type === "CommandRejected") setMessage(formatAlbionProtocolError(event.body?.error, thai));
         if (event.type === "MatchOpened") {
           const matchId = event.body?.match_id;
           if (typeof matchId === "string") setLiveMatchId(matchId);

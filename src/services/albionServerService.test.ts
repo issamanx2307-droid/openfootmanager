@@ -4,6 +4,7 @@ import {
   applyAlbionServerEvent,
   clearAlbionSession,
   formatAlbionLiveEvent,
+  formatAlbionProtocolError,
   loadAlbionSession,
   saveAlbionSession,
   serializeAlbionCommand,
@@ -39,6 +40,13 @@ describe("formatAlbionLiveEvent", () => {
     const event = { minute: 72, event_type: "Goal", side: "Home" };
     expect(formatAlbionLiveEvent(event, false)).toBe("72′ Goal · Home");
     expect(formatAlbionLiveEvent(event, true)).toBe("72′ ประตู · Home");
+  });
+});
+
+describe("formatAlbionProtocolError", () => {
+  it("localizes stable rejection codes without server-supplied prose", () => {
+    expect(formatAlbionProtocolError({ code: "INVALID_LINEUP" }, true)).toContain("11");
+    expect(formatAlbionProtocolError({ code: "INVALID_LINEUP" }, false)).toContain("eleven");
   });
 });
 
