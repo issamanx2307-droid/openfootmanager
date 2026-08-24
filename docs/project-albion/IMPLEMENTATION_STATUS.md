@@ -539,3 +539,7 @@ persists settings in browser storage; the desktop runtime continues to use its
 existing Tauri settings command. The fallback is covered by the settings-store
 regression, and a 1280×720 browser check confirms the Thai Settings screen has
 no horizontal overflow.
+
+Phase 10 update: the app shell now sets the document `lang` attribute from the
+chosen locale. Screen readers therefore receive `th` for the Thai main menu
+and Settings flow instead of the former English document language.

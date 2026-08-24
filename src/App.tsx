@@ -66,6 +66,10 @@ function App() {
     );
   }, [settings.high_contrast]);
 
+  useEffect(() => {
+    document.documentElement.lang = settings.language || "en";
+  }, [settings.language]);
+
   // Apply saved language from settings once loaded (overrides OS detection)
   useEffect(() => {
     if (loaded && settings.language && settings.language !== i18n.language) {
