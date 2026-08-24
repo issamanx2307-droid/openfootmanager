@@ -419,3 +419,8 @@ output such as the canonical side identifier.
 Phase 10 update: the dashboard entry point for private multiplayer now uses
 the shared locale catalogue, so its label follows the active English or Thai
 language instead of remaining hard-coded in Thai.
+
+Phase 10 update: the Thai catalogue now covers the core new-career wizard:
+manager creation, validation errors, world selection, generated-history
+choices and generation progress. The lazy-load regression asserts translated
+keys from each wizard step rather than accepting English fallback text.

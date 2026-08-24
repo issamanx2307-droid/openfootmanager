@@ -10,8 +10,90 @@
     "delete": "ลบ",
     "cancel": "ยกเลิก",
     "mainMenu": "เมนูหลัก",
-    "worldEditor": "ตัวแก้ไขโลก"
+    "worldEditor": "ตัวแก้ไขโลก",
+    "failedStartGame": "ไม่สามารถเริ่มเกมได้: {{error}}",
+    "loadGameFailed": "ไม่สามารถโหลดเซฟได้: {{error}}",
+    "openDiscord": "เปิดชุมชน Discord",
+    "openGithub": "เปิดคลัง GitHub"
   },
+  "createManager": {
+    "title": "สร้างผู้จัดการ",
+    "firstName": "ชื่อ",
+    "lastName": "นามสกุล",
+    "dob": "วันเกิด",
+    "startYear": "ปีเริ่มต้น",
+    "startPhase": "ช่วงเริ่มต้น",
+    "phaseSeasonStart": "เริ่มฤดูกาล",
+    "phaseMidSeason": "กลางฤดูกาล",
+    "nationality": "สัญชาติ",
+    "countryOfOrigin": "ประเทศ/ภูมิภาค",
+    "selectNationality": "เลือกสัญชาติ...",
+    "selectCountry": "เลือกประเทศ/ภูมิภาค...",
+    "searchNationalities": "ค้นหาสัญชาติ...",
+    "chooseWorld": "เลือกโลก",
+    "placeholderFirst": "เช่น José",
+    "placeholderLast": "เช่น Mourinho"
+  },
+  "validation": {
+    "required": "ต้องระบุ {{field}}",
+    "maxLength": "{{field}} ต้องมีความยาวไม่เกิน {{max}} ตัวอักษร",
+    "minStartYear": "ปีเริ่มต้นต้องเป็น {{min}} หรือหลังจากนั้น",
+    "minAge": "ผู้จัดการต้องมีอายุอย่างน้อย {{min}} ปี — เปลี่ยนวันเกิดเพื่อดำเนินการต่อ",
+    "invalidDate": "วันที่ไม่ถูกต้อง",
+    "invalidDob": "วันเกิดไม่ถูกต้อง"
+  },
+  "worldSelect": {
+    "title": "เลือกโลก",
+    "scanning": "กำลังค้นหาฐานข้อมูล...",
+    "importFile": "นำเข้าจากไฟล์",
+    "importPackage": "นำเข้าแพ็กเกจโลก",
+    "packageErrorsTitle": "ปัญหาแพ็กเกจ",
+    "importCompetitions": "เพิ่มไฟล์การแข่งขัน",
+    "removeCompetitions": "นำออก",
+    "competitionsErrorsTitle": "ไม่สามารถใช้ไฟล์การแข่งขันนี้ได้:",
+    "startCareer": "เริ่มอาชีพ",
+    "creatingWorld": "กำลังสร้างโลก...",
+    "teams": "{{count}} สโมสร",
+    "players": "{{count}} นักเตะ",
+    "competitions": "{{count}} รายการ",
+    "randomWorld": "โลกสุ่ม",
+    "randomDescription": "โลกที่สร้างสโมสร นักเตะ และทีมงานขึ้นตามกระบวนการ",
+    "historyMode": { "generated": "ประวัติที่สร้างขึ้น", "reference": "ประวัติอ้างอิง", "hybrid": "ประวัติผสม" },
+    "summary": {
+      "startYear": "เริ่มอาชีพ",
+      "seasonStart": {
+        "generated": "เริ่มฤดูกาล {{year}} ในโลกใหม่ พร้อมประวัติที่สร้างขึ้น {{count}} ฤดูกาล",
+        "reference": "เริ่มฤดูกาล {{year}} โดยใช้ snapshot ประวัติที่เลือกเป็นฐานข้อมูลโลก",
+        "hybrid": "เริ่มฤดูกาล {{year}} ด้วยรายชื่อนักเตะนี้ พร้อมสร้างประวัติที่ขาดหาย {{count}} ฤดูกาล"
+      },
+      "midSeason": {
+        "generated": "รับงานกลางฤดูกาล {{year}} พร้อมตาราง คะแนน ข่าว และประวัติที่สร้างขึ้น {{count}} ฤดูกาล",
+        "reference": "รับงานกลางฤดูกาล {{year}} โดยใช้ snapshot ประวัติที่เลือกและบริบทฤดูกาลปัจจุบัน",
+        "hybrid": "รับงานกลางฤดูกาล {{year}} ด้วยรายชื่อนักเตะนี้ และประวัติที่สร้างขึ้น {{count}} ฤดูกาล"
+      }
+    },
+    "historyDepth": {
+      "label": "ประวัติที่สร้างขึ้น",
+      "hint": "เลือกระดับประวัติของโลก ยิ่งมากยิ่งมีบริบท แต่ใช้เวลาสร้างนานขึ้น",
+      "reference": "โลกนี้มีข้อมูลประวัติของตนเองอยู่แล้ว",
+      "applied": "สร้างแล้ว {{count}} ฤดูกาล",
+      "none": "ไม่มีประวัติ",
+      "option": "{{count}} ฤดูกาล",
+      "recommended": "แนะนำ"
+    },
+    "installedPackages": "แพ็กเกจที่ติดตั้ง",
+    "installPackage": "ติดตั้งแพ็กเกจ (.ofm)",
+    "noInstalledPackages": "ยังไม่มีแพ็กเกจที่ติดตั้ง",
+    "removePackage": "นำออก",
+    "packageStackErrors": "ข้อผิดพลาดของชุดแพ็กเกจ",
+    "stackConflictWarnings": "แพ็กเกจขัดแย้ง {{count}} รายการ — เกมจะใช้เวอร์ชันลำดับสุดท้าย",
+    "namePools": "คลังชื่อ {{count}} ชุด",
+    "countries": "{{count}} ประเทศ",
+    "confederations": "{{count}} สมาพันธ์",
+    "packageAuthor": "โดย {{author}}",
+    "packageVersion": "v{{version}}"
+  },
+  "generation": { "title": "สร้างและเตรียมโลก", "coverage": "แพ็กเกจของคุณครอบคลุม" },
   "dashboard": {
     "home": "หน้าแรก",
     "inbox": "กล่องข้อความ",

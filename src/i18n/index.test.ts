@@ -50,5 +50,8 @@ describe("i18n lazy loading", () => {
     await changeAppLanguage("th-TH");
     expect(i18n.language).toBe("th");
     expect(i18n.t("menu.newGame")).toBe("เริ่มเกมใหม่");
+    expect(i18n.t("createManager.title")).toBe("สร้างผู้จัดการ");
+    expect(i18n.t("worldSelect.startCareer")).toBe("เริ่มอาชีพ");
+    expect(i18n.t("generation.title")).toBe("สร้างและเตรียมโลก");
   });
 });
