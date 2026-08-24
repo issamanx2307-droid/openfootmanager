@@ -27,6 +27,7 @@ export default function MultiplayerLobby() {
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "ส่งคำสั่งระหว่างแข่งไปยังเซิร์ฟเวอร์แล้ว",
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
+    events: "เหตุการณ์ล่าสุด",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
@@ -40,6 +41,7 @@ export default function MultiplayerLobby() {
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Live-match command sent to the server.",
     matchFinished: "Match finished", score: "Score",
+    events: "Latest events",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
@@ -57,6 +59,7 @@ export default function MultiplayerLobby() {
   const [trainingFocus, setTrainingFocus] = useState("tactical");
   const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
   const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
+  const [liveEvents, setLiveEvents] = useState<unknown[]>([]);
 
   useEffect(() => () => {
     client.current.disconnect();
@@ -95,6 +98,10 @@ export default function MultiplayerLobby() {
         if (typeof body?.phase === "string" && typeof body.match_second === "number" && typeof body.home_score === "number" && typeof body.away_score === "number") {
           setLiveState({ phase: body.phase, second: body.match_second, home: body.home_score, away: body.away_score });
         }
+      }
+      const batchEvents = event.body?.events;
+      if (event.type === "MatchEventBatch" && Array.isArray(batchEvents)) {
+        setLiveEvents((previous) => [...previous, ...batchEvents].slice(-6));
       }
       if (event.type === "MatchFinished") {
         setLiveMatchId(null);
@@ -150,6 +157,10 @@ export default function MultiplayerLobby() {
           if (typeof body?.phase === "string" && typeof body.match_second === "number" && typeof body.home_score === "number" && typeof body.away_score === "number") {
             setLiveState({ phase: body.phase, second: body.match_second, home: body.home_score, away: body.away_score });
           }
+        }
+        const batchEvents = event.body?.events;
+        if (event.type === "MatchEventBatch" && Array.isArray(batchEvents)) {
+          setLiveEvents((previous) => [...previous, ...batchEvents].slice(-6));
         }
         if (event.type === "MatchFinished") {
           setLiveMatchId(null);
@@ -247,6 +258,7 @@ export default function MultiplayerLobby() {
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
           {liveState && <p aria-live="polite">{copy.score}: {liveState.home}–{liveState.away} · {Math.floor(liveState.second / 60)}′ · {liveState.phase}</p>}
           <button type="button" onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold">{copy.liveFormation}: {formation}</button>
+          {liveEvents.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{liveEvents.map((event, index) => <li key={index}>{String(JSON.stringify(event))}</li>)}</ul></div>}
         </fieldset>}
         {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
       </section>}

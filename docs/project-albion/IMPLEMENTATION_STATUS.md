@@ -386,3 +386,8 @@ the disconnect policy: after both managers open a canonical live fixture, a
 disconnected manager prevents ticks/events; reconnecting that manager allows
 the same match to advance again. This covers the live pause behavior rather
 than only the Ready-barrier side of disconnect handling.
+
+Phase 9 update: the live match centre now consumes `MatchEventBatch` in
+addition to score/time state, retaining a short canonical event feed with
+polite assistive-technology announcements. This makes the streamed server
+event chain visible to the player rather than leaving it transport-only.
