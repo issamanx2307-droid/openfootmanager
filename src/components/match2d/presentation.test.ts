@@ -76,7 +76,7 @@ describe("2D match presentation", () => {
 
   it("orders source events deterministically and filters highlights without re-simulation", () => {
     const clips = compilePresentationTimeline([
-      event(12, "Pass", "Home"),
+      event(12, "PassCompleted", "Home"),
       event(8, "Goal", "Away", "AttackingBox"),
       event(15, "ShotOffTarget", "Home", "AttackingCentre"),
     ]);

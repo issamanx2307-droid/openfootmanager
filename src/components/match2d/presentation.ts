@@ -27,6 +27,15 @@ const ZONES: Record<string, PitchPoint> = {
   AttackingBox: { x: 0.88, y: 0.5 },
 };
 
+const KNOWN_EVENT_TYPES = new Set([
+  "KickOff", "HalfTime", "SecondHalfStart", "FullTime", "PassCompleted", "PassIntercepted",
+  "Dribble", "DribbleTackled", "Cross", "ShotOnTarget", "ShotOffTarget", "ShotBlocked",
+  "ShotSaved", "Goal", "PenaltyAwarded", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal",
+  "ShootoutMiss", "Tackle", "Interception", "Clearance", "Foul", "YellowCard", "RedCard",
+  "SecondYellow", "Corner", "FreeKick", "Injury", "GoalKick", "Substitution",
+]);
+const reportedUnknownEventTypes = new Set<string>();
+
 function clamp(value: number): number {
   return Math.max(PITCH_MARGIN, Math.min(1 - PITCH_MARGIN, value));
 }
@@ -109,6 +118,15 @@ export function compilePresentationTimeline(events: MatchEvent[]): PresentationC
   const orderedEvents = [...events].sort((a, b) => a.minute - b.minute);
   return orderedEvents
     .map((event, index) => {
+      if (!KNOWN_EVENT_TYPES.has(event.event_type) && !reportedUnknownEventTypes.has(event.event_type)) {
+        reportedUnknownEventTypes.add(event.event_type);
+        console.warn("[albion-2d] unknown semantic event; using generic movement", {
+          eventType: event.event_type,
+          minute: event.minute,
+          side: event.side,
+          zone: event.zone,
+        });
+      }
       const ballTo = zonePoint(event.zone, event.side);
       const durationMs = eventDuration(event);
       const clip: PresentationClip = {

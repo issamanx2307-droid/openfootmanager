@@ -5,3 +5,8 @@ export const MATCH_2D_CONFIG = {
 } as const;
 
 export type CameraMode = "full" | "follow-ball";
+
+export function rendererDebugEnabled(): boolean {
+  return import.meta.env.DEV && typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("albion2dDebug") === "1";
+}

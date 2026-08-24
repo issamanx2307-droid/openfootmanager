@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { MatchEvent, MatchSnapshot } from "../match/types";
 import { presentationFrame } from "./presentation";
-import { MATCH_2D_CONFIG, type CameraMode } from "./config";
+import { MATCH_2D_CONFIG, rendererDebugEnabled, type CameraMode } from "./config";
 import type { HighlightMode, PitchPoint, PresentationPlayer } from "./types";
 
 type Match2DRendererProps = {
@@ -106,6 +106,8 @@ export default function Match2DRenderer({
 }: Match2DRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const startedAt = useRef<number | null>(null);
+  const previousFrameAt = useRef<number | null>(null);
+  const fps = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -129,6 +131,10 @@ export default function Match2DRenderer({
     resize();
     const render = (now: number) => {
       if (startedAt.current === null) startedAt.current = now;
+      if (previousFrameAt.current !== null) {
+        fps.current = 1000 / Math.max(1, now - previousFrameAt.current);
+      }
+      previousFrameAt.current = now;
       const rect = canvas.getBoundingClientRect();
       const elapsed = reducedMotion ? 0 : (now - startedAt.current) * speed;
       const frame = presentationFrame(
@@ -185,6 +191,14 @@ export default function Match2DRenderer({
         context.fillStyle = "#f8fafc";
         context.font = "bold 13px Inter, sans-serif";
         context.fillText(`${frame.activeClip.event.minute}' ${frame.activeClip.event.event_type}`, 20, 31);
+      }
+      if (rendererDebugEnabled()) {
+        context.fillStyle = "rgba(15, 23, 42, 0.82)";
+        context.fillRect(12, rect.height - 63, 280, 51);
+        context.fillStyle = "#f8fafc";
+        context.font = "11px monospace";
+        context.fillText(`v${MATCH_2D_CONFIG.version} · ${fps.current.toFixed(0)} FPS · ${frame.players.length} players`, 20, rect.height - 43);
+        context.fillText(`${frame.activeClip?.clipId ?? "static"} · ball ${frame.ball.x.toFixed(2)}, ${frame.ball.y.toFixed(2)}`, 20, rect.height - 25);
       }
       frameId = requestAnimationFrame(render);
     };
