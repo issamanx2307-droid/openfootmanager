@@ -24,6 +24,19 @@ type Match2DRendererProps = {
   eventLabel: (event: MatchEvent) => string;
 };
 
+type PitchViewport = { x: number; y: number; width: number; height: number };
+
+/** Fits the canonical football-pitch ratio inside any Match Centre viewport. */
+export function fitPitchViewport(width: number, height: number): PitchViewport {
+  const aspectRatio = MATCH_2D_CONFIG.pitch.aspectRatio;
+  if (width / height > aspectRatio) {
+    const pitchWidth = height * aspectRatio;
+    return { x: (width - pitchWidth) / 2, y: 0, width: pitchWidth, height };
+  }
+  const pitchHeight = width / aspectRatio;
+  return { x: 0, y: (height - pitchHeight) / 2, width, height: pitchHeight };
+}
+
 function toCanvas(point: PitchPoint, width: number, height: number): [number, number] {
   return [point.x * width, point.y * height];
 }
@@ -265,6 +278,7 @@ export default function Match2DRenderer({
       }
       previousFrameAt.current = now;
       const rect = canvas.getBoundingClientRect();
+      const pitchViewport = fitPitchViewport(rect.width, rect.height);
       const elapsed = reducedMotion ? 0 : (now - startedAt.current) * speed;
       const frame = presentationFrame(
         replayEvent ? { ...snapshot, events: [replayEvent] } : snapshot,
@@ -275,13 +289,16 @@ export default function Match2DRenderer({
       const boundedZoom = Math.max(MATCH_2D_CONFIG.camera.minZoom, Math.min(MATCH_2D_CONFIG.camera.maxZoom, zoom));
       const activeZoom = cameraMode === "follow-ball" ? Math.max(boundedZoom, MATCH_2D_CONFIG.camera.dynamicZoom) : boundedZoom;
       const [focusX, focusY] = cameraMode === "follow-ball"
-        ? toCanvas(frame.ball, rect.width, rect.height)
-        : [rect.width / 2, rect.height / 2];
+        ? toCanvas(frame.ball, pitchViewport.width, pitchViewport.height)
+        : [pitchViewport.width / 2, pitchViewport.height / 2];
       context.save();
-      context.translate(rect.width / 2, rect.height / 2);
+      context.beginPath();
+      context.rect(pitchViewport.x, pitchViewport.y, pitchViewport.width, pitchViewport.height);
+      context.clip();
+      context.translate(pitchViewport.x + pitchViewport.width / 2, pitchViewport.y + pitchViewport.height / 2);
       context.scale(activeZoom, activeZoom);
       context.translate(-focusX, -focusY);
-      drawPitch(context, rect.width, rect.height);
+      drawPitch(context, pitchViewport.width, pitchViewport.height);
       let homeMarkerNumber = 0;
       let awayMarkerNumber = 0;
       frame.players.forEach((player) => {
@@ -294,8 +311,8 @@ export default function Match2DRenderer({
         drawPlayer(
           context,
           player,
-          rect.width,
-          rect.height,
+          pitchViewport.width,
+          pitchViewport.height,
           player.side === "Home" ? homeColor : awayColor,
           showNames,
           showRoleLabels,
@@ -305,16 +322,16 @@ export default function Match2DRenderer({
           status.injured,
         );
       });
-      const [ballX, ballY] = toCanvas(frame.ball, rect.width, rect.height);
+      const [ballX, ballY] = toCanvas(frame.ball, pitchViewport.width, pitchViewport.height);
       if (frame.activeClip && frame.ballTrajectory !== "ground") {
-        const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, rect.width, rect.height);
+        const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, pitchViewport.width, pitchViewport.height);
         context.save();
         context.strokeStyle = frame.ballTrajectory === "shot" ? "rgba(250,204,21,0.8)" : "rgba(255,255,255,0.55)";
         context.lineWidth = 2;
         context.setLineDash([5, 5]);
         context.beginPath();
         context.moveTo(fromX, fromY);
-        context.quadraticCurveTo((fromX + ballX) / 2, Math.min(fromY, ballY) - rect.height * 0.12, ballX, ballY);
+        context.quadraticCurveTo((fromX + ballX) / 2, Math.min(fromY, ballY) - pitchViewport.height * 0.12, ballX, ballY);
         context.stroke();
         context.restore();
       }
@@ -322,11 +339,11 @@ export default function Match2DRenderer({
       context.strokeStyle = "#111827";
       context.lineWidth = 1.5;
       context.beginPath();
-      context.arc(ballX, ballY, Math.max(4, Math.min(rect.width, rect.height) * 0.011), 0, Math.PI * 2);
+      context.arc(ballX, ballY, Math.max(4, Math.min(pitchViewport.width, pitchViewport.height) * 0.011), 0, Math.PI * 2);
       context.fill();
       context.stroke();
       if (rendererDebugEnabled()) {
-        drawDebugPitchGuides(context, rect.width, rect.height, frame);
+        drawDebugPitchGuides(context, pitchViewport.width, pitchViewport.height, frame);
       }
       context.restore();
       if (frame.activeClip && ["Goal", "PenaltyGoal", "RedCard", "Substitution"].includes(frame.activeClip.event.event_type)) {
@@ -349,5 +366,5 @@ export default function Match2DRenderer({
     };
   }, [awayColor, cameraMode, eventLabel, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, showRoleLabels, snapshot, speed, zoom]);
 
-  return <canvas ref={canvasRef} aria-label={ariaLabel} className="block h-full min-h-80 w-full bg-emerald-800" />;
+  return <canvas ref={canvasRef} aria-label={ariaLabel} className="block h-full min-h-80 w-full bg-slate-950" />;
 }

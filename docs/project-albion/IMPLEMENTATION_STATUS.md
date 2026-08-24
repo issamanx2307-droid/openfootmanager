@@ -659,3 +659,10 @@ match minute, ball coordinates, active player IDs, FPS, frame time and entity
 count. The same developer-only mode draws normalized pitch-zone guides and
 the current ball movement path. It is not included in normal user mode and
 does not alter the authoritative event stream or match state.
+
+2D pitch update: the Canvas renderer now fits a 105:68 logical football pitch
+inside any available Match Centre rectangle, adding neutral out-of-play space
+rather than stretching the grass and player coordinates. Camera clipping and
+all normalized player/ball transforms use that fitted viewport. Unit coverage
+checks both wide and tall containers, while the renderer remains resolution-
+independent.

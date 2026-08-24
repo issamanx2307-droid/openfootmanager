@@ -1,6 +1,7 @@
 /** Versioned, presentation-only tuning defaults for the 2D Match Centre. */
 export const MATCH_2D_CONFIG = {
   version: "albion-2d-1",
+  pitch: { aspectRatio: 105 / 68 },
   camera: { minZoom: 1, maxZoom: 2.2, dynamicZoom: 1.3 },
   debug: { panelWidth: 360, panelHeight: 108, panelInset: 12, gridColumns: 6, gridRows: 4 },
 } as const;
