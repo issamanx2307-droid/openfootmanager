@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 
 export interface AppSettings {
   theme: "dark" | "light" | "system";
@@ -47,11 +47,35 @@ const DEFAULT_CURRENCY: CurrencyDefinition = {
   exchange_rate: 1,
 };
 
+const WEB_SETTINGS_STORAGE_KEY = "openfootmanager.settings";
+
+function loadWebSettings(): Partial<AppSettings> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const stored = window.localStorage.getItem(WEB_SETTINGS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) as Partial<AppSettings> : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistWebSettings(settings: AppSettings) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(WEB_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  }
+}
+
 function mergeWithDefaultSettings(settings: Partial<AppSettings> = {}): AppSettings {
   return { ...DEFAULT_SETTINGS, ...settings };
 }
 
 async function persistSettings(settings: AppSettings) {
+  if (!isTauri()) {
+    persistWebSettings(settings);
+    return;
+  }
+
   await invoke("save_settings", { settings });
 }
 
@@ -95,6 +119,18 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   loaded: false,
 
   loadSettings: async () => {
+    if (!isTauri()) {
+      const settings = mergeWithDefaultSettings(loadWebSettings());
+      const supportedCurrencies = indexSupportedCurrencies();
+      set({
+        settings,
+        currency: resolveCurrency(settings.currency, supportedCurrencies),
+        supportedCurrencies,
+        loaded: true,
+      });
+      return;
+    }
+
     try {
       const response = await invoke<SettingsResponse>("get_settings");
       const settings = mergeWithDefaultSettings(response.settings);

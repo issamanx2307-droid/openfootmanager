@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useSettingsStore } from "./settingsStore";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+  isTauri: vi.fn(() => true),
 }));
 
 const DEFAULT_SETTINGS = {
@@ -28,6 +29,8 @@ const SUPPORTED_CURRENCIES = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(isTauri).mockReturnValue(true);
+  window.localStorage.clear();
   useSettingsStore.setState({
     settings: { ...DEFAULT_SETTINGS },
     currency: SUPPORTED_CURRENCIES[0],
@@ -78,6 +81,29 @@ describe("useSettingsStore", () => {
     expect(useSettingsStore.getState().loaded).toBe(true);
     expect(useSettingsStore.getState().settings).toEqual(DEFAULT_SETTINGS);
     expect(useSettingsStore.getState().currency).toEqual(SUPPORTED_CURRENCIES[0]);
+  });
+
+  it("uses browser storage when the Tauri runtime is unavailable", async () => {
+    vi.mocked(isTauri).mockReturnValue(false);
+    window.localStorage.setItem("openfootmanager.settings", JSON.stringify({
+      language: "th",
+      currency: "USD",
+    }));
+
+    await useSettingsStore.getState().loadSettings();
+    await useSettingsStore.getState().updateSettings({ high_contrast: true });
+
+    expect(invoke).not.toHaveBeenCalled();
+    expect(useSettingsStore.getState().settings).toMatchObject({
+      language: "th",
+      currency: "USD",
+      high_contrast: true,
+    });
+    expect(JSON.parse(window.localStorage.getItem("openfootmanager.settings") ?? "{}")).toMatchObject({
+      language: "th",
+      currency: "USD",
+      high_contrast: true,
+    });
   });
 
   it("falls back to the default currency metadata when the selected currency is unsupported", async () => {

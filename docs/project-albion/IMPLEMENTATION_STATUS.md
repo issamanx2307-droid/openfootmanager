@@ -531,3 +531,11 @@ surfaces. They are explicitly deferred follow-up migration work, rather than
 silently being treated as server-authoritative multiplayer features. This scope
 decision permits Phase 10 validation to concentrate on the accepted core loop
 in English and Thai.
+
+Phase 10 update: Settings now has complete Thai copy, including language,
+accessibility, match preferences and the FPL data update controls. When the
+frontend runs outside Tauri (for local browser demos and visual checks), it
+persists settings in browser storage; the desktop runtime continues to use its
+existing Tauri settings command. The fallback is covered by the settings-store
+regression, and a 1280×720 browser check confirms the Thai Settings screen has
+no horizontal overflow.
