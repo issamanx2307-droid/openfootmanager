@@ -1259,6 +1259,75 @@ mod tests {
         server.abort();
     }
 
+    #[tokio::test]
+    async fn two_websocket_clients_open_the_same_canonical_live_match() {
+        let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        let state = AppState::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        let (token_a, token_b, career_id, protocol_version) = {
+            let mut session = state.session.lock().unwrap();
+            let token_a = session.join(join_request(manager_a, club_a)).unwrap().reconnect_token;
+            let token_b = session.join(join_request(manager_b, club_b)).unwrap().reconnect_token;
+            (token_a, token_b, session.config.career_id, session.config.versions.protocol_version)
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(axum::serve(listener, router(state.clone())).into_future());
+        let (mut client_a, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_a}")).await.unwrap();
+        let (mut client_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
+
+        for client in [&mut client_a, &mut client_b] {
+            for _ in 0..2 {
+                let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("server must send initial view") };
+                assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::Hello(_) | ServerEvent::ViewSnapshot(_)));
+            }
+        }
+        for manager_id in [manager_a, manager_b] {
+            let ready = Envelope {
+                protocol_version,
+                message_id: Uuid::new_v4(),
+                kind: MessageKind::Command,
+                career_id,
+                manager_id,
+                expected_revision: None,
+                payload: EnvelopePayload::Command(Command::MarkReady(MarkReadyBody {})),
+            };
+            let client = if manager_id == manager_a { &mut client_a } else { &mut client_b };
+            client.send(TungsteniteMessage::Text(serde_json::to_string(&ready).unwrap().into())).await.unwrap();
+        }
+
+        let mut match_ids = Vec::new();
+        for client in [&mut client_a, &mut client_b] {
+            let match_id = tokio::time::timeout(Duration::from_secs(3), async {
+                loop {
+                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("socket closed before match opened") };
+                    if let ServerEvent::MatchOpened(body) = serde_json::from_str::<ServerEvent>(&text).unwrap() {
+                        break body.match_id;
+                    }
+                }
+            }).await.expect("match must open for both clients");
+            match_ids.push(match_id);
+        }
+        assert_eq!(match_ids[0], match_ids[1]);
+        let mut snapshots = Vec::new();
+        for client in [&mut client_a, &mut client_b] {
+            let snapshot = tokio::time::timeout(Duration::from_secs(3), async {
+                loop {
+                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("socket closed before match state") };
+                    if let ServerEvent::MatchState(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+                        && body.match_id == match_ids[0]
+                    {
+                        break (body.match_second, body.home_score, body.away_score);
+                    }
+                }
+            }).await.expect("match state must reach both clients");
+            snapshots.push(snapshot);
+        }
+        assert_eq!(snapshots[0], snapshots[1]);
+        server.abort();
+    }
+
     #[test]
     fn conflicting_two_manager_commands_commit_once_at_one_revision() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_game();

@@ -397,6 +397,10 @@ Phase 8 update: a one-human-versus-AI live regression now verifies that the
 single human manager can pass Ready, open the canonical fixture and receive a
 live `MatchState` without an AI-side connection or Ready acknowledgement.
 
+Phase 8 update: the real two-WebSocket canonical-career integration now joins
+both managers, drives both Ready commands and proves each client receives the
+same `MatchOpened` identifier and first streamed `MatchState` clock/score.
+
 Phase 9 update: the live match centre now consumes `MatchEventBatch` in
 addition to score/time state, retaining a short canonical event feed with
 polite assistive-technology announcements. This makes the streamed server
