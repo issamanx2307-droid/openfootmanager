@@ -75,18 +75,23 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Suspense fallback={<LazyFallback />}>
-        <Routes>
-          <Route path="/" element={<MainMenu />} />
-          <Route path="/select-team" element={<TeamSelection />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/match" element={<MatchSimulation />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/sim-lab" element={<SimLab />} />
-          <Route path="/world-editor" element={<WorldEditorPage />} />
-          <Route path="/multiplayer" element={<MultiplayerLobby />} />
-        </Routes>
-      </Suspense>
+      <a className="skip-link" href="#main-content">
+        {i18n.language.startsWith("th") ? "ข้ามไปยังเนื้อหาหลัก" : "Skip to main content"}
+      </a>
+      <div id="main-content" tabIndex={-1}>
+        <Suspense fallback={<LazyFallback />}>
+          <Routes>
+            <Route path="/" element={<MainMenu />} />
+            <Route path="/select-team" element={<TeamSelection />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/match" element={<MatchSimulation />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/sim-lab" element={<SimLab />} />
+            <Route path="/world-editor" element={<WorldEditorPage />} />
+            <Route path="/multiplayer" element={<MultiplayerLobby />} />
+          </Routes>
+        </Suspense>
+      </div>
     </BrowserRouter>
   );
 }

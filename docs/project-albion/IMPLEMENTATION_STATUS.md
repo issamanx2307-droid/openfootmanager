@@ -331,3 +331,9 @@ including translated main-menu, dashboard navigation and settings essentials;
 all untranslated keys fall back safely to English while the remaining locale
 coverage is completed. The i18n lazy-load test verifies Thai locale resolution,
 bundle loading and a translated menu label.
+
+Phase 10 update: the app shell now provides a keyboard-visible skip link to
+the routed content target, while Thai-capable system font fallbacks prevent
+Latin-oriented heading fonts from degrading Thai glyphs. Reduced-motion and
+high-contrast handling already present in the shared stylesheet remain in
+effect for the new lobby and routes.
