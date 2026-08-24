@@ -728,3 +728,10 @@ focused coverage confirms the goalkeeper closes the distance to the live ball.
 same short-lived localized Canvas overlay as goals, red cards and substitutions.
 Their persistent marker badge remains derived from the authoritative snapshot;
 the overlay is only a timing cue while the event clip plays.
+
+2D movement update: during an event clip, non-participant outfield markers now
+make a small deterministic shape adjustment. The team in possession creates
+shallow support while the defending side narrows toward the event's ball side.
+The original formation remains dominant, preventing the common “all players
+chase the ball” artifact. This adjustment is interpolation-only and does not
+create player locations, possession, or outcomes in the engine.

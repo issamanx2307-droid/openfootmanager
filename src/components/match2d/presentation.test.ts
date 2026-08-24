@@ -147,6 +147,30 @@ describe("2D match presentation", () => {
     );
   });
 
+  it("keeps formation lanes while teams support and compress around live play", () => {
+    const input = {
+      home_team: { id: "home", name: "Home", formation: "4-3-3", play_style: "Balanced", players: [player("home-gk", "Goalkeeper"), player("home-defender", "Defender"), player("carrier", "Midfielder")] },
+      away_team: { id: "away", name: "Away", formation: "4-3-3", play_style: "Balanced", players: [player("away-gk", "Goalkeeper"), player("away-defender", "Defender")] },
+      sent_off: [], ball_zone: "AttackingRight", current_minute: 36,
+      events: [{ ...event(36, "Dribble", "Home", "AttackingRight"), player_id: "carrier" }],
+    };
+    const start = presentationFrame(input, 0);
+    const live = presentationFrame(input, 350);
+    const homeDefenderAtStart = start.players.find((item) => item.id === "home-defender")!;
+    const homeDefenderLive = live.players.find((item) => item.id === "home-defender")!;
+    const awayDefenderAtStart = start.players.find((item) => item.id === "away-defender")!;
+    const awayDefenderLive = live.players.find((item) => item.id === "away-defender")!;
+    const eventTarget = zonePoint("AttackingRight", "Home");
+
+    expect(homeDefenderLive.point).not.toEqual(homeDefenderAtStart.point);
+    expect(awayDefenderLive.point).not.toEqual(awayDefenderAtStart.point);
+    expect(Math.abs(awayDefenderLive.point.y - eventTarget.y)).toBeLessThan(
+      Math.abs(awayDefenderAtStart.point.y - eventTarget.y),
+    );
+    expect(homeDefenderLive.point).not.toEqual(live.ball);
+    expect(awayDefenderLive.point).not.toEqual(live.ball);
+  });
+
   it("derives card and injury badges from authoritative snapshot facts", () => {
     const events = [event(64, "Injury", "Home")];
     events[0].player_id = "runner";

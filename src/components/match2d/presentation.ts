@@ -107,6 +107,37 @@ function moveTowards(from: PitchPoint, to: PitchPoint, amount: number): PitchPoi
 }
 
 /**
+ * A sparse event stream has no per-player coordinates.  This small,
+ * deterministic adjustment keeps the original formation legible while making
+ * the possession side offer support and the defending side narrow toward the
+ * ball side.  It deliberately stops well short of the ball so a whole team
+ * never collapses into one marker cluster.
+ */
+function applyContextualTeamShape(
+  players: PresentationPlayer[],
+  clip: PresentationClip,
+  ball: PitchPoint,
+  progress: number,
+): PresentationPlayer[] {
+  return players.map((player) => {
+    if (player.goalkeeper || player.id === clip.event.player_id || player.id === clip.event.secondary_player_id) {
+      return player;
+    }
+    const hasPossession = player.side === clip.event.side;
+    const roleFactor = player.player.position === "Forward" ? 0.85
+      : player.player.position === "Midfielder" ? 1 : 0.75;
+    // Defenders compress a little more laterally. Possession support remains
+    // shallower, preserving lanes for a pass rather than chasing the carrier.
+    const response = (hasPossession ? 0.1 : 0.16) * roleFactor * progress;
+    const target = {
+      x: player.point.x + (ball.x - player.point.x) * (hasPossession ? 0.42 : 0.22),
+      y: ball.y,
+    };
+    return { ...player, point: moveTowards(player.point, target, response) };
+  });
+}
+
+/**
  * Cards and injury events are already authoritative snapshot facts.  The
  * renderer only converts them into marker badges; it never changes who is
  * available or on the pitch.
@@ -284,8 +315,9 @@ export function presentationFrame(
       x: activeClip.ballFrom.x + (activeClip.ballTo.x - activeClip.ballFrom.x) * eased,
       y: activeClip.ballFrom.y + (activeClip.ballTo.y - activeClip.ballFrom.y) * eased,
     };
+  const shapedPlayers = applyContextualTeamShape(players, activeClip, ball, eased);
   return {
-    players: applySemanticPlayerMovement(players, activeClip, ball, eased),
+    players: applySemanticPlayerMovement(shapedPlayers, activeClip, ball, eased),
     ball,
     activeClip,
     ballTrajectory: trajectoryForEvent(activeClip.event),
