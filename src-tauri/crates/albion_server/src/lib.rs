@@ -748,7 +748,9 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use db::game_database::GameDatabase;
     use db::game_persistence::GamePersistenceWriter;
+    use domain::league::{Fixture, FixtureCompetition, FixtureStatus, League, StandingEntry};
     use domain::manager::Manager;
+    use domain::player::{Player, PlayerAttributes, Position};
     use domain::team::Team;
     use futures_util::{SinkExt, StreamExt};
     use std::future::IntoFuture;
@@ -807,6 +809,47 @@ mod tests {
         );
         game.managers.push(manager_b);
         (game, manager_a_id, manager_b_id, club_a_id, club_b_id)
+    }
+
+    fn live_player(id: String, team_id: &Uuid, position: Position) -> Player {
+        let mut player = Player::new(id, "Player".into(), "Live Player".into(), "1995-01-01".into(), "ENG".into(), position, PlayerAttributes {
+            pace: 65, stamina: 65, strength: 65, agility: 65, passing: 65, shooting: 65,
+            tackling: 65, dribbling: 65, defending: 65, positioning: 65, vision: 65,
+            decisions: 65, composure: 65, aggression: 50, teamwork: 65, leadership: 50,
+            handling: 65, reflexes: 65, aerial: 65,
+        });
+        player.team_id = Some(team_id.to_string());
+        player
+    }
+
+    fn two_manager_live_game() -> (Game, Uuid, Uuid, Uuid, Uuid) {
+        let (mut game, manager_a, manager_b, club_a, club_b) = two_manager_game();
+        let positions = [
+            Position::Goalkeeper, Position::Defender, Position::Defender, Position::Defender,
+            Position::Defender, Position::Midfielder, Position::Midfielder, Position::Midfielder,
+            Position::Midfielder, Position::Forward, Position::Forward,
+        ];
+        game.players.extend(positions.iter().enumerate().flat_map(|(index, position)| [
+            live_player(format!("a-{index}"), &club_a, position.clone()),
+            live_player(format!("b-{index}"), &club_b, position.clone()),
+        ]));
+        let fixture_id = Uuid::new_v4();
+        let mut league = League::default();
+        league.id = "test-league".into();
+        league.fixtures.push(Fixture {
+            id: fixture_id.to_string(),
+            competition_id: league.id.clone(),
+            matchday: 1,
+            date: game.clock.current_date.format("%Y-%m-%d").to_string(),
+            home_team_id: club_a.to_string(),
+            away_team_id: club_b.to_string(),
+            competition: FixtureCompetition::League,
+            status: FixtureStatus::Scheduled,
+            result: None,
+        });
+        league.standings = vec![StandingEntry::new(club_a.to_string()), StandingEntry::new(club_b.to_string())];
+        game.competitions.push(league);
+        (game, manager_a, manager_b, club_a, club_b)
     }
 
     fn tactics_envelope(session: &CareerSession, manager_id: Uuid, expected_revision: u64) -> Envelope {
@@ -872,6 +915,26 @@ mod tests {
         session.manager_disconnected(manager);
         assert!(!session.ready_managers.contains(&manager));
         assert!(!session.connected_managers.contains(&manager));
+    }
+
+    #[test]
+    fn two_ready_humans_open_and_tick_one_canonical_live_match() {
+        let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        let mut session = CareerSession::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        session.join(join_request(manager_a, club_a)).unwrap();
+        session.join(join_request(manager_b, club_b)).unwrap();
+        session.manager_connected(manager_a);
+        session.manager_connected(manager_b);
+        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+        let opened = session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        assert!(opened.iter().any(|event| matches!(event, ServerEvent::MatchOpened(_))));
+        assert_eq!(session.live_matches.len(), 1);
+
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        let updates = session.tick_live_matches();
+        assert!(updates.iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
     }
 
     #[test]

@@ -282,3 +282,10 @@ It keeps only manager-specific view snapshots and the server revision in its
 cache; it never treats frontend state as authoritative. Focused tests cover
 snapshot/revision updates and stale-revision resync behavior. Existing Tauri
 screens have not yet been switched over, so Phase 9 remains in progress.
+
+Phase 8 update: a server-level human-v-human regression now builds playable
+eleven-player squads for both claimed clubs, drives both managers through the
+Ready barrier, verifies one canonical `MatchOpened`, then advances the server
+clock and observes its `MatchState`. This closes the prior gap where live-match
+coordination was implemented but not exercised through the authoritative
+session layer.
