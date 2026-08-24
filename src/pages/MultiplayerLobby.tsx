@@ -13,6 +13,21 @@ import {
 } from "../services/albionServerService";
 import { useGameStore } from "../store/gameStore";
 
+type ManagerDashboard = {
+  currentDate: string;
+  club: { name: string; formation: string; playStyle: string };
+};
+
+function readManagerDashboard(value: unknown): ManagerDashboard | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const club = record.club;
+  if (typeof record.currentDate !== "string" || !club || typeof club !== "object") return null;
+  const clubRecord = club as Record<string, unknown>;
+  if (typeof clubRecord.name !== "string" || typeof clubRecord.formation !== "string" || typeof clubRecord.playStyle !== "string") return null;
+  return { currentDate: record.currentDate, club: { name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle } };
+}
+
 export default function MultiplayerLobby() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -30,6 +45,7 @@ export default function MultiplayerLobby() {
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "ส่งคำสั่งระหว่างแข่งไปยังเซิร์ฟเวอร์แล้ว",
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
     events: "เหตุการณ์ล่าสุด",
+    clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
@@ -44,6 +60,7 @@ export default function MultiplayerLobby() {
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Live-match command sent to the server.",
     matchFinished: "Match finished", score: "Score",
     events: "Latest events",
+    clubView: "Server club view", date: "Game date", playStyle: "Approach",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
@@ -62,6 +79,7 @@ export default function MultiplayerLobby() {
   const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
   const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
   const [liveEvents, setLiveEvents] = useState<string[]>([]);
+  const dashboardView = readManagerDashboard(dashboard);
 
   useEffect(() => () => {
     client.current.disconnect();
@@ -262,7 +280,14 @@ export default function MultiplayerLobby() {
           <button type="button" onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold">{copy.liveFormation}: {formation}</button>
           {liveEvents.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{liveEvents.map((event, index) => <li key={index}>{event}</li>)}</ul></div>}
         </fieldset>}
-        {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
+        {dashboardView && <section className="mt-4 rounded border border-navy-600 p-3" aria-label={copy.clubView}>
+          <h2 className="font-bold">{copy.clubView} · {dashboardView.club.name}</h2>
+          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+            <dt className="text-gray-300">{copy.date}</dt><dd>{dashboardView.currentDate}</dd>
+            <dt className="text-gray-300">{copy.tactics}</dt><dd>{dashboardView.club.formation}</dd>
+            <dt className="text-gray-300">{copy.playStyle}</dt><dd>{dashboardView.club.playStyle}</dd>
+          </dl>
+        </section>}
       </section>}
     </div>
   </main>;
