@@ -268,7 +268,7 @@ struct CareerSession {
     slots: HashMap<Uuid, ManagerSlot>,
     claimed_clubs: HashMap<Uuid, Uuid>,
     reconnect_tokens: HashMap<String, Uuid>,
-    connected_managers: HashSet<Uuid>,
+    manager_connection_counts: HashMap<Uuid, usize>,
     completed_commands: HashMap<Uuid, Vec<ServerEvent>>,
     ready_managers: HashSet<Uuid>,
     career: Option<CanonicalCareer>,
@@ -306,7 +306,7 @@ impl CareerSession {
             slots: restored_claims.as_ref().map_or_else(HashMap::new, |claims| claims.slots.clone()),
             claimed_clubs: restored_claims.map_or_else(HashMap::new, |claims| claims.claimed_clubs),
             reconnect_tokens,
-            connected_managers: HashSet::new(),
+            manager_connection_counts: HashMap::new(),
             completed_commands: HashMap::new(),
             ready_managers: HashSet::new(),
             career,
@@ -389,12 +389,20 @@ impl CareerSession {
     }
 
     fn manager_connected(&mut self, manager_id: Uuid) {
-        self.connected_managers.insert(manager_id);
+        *self.manager_connection_counts.entry(manager_id).or_default() += 1;
     }
 
     fn manager_disconnected(&mut self, manager_id: Uuid) {
-        self.connected_managers.remove(&manager_id);
-        self.ready_managers.remove(&manager_id);
+        let Some(count) = self.manager_connection_counts.get_mut(&manager_id) else { return; };
+        *count = count.saturating_sub(1);
+        if *count == 0 {
+            self.manager_connection_counts.remove(&manager_id);
+            self.ready_managers.remove(&manager_id);
+        }
+    }
+
+    fn manager_is_connected(&self, manager_id: &Uuid) -> bool {
+        self.manager_connection_counts.get(manager_id).is_some_and(|count| *count > 0)
     }
 
     fn persist_session_state(&self) -> Result<(), String> {
@@ -465,7 +473,7 @@ impl CareerSession {
                     applied_revision: self.revision,
                 }), self.ready_state_event(manager_id)];
                 if self.ready_managers.len() == self.slots.len()
-                    && self.slots.keys().all(|manager_id| self.connected_managers.contains(manager_id))
+                    && self.slots.keys().all(|manager_id| self.manager_is_connected(manager_id))
                 {
                     events.extend(self.advance_ready_barrier());
                 }
@@ -725,7 +733,7 @@ impl CareerSession {
             .into_iter()
             .filter_map(|club_id| Uuid::parse_str(club_id).ok())
             .filter_map(|club_id| self.claimed_clubs.get(&club_id))
-            .any(|manager_id| !self.connected_managers.contains(manager_id))
+            .any(|manager_id| !self.manager_is_connected(manager_id))
     }
 }
 
@@ -927,7 +935,19 @@ mod tests {
 
         session.manager_disconnected(manager);
         assert!(!session.ready_managers.contains(&manager));
-        assert!(!session.connected_managers.contains(&manager));
+        assert!(!session.manager_is_connected(&manager));
+    }
+
+    #[test]
+    fn closing_one_of_a_managers_tabs_keeps_the_manager_connected() {
+        let mut session = session();
+        let manager = Uuid::new_v4();
+        session.manager_connected(manager);
+        session.manager_connected(manager);
+        session.manager_disconnected(manager);
+        assert!(session.manager_is_connected(&manager));
+        session.manager_disconnected(manager);
+        assert!(!session.manager_is_connected(&manager));
     }
 
     #[test]

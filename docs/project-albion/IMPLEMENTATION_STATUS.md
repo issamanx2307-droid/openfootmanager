@@ -295,3 +295,8 @@ than returning only to the socket that issued a command. The real two-WebSocket
 test verifies that the guest receives both the host's acknowledgement and the
 shared Ready-state update, which is required for the host/guest UI to stay in
 sync during shared play.
+
+Phase 8 update: connection tracking is reference counted per manager, so an
+extra browser tab or transient duplicate socket cannot mark a still-connected
+manager as absent and pause the shared career. The disconnect regression now
+covers both final-socket cleanup and the multi-tab case.
