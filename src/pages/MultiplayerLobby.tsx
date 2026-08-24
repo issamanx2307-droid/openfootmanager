@@ -49,6 +49,8 @@ export default function MultiplayerLobby() {
     client.current.connect(url, joined, (event, cache) => {
       if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
       if (event.type === "CommandRejected") setMessage("คำสั่งถูกปฏิเสธ: กรุณารีเฟรชข้อมูลแล้วลองใหม่");
+      if (event.type === "ReadyStateChanged") setMessage("อัปเดตสถานะพร้อมแล้ว รอผู้จัดการอีกฝ่าย");
+      if (event.type === "MatchOpened") setMessage("ถึงวันแข่งขันแล้ว กำลังเปิดศูนย์การแข่งขัน");
     });
     saveAlbionSession({ ...joined, server_url: url });
     setSession(joined);
@@ -89,6 +91,7 @@ export default function MultiplayerLobby() {
       const restored = await client.current.reconnect(stored.server_url, stored.reconnect_token, versions);
       client.current.connect(stored.server_url, restored, (event, cache) => {
         if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
+        if (event.type === "MatchOpened") setMessage("ถึงวันแข่งขันแล้ว กำลังเปิดศูนย์การแข่งขัน");
       });
       setSession(restored);
       setMessage("เชื่อมต่อ session เดิมสำเร็จ");
@@ -97,6 +100,16 @@ export default function MultiplayerLobby() {
       setMessage("session เดิมหมดอายุหรือเซิร์ฟเวอร์ไม่พร้อม กรุณาเข้าร่วมใหม่");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const markReady = () => {
+    if (!session) return;
+    try {
+      client.current.sendCommand(session, { MarkReady: {} });
+      setMessage("ส่งสถานะพร้อมแล้ว");
+    } catch {
+      setMessage("การเชื่อมต่อขาดหาย กรุณาเชื่อมต่อใหม่");
     }
   };
 
@@ -118,7 +131,8 @@ export default function MultiplayerLobby() {
       </div>
       {session && <section className="rounded bg-navy-700 p-4" aria-live="polite">
         <p>เชื่อมต่อสำเร็จ · revision {session.current_revision}</p>
-        {dashboard && <pre className="mt-3 overflow-auto text-xs text-gray-200">{JSON.stringify(dashboard, null, 2)}</pre>}
+        <button type="button" onClick={markReady} className="mt-3 rounded bg-primary-500 px-4 py-2 font-bold">พร้อมดำเนินเกม</button>
+        {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
       </section>}
     </div>
   </main>;

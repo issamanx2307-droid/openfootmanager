@@ -319,3 +319,9 @@ Phase 9 update: reconnect UX now persists only the server URL and issued
 reconnect session token locally. The lobby offers one-click restoration through
 the server's reconnect endpoint and clears stale data on failure; a focused
 browser-storage regression covers save, restore and cleanup.
+
+Phase 9 update: the first shared-game UI command now crosses the full client
+boundary: “Ready” serializes `MarkReady` over the authenticated WebSocket and
+the lobby reacts to broadcast Ready and MatchOpened events. This connects the
+desktop flow to the authoritative ready barrier instead of advancing local
+Tauri state.
