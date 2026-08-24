@@ -290,6 +290,13 @@ React service layer; stopping the host aborts only that owned task. This makes
 the forthcoming host/join lobby able to use a real canonical server rather
 than a manually launched console process.
 
+Phase 9 update: `/multiplayer` is now a usable Thai lobby for an active career:
+the manager can host with a private code or join a supplied host URL, performs
+the version handshake and club claim, then receives the narrow dashboard view
+through the authoritative WebSocket. The existing dashboard exposes a direct
+entry point. Broader tab-by-tab replacement of legacy local mutations remains
+in progress.
+
 Phase 8 update: a server-level human-v-human regression now builds playable
 eleven-player squads for both claimed clubs, drives both managers through the
 Ready barrier, verifies one canonical `MatchOpened`, then advances the server

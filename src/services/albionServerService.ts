@@ -78,6 +78,12 @@ export class AlbionServerClient {
     return this.cache;
   }
 
+  async version(serverUrl: string): Promise<AlbionVersionSet> {
+    const response = await fetch(new URL("/version", serverUrl));
+    if (!response.ok) throw new Error(await response.text());
+    return response.json() as Promise<AlbionVersionSet>;
+  }
+
   async join(serverUrl: string, request: AlbionJoinRequest): Promise<AlbionSession> {
     return this.post<AlbionSession>(serverUrl, "/api/v1/session/join", request);
   }

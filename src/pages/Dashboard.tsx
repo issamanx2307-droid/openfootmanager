@@ -545,7 +545,8 @@ export default function Dashboard(): JSX.Element {
       <FiredModal />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="relative flex-1 flex flex-col h-screen overflow-hidden">
+        <button type="button" onClick={() => navigate("/multiplayer")} className="absolute right-4 top-3 z-10 rounded bg-navy-700 px-3 py-1 text-xs text-white hover:bg-navy-600">เล่นร่วมกัน</button>
         <DashboardHeader
           activeTabLabel={activeTabLabel}
           currentDate={currentDate}

@@ -13,6 +13,7 @@ const MatchSimulation = lazy(() => import("./pages/MatchSimulation"));
 const Settings = lazy(() => import("./pages/Settings"));
 const SimLab = lazy(() => import("./pages/SimLab"));
 const WorldEditorPage = lazy(() => import("./pages/WorldEditor"));
+const MultiplayerLobby = lazy(() => import("./pages/MultiplayerLobby"));
 
 function LazyFallback() {
   return (
@@ -83,6 +84,7 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/sim-lab" element={<SimLab />} />
           <Route path="/world-editor" element={<WorldEditorPage />} />
+          <Route path="/multiplayer" element={<MultiplayerLobby />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
