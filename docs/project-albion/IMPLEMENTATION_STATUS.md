@@ -289,3 +289,9 @@ Ready barrier, verifies one canonical `MatchOpened`, then advances the server
 clock and observes its `MatchState`. This closes the prior gap where live-match
 coordination was implemented but not exercised through the authoritative
 session layer.
+
+Phase 8 update: server events now pass through a shared broadcast lane rather
+than returning only to the socket that issued a command. The real two-WebSocket
+test verifies that the guest receives both the host's acknowledgement and the
+shared Ready-state update, which is required for the host/guest UI to stay in
+sync during shared play.

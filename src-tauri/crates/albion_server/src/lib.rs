@@ -26,6 +26,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast;
 use uuid::Uuid;
 use ofm_core::live_match_manager::LiveMatchSession;
 
@@ -76,11 +77,15 @@ impl ServerConfig {
 }
 
 #[derive(Clone)]
-pub struct AppState(Arc<Mutex<CareerSession>>);
+pub struct AppState {
+    session: Arc<Mutex<CareerSession>>,
+    events: broadcast::Sender<ServerEvent>,
+}
 
 impl AppState {
     pub fn new(config: ServerConfig) -> Self {
-        Self(Arc::new(Mutex::new(CareerSession::new(config))))
+        let (events, _) = broadcast::channel(128);
+        Self { session: Arc::new(Mutex::new(CareerSession::new(config))), events }
     }
 }
 
@@ -102,14 +107,14 @@ async fn healthz() -> StatusCode {
 }
 
 async fn readyz(State(state): State<AppState>) -> StatusCode {
-    match state.0.lock() {
+    match state.session.lock() {
         Ok(_) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::SERVICE_UNAVAILABLE,
     }
 }
 
 async fn version(State(state): State<AppState>) -> Json<VersionSet> {
-    Json(state.0.lock().expect("career session lock poisoned").config.versions.clone())
+    Json(state.session.lock().expect("career session lock poisoned").config.versions.clone())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -140,7 +145,7 @@ async fn join(
     State(state): State<AppState>,
     Json(request): Json<JoinRequest>,
 ) -> Result<Json<JoinResponse>, ApiError> {
-    let mut session = state.0.lock().expect("career session lock poisoned");
+    let mut session = state.session.lock().expect("career session lock poisoned");
     let response = session.join(request)?;
     Ok(Json(response))
 }
@@ -155,7 +160,7 @@ async fn reconnect(
     State(state): State<AppState>,
     Json(request): Json<ReconnectRequest>,
 ) -> Result<Json<JoinResponse>, ApiError> {
-    let session = state.0.lock().expect("career session lock poisoned");
+    let session = state.session.lock().expect("career session lock poisoned");
     let response = session.reconnect(request)?;
     Ok(Json(response))
 }
@@ -171,7 +176,7 @@ async fn websocket(
     Query(query): Query<WebSocketQuery>,
 ) -> Result<Response, ApiError> {
     let manager_id = {
-        let session = state.0.lock().expect("career session lock poisoned");
+        let session = state.session.lock().expect("career session lock poisoned");
         session.manager_for_token(&query.reconnect_token)?
     };
     Ok(ws.on_upgrade(move |socket| websocket_loop(socket, state, manager_id)))
@@ -179,12 +184,12 @@ async fn websocket(
 
 async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid) {
     {
-        let mut session = state.0.lock().expect("career session lock poisoned");
+        let mut session = state.session.lock().expect("career session lock poisoned");
         session.manager_connected(manager_id);
     }
     websocket_session(&mut socket, &state, manager_id).await;
     state
-        .0
+        .session
         .lock()
         .expect("career session lock poisoned")
         .manager_disconnected(manager_id);
@@ -192,7 +197,7 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
 
 async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id: Uuid) {
     let hello = {
-        let session = state.0.lock().expect("career session lock poisoned");
+        let session = state.session.lock().expect("career session lock poisoned");
         ServerEvent::Hello(HelloBody {
             career_id: session.config.career_id,
             server_versions: session.config.versions.clone(),
@@ -203,7 +208,7 @@ async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id:
         return;
     }
     let manager_view = {
-        let session = state.0.lock().expect("career session lock poisoned");
+        let session = state.session.lock().expect("career session lock poisoned");
         session.manager_dashboard_event(manager_id)
     };
     if let Some(view) = manager_view
@@ -213,6 +218,7 @@ async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id:
     }
 
     let mut live_tick = tokio::time::interval(Duration::from_millis(500));
+    let mut server_events = state.events.subscribe();
     loop {
         tokio::select! {
             incoming = socket.recv() => {
@@ -220,25 +226,32 @@ async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id:
                 let Message::Text(text) = message else { continue; };
                 let events = match serde_json::from_str::<Envelope>(&text) {
                     Ok(envelope) => state
-                        .0
+                        .session
                         .lock()
                         .expect("career session lock poisoned")
                         .apply_command(manager_id, envelope),
                     Err(_) => vec![ServerEvent::CommandRejected(CommandRejectedBody {
                         command_id: Uuid::nil(),
-                        current_revision: state.0.lock().expect("career session lock poisoned").revision,
+                        current_revision: state.session.lock().expect("career session lock poisoned").revision,
                         error: ProtocolError::new(ErrorCode::ProtocolIncompatible),
                     })],
                 };
                 for event in events {
-                    if send_event(socket, event).await.is_err() { return; }
+                    let _ = state.events.send(event);
                 }
             }
             _ = live_tick.tick() => {
-                let events = state.0.lock().expect("career session lock poisoned").tick_live_matches();
+                let events = state.session.lock().expect("career session lock poisoned").tick_live_matches();
                 for event in events {
+                    let _ = state.events.send(event);
+                }
+            }
+            event = server_events.recv() => match event {
+                Ok(event) => {
                     if send_event(socket, event).await.is_err() { return; }
                 }
+                Err(broadcast::error::RecvError::Lagged(_)) => {}
+                Err(broadcast::error::RecvError::Closed) => return,
             }
         }
     }
@@ -1045,7 +1058,7 @@ mod tests {
     async fn two_websocket_clients_receive_hello_and_duplicate_ready_is_safe() {
         let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
         let (token_a, token_b, manager_a) = {
-            let mut session = state.0.lock().unwrap();
+            let mut session = state.session.lock().unwrap();
             let manager_a = Uuid::new_v4();
             let joined_a = session.join(join_request(manager_a, Uuid::new_v4())).unwrap();
             let joined_b = session.join(join_request(Uuid::new_v4(), Uuid::new_v4())).unwrap();
@@ -1062,7 +1075,7 @@ mod tests {
             assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::Hello(_)));
         }
         let (career_id, protocol_version) = {
-            let session = state.0.lock().unwrap();
+            let session = state.session.lock().unwrap();
             (session.config.career_id, session.config.versions.protocol_version)
         };
         let ready = Envelope {
@@ -1079,6 +1092,10 @@ mod tests {
         let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else { panic!("ready needs acknowledgement") };
         assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::CommandAck(_)));
         let Some(Ok(TungsteniteMessage::Text(_))) = client_a.next().await else { panic!("ready state event must follow acknowledgement") };
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_b.next().await else { panic!("guest must receive the shared acknowledgement") };
+        assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::CommandAck(_)));
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_b.next().await else { panic!("guest must receive the shared ready state") };
+        assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::ReadyStateChanged(_)));
         client_a.send(TungsteniteMessage::Text(message.into())).await.unwrap();
         let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else { panic!("duplicate needs acknowledgement") };
         let ServerEvent::CommandAck(ack) = serde_json::from_str::<ServerEvent>(&text).unwrap() else { panic!("duplicate must replay ack") };
