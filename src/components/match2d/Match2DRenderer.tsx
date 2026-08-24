@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { MatchEvent, MatchSnapshot } from "../match/types";
 import { playerVisualStatus, presentationFrame, roleAbbreviation } from "./presentation";
 import { MATCH_2D_CONFIG, rendererDebugEnabled, type CameraMode } from "./config";
-import type { HighlightMode, PitchPoint, PresentationPlayer } from "./types";
+import type { HighlightMode, MatchPresentationFrame, PitchPoint, PresentationPlayer } from "./types";
 
 type Match2DRendererProps = {
   snapshot: MatchSnapshot;
@@ -151,6 +151,69 @@ function drawPlayer(
   context.restore();
 }
 
+/** Development-only shape and movement guides. They remain wholly visual. */
+function drawDebugPitchGuides(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  frame: MatchPresentationFrame,
+): void {
+  context.save();
+  context.strokeStyle = "rgba(250, 204, 21, 0.28)";
+  context.lineWidth = 1;
+  for (let column = 1; column < MATCH_2D_CONFIG.debug.gridColumns; column += 1) {
+    const x = (width / MATCH_2D_CONFIG.debug.gridColumns) * column;
+    context.beginPath();
+    context.moveTo(x, 0);
+    context.lineTo(x, height);
+    context.stroke();
+  }
+  for (let row = 1; row < MATCH_2D_CONFIG.debug.gridRows; row += 1) {
+    const y = (height / MATCH_2D_CONFIG.debug.gridRows) * row;
+    context.beginPath();
+    context.moveTo(0, y);
+    context.lineTo(width, y);
+    context.stroke();
+  }
+  if (frame.activeClip) {
+    const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, width, height);
+    const [toX, toY] = toCanvas(frame.activeClip.ballTo, width, height);
+    context.strokeStyle = "rgba(248, 250, 252, 0.85)";
+    context.setLineDash([4, 3]);
+    context.beginPath();
+    context.moveTo(fromX, fromY);
+    context.lineTo(toX, toY);
+    context.stroke();
+    context.setLineDash([]);
+  }
+  context.restore();
+}
+
+function drawDebugDiagnostics(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  frame: MatchPresentationFrame,
+  fps: number,
+  frameMs: number,
+  currentMinute: number,
+): void {
+  const inset = MATCH_2D_CONFIG.debug.panelInset;
+  const lines = [
+    `v${MATCH_2D_CONFIG.version} · ${fps.toFixed(0)} FPS · ${frameMs.toFixed(1)} ms`,
+    `event ${frame.activeClip?.event.event_type ?? "static"} · clip ${frame.activeClip?.clipId ?? "none"}`,
+    `match ${currentMinute}′ · ball ${frame.ball.x.toFixed(2)}, ${frame.ball.y.toFixed(2)} · entities ${frame.players.length + 1}`,
+    `players ${frame.players.map((player) => player.id).join(", ") || "none"}`,
+  ];
+  context.save();
+  context.fillStyle = "rgba(15, 23, 42, 0.88)";
+  context.fillRect(inset, height - MATCH_2D_CONFIG.debug.panelHeight - inset, Math.min(MATCH_2D_CONFIG.debug.panelWidth, width - inset * 2), MATCH_2D_CONFIG.debug.panelHeight);
+  context.fillStyle = "#f8fafc";
+  context.font = "11px monospace";
+  lines.forEach((line, index) => context.fillText(line, inset + 8, height - MATCH_2D_CONFIG.debug.panelHeight + 18 + index * 20));
+  context.restore();
+}
+
 export default function Match2DRenderer({
   snapshot,
   homeColor,
@@ -172,6 +235,7 @@ export default function Match2DRenderer({
   const startedAt = useRef<number | null>(null);
   const previousFrameAt = useRef<number | null>(null);
   const fps = useRef(0);
+  const frameMs = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -196,7 +260,8 @@ export default function Match2DRenderer({
     const render = (now: number) => {
       if (startedAt.current === null) startedAt.current = now;
       if (previousFrameAt.current !== null) {
-        fps.current = 1000 / Math.max(1, now - previousFrameAt.current);
+        frameMs.current = Math.max(1, now - previousFrameAt.current);
+        fps.current = 1000 / frameMs.current;
       }
       previousFrameAt.current = now;
       const rect = canvas.getBoundingClientRect();
@@ -260,6 +325,9 @@ export default function Match2DRenderer({
       context.arc(ballX, ballY, Math.max(4, Math.min(rect.width, rect.height) * 0.011), 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      if (rendererDebugEnabled()) {
+        drawDebugPitchGuides(context, rect.width, rect.height, frame);
+      }
       context.restore();
       if (frame.activeClip && ["Goal", "PenaltyGoal", "RedCard", "Substitution"].includes(frame.activeClip.event.event_type)) {
         const label = eventLabel(frame.activeClip.event);
@@ -270,12 +338,7 @@ export default function Match2DRenderer({
         context.fillText(label, 20, 31);
       }
       if (rendererDebugEnabled()) {
-        context.fillStyle = "rgba(15, 23, 42, 0.82)";
-        context.fillRect(12, rect.height - 63, 280, 51);
-        context.fillStyle = "#f8fafc";
-        context.font = "11px monospace";
-        context.fillText(`v${MATCH_2D_CONFIG.version} · ${fps.current.toFixed(0)} FPS · ${frame.players.length} players`, 20, rect.height - 43);
-        context.fillText(`${frame.activeClip?.clipId ?? "static"} · ball ${frame.ball.x.toFixed(2)}, ${frame.ball.y.toFixed(2)}`, 20, rect.height - 25);
+        drawDebugDiagnostics(context, rect.width, rect.height, frame, fps.current, frameMs.current, snapshot.current_minute);
       }
       frameId = requestAnimationFrame(render);
     };

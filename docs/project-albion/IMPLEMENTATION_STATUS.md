@@ -652,3 +652,10 @@ label from its owning Match Centre instead of rendering a protocol event name.
 Thai translations for the full match event-type set were completed, including
 goal, penalty goal, red card and substitution. The H2H view uses its existing
 authoritative-event formatter; neither path changes canonical match data.
+
+2D diagnostics update: development builds can now enable
+`?albion2dDebug=1` to inspect the active semantic event, presentation clip,
+match minute, ball coordinates, active player IDs, FPS, frame time and entity
+count. The same developer-only mode draws normalized pitch-zone guides and
+the current ball movement path. It is not included in normal user mode and
+does not alter the authoritative event stream or match state.
