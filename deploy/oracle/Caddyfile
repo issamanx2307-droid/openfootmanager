@@ -1,0 +1,7 @@
+# Replace play.example.com with the DNS name assigned to the Oracle VM.
+# Caddy obtains and renews the TLS certificate, and proxies WebSocket upgrades
+# to Albion automatically.
+play.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:38421
+}

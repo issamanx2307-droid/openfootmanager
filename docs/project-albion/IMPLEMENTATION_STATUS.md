@@ -551,3 +551,16 @@ LAN default. Oracle deployment instructions cover `ALBION_BIND`,
 WebSocket proxying and SQLite backup/restart smoke checks. This is preparation
 for the first single-career Oracle VM, not account authentication or
 multi-career tenancy.
+
+Phase 10 update: Thai now covers the full club-selection and simulation-scope
+flow, including region, competition and dependency explanations. The locale
+audit consequently drops from 78 to 63 missing top-level key groups; remaining
+groups belong to legacy management screens outside the accepted multiplayer
+core loop.
+
+Oracle deployment update: the repository now contains a deployable bundle with
+an environment template, systemd unit, Caddyfile, native-on-Oracle build
+script, consistent SQLite online-backup script and public probe script. The
+only deployment-specific remaining work is to supply the Oracle VM, DNS name,
+career database and private join secret, then execute the documented smoke
+test.
