@@ -1389,13 +1389,35 @@ mod tests {
                     if let ServerEvent::MatchState(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
                         && body.match_id == match_ids[0]
                     {
-                        break (body.match_second, body.home_score, body.away_score);
+                        break (
+                            body.match_second,
+                            body.home_score,
+                            body.away_score,
+                            serde_json::to_string(&body.snapshot).expect("snapshot must serialize"),
+                        );
                     }
                 }
             }).await.expect("match state must reach both clients");
             snapshots.push(snapshot);
         }
         assert_eq!(snapshots[0], snapshots[1]);
+        let canonical_snapshot: serde_json::Value = serde_json::from_str(&snapshots[0].3).unwrap();
+        assert_eq!(canonical_snapshot["home_team"]["players"].as_array().map(Vec::len), Some(11));
+        assert_eq!(canonical_snapshot["away_team"]["players"].as_array().map(Vec::len), Some(11));
+
+        client_b.close(None).await.unwrap();
+        let (mut reconnected_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
+        let reconnect_snapshot = tokio::time::timeout(Duration::from_secs(3), async {
+            loop {
+                let Some(Ok(TungsteniteMessage::Text(text))) = reconnected_b.next().await else { panic!("socket closed before reconnect state") };
+                if let ServerEvent::MatchState(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+                    && body.match_id == match_ids[0]
+                {
+                    break (body.match_second, body.home_score, body.away_score, serde_json::to_string(&body.snapshot).unwrap());
+                }
+            }
+        }).await.expect("reconnecting guest must receive the canonical match state");
+        assert_eq!(reconnect_snapshot, snapshots[0]);
         server.abort();
     }
 
