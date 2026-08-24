@@ -29,6 +29,9 @@ export type MatchPresentationFrame = {
   players: PresentationPlayer[];
   ball: PitchPoint;
   activeClip: PresentationClip | null;
+  ballTrajectory: "ground" | "arc" | "shot";
+  actorPlayerId: string | null;
+  targetPlayerId: string | null;
 };
 
 export type MatchPresentationInput = Pick<

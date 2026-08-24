@@ -52,6 +52,7 @@ function drawPlayer(
   height: number,
   color: string,
   showNames: boolean,
+  highlighted: boolean,
 ): void {
   const [x, y] = toCanvas(presentationPlayer.point, width, height);
   const radius = Math.max(9, Math.min(width, height) * 0.026);
@@ -63,6 +64,13 @@ function drawPlayer(
   context.arc(x, y, radius, 0, Math.PI * 2);
   context.fill();
   context.stroke();
+  if (highlighted) {
+    context.strokeStyle = "#facc15";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(x, y, radius + 5, 0, Math.PI * 2);
+    context.stroke();
+  }
   context.fillStyle = "#ffffff";
   context.font = `bold ${Math.max(9, radius)}px Inter, sans-serif`;
   context.textAlign = "center";
@@ -111,8 +119,28 @@ export default function Match2DRenderer({
       const frame = presentationFrame(snapshot, elapsed, highlightMode);
       context.clearRect(0, 0, rect.width, rect.height);
       drawPitch(context, rect.width, rect.height);
-      frame.players.forEach((player) => drawPlayer(context, player, rect.width, rect.height, player.side === "Home" ? homeColor : awayColor, showNames));
+      frame.players.forEach((player) => drawPlayer(
+        context,
+        player,
+        rect.width,
+        rect.height,
+        player.side === "Home" ? homeColor : awayColor,
+        showNames,
+        player.id === frame.actorPlayerId || player.id === frame.targetPlayerId,
+      ));
       const [ballX, ballY] = toCanvas(frame.ball, rect.width, rect.height);
+      if (frame.activeClip && frame.ballTrajectory !== "ground") {
+        const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, rect.width, rect.height);
+        context.save();
+        context.strokeStyle = frame.ballTrajectory === "shot" ? "rgba(250,204,21,0.8)" : "rgba(255,255,255,0.55)";
+        context.lineWidth = 2;
+        context.setLineDash([5, 5]);
+        context.beginPath();
+        context.moveTo(fromX, fromY);
+        context.quadraticCurveTo((fromX + ballX) / 2, Math.min(fromY, ballY) - rect.height * 0.12, ballX, ballY);
+        context.stroke();
+        context.restore();
+      }
       context.fillStyle = "#ffffff";
       context.strokeStyle = "#111827";
       context.lineWidth = 1.5;
@@ -120,6 +148,13 @@ export default function Match2DRenderer({
       context.arc(ballX, ballY, Math.max(4, Math.min(rect.width, rect.height) * 0.011), 0, Math.PI * 2);
       context.fill();
       context.stroke();
+      if (frame.activeClip && ["Goal", "PenaltyGoal", "RedCard", "Substitution"].includes(frame.activeClip.event.event_type)) {
+        context.fillStyle = "rgba(15, 23, 42, 0.7)";
+        context.fillRect(12, 12, 150, 28);
+        context.fillStyle = "#f8fafc";
+        context.font = "bold 13px Inter, sans-serif";
+        context.fillText(`${frame.activeClip.event.minute}' ${frame.activeClip.event.event_type}`, 20, 31);
+      }
       frameId = requestAnimationFrame(render);
     };
     frameId = requestAnimationFrame(render);

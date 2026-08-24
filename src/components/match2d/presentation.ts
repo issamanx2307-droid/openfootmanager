@@ -48,6 +48,12 @@ function eventDuration(event: MatchEvent): number {
   return 560;
 }
 
+function trajectoryForEvent(event: MatchEvent): MatchPresentationFrame["ballTrajectory"] {
+  if (["Cross", "Corner", "FreeKick"].includes(event.event_type)) return "arc";
+  if (["Shot", "Goal", "PenaltyGoal", "PenaltyMiss", "Save"].includes(event.event_type)) return "shot";
+  return "ground";
+}
+
 export function zonePoint(zone: string, side: PresentationSide = "Home"): PitchPoint {
   const base = ZONES[zone] ?? HOME_BALL;
   return side === "Home" ? base : mirror(base);
@@ -123,11 +129,27 @@ export function presentationFrame(
   const clips = filterPresentationTimeline(compilePresentationTimeline(input.events), mode);
   const totalDuration = clips.reduce((total, clip) => total + clip.durationMs, 0);
   if (clips.length === 0 || totalDuration === 0) {
-    return { players, ball: zonePoint(input.ball_zone), activeClip: null };
+    return {
+      players,
+      ball: zonePoint(input.ball_zone),
+      activeClip: null,
+      ballTrajectory: "ground",
+      actorPlayerId: null,
+      targetPlayerId: null,
+    };
   }
   const playbackMs = elapsedMs % totalDuration;
   const activeClip = clips.find((clip) => playbackMs >= clip.startMs && playbackMs < clip.startMs + clip.durationMs) ?? clips.at(-1) ?? null;
-  if (!activeClip) return { players, ball: zonePoint(input.ball_zone), activeClip: null };
+  if (!activeClip) {
+    return {
+      players,
+      ball: zonePoint(input.ball_zone),
+      activeClip: null,
+      ballTrajectory: "ground",
+      actorPlayerId: null,
+      targetPlayerId: null,
+    };
+  }
   const progress = Math.max(0, Math.min(1, (playbackMs - activeClip.startMs) / activeClip.durationMs));
   const eased = progress * progress * (3 - 2 * progress);
   return {
@@ -137,5 +159,8 @@ export function presentationFrame(
       y: activeClip.ballFrom.y + (activeClip.ballTo.y - activeClip.ballFrom.y) * eased,
     },
     activeClip,
+    ballTrajectory: trajectoryForEvent(activeClip.event),
+    actorPlayerId: activeClip.event.player_id,
+    targetPlayerId: activeClip.event.secondary_player_id,
   };
 }

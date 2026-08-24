@@ -10,6 +10,7 @@ import { EventFeed, MatchStats, Lineups } from "./MatchPanels";
 import MatchScreenLayout from "./MatchScreenLayout";
 import { SubPanel } from "./SubPanel";
 import Match2DRenderer from "../match2d/Match2DRenderer";
+import type { HighlightMode } from "../match2d/types";
 import {
   Play, Pause, FastForward, SkipForward,
   Clock, Users, BarChart3, MessageSquare, RefreshCw,
@@ -40,7 +41,7 @@ export default function MatchLive({
   onSnapshotUpdate, onImportantEvent,
   onHalfTime, onFullTime, onPenaltyShootout,
 }: MatchLiveProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { settings } = useSettingsStore();
   const initialSpeed: SimSpeed = preferredSpeed
     ?? ((settings.match_speed === "slow" || settings.match_speed === "fast") ? settings.match_speed : "normal");
@@ -48,6 +49,8 @@ export default function MatchLive({
   const [activePanel, setActivePanel] = useState<ActivePanel>("events");
   const [isRunning, setIsRunning] = useState(true);
   const [showSubPanel, setShowSubPanel] = useState(false);
+  const [highlightMode, setHighlightMode] = useState<HighlightMode>("full");
+  const [showPlayerNames, setShowPlayerNames] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eventFeedRef = useRef<HTMLDivElement>(null);
   // Track phases we've already signaled to avoid double-firing
@@ -68,6 +71,9 @@ export default function MatchLive({
 
   const isFinished = snapshot.phase === "Finished";
   const rendererSpeed: 1 | 2 | 4 = speed === "fast" ? 4 : speed === "slow" ? 1 : 2;
+  const match2dCopy = i18n.language.startsWith("th")
+    ? { title: "มุมมองแมตช์ 2D", key: "สำคัญ", extended: "ขยาย", full: "ทั้งหมด", showNames: "แสดงชื่อนักเตะ", hideNames: "ซ่อนชื่อนักเตะ" }
+    : { title: "2D Match View", key: "Key", extended: "Extended", full: "Full", showNames: "Show player names", hideNames: "Hide player names" };
 
   // Reads only `lastResult` for phase transitions, which is sound because step_many stops on
   // entering any phase that needs the manager — so a half time, shootout or finish is always the
@@ -297,8 +303,9 @@ export default function MatchLive({
               homeColor={homeTeamColor}
               awayColor={awayTeamColor}
               speed={rendererSpeed}
-              highlightMode="full"
+              highlightMode={highlightMode}
               reducedMotion={!isRunning || speed === "paused"}
+              showNames={showPlayerNames}
             />
           </section>
           <div className="flex bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-700 transition-colors duration-300">
@@ -370,6 +377,30 @@ export default function MatchLive({
           </div>
 
           {/* User Controls */}
+          <div className="p-4 border-b border-gray-200 dark:border-navy-700 flex flex-col gap-2">
+            <h3 className="text-xs font-heading font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">{match2dCopy.title}</h3>
+            <div className="grid grid-cols-3 gap-1" role="group" aria-label="Match highlights">
+              {(["key", "extended", "full"] as HighlightMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setHighlightMode(mode)}
+                  className={`rounded px-2 py-1.5 text-[10px] font-heading uppercase tracking-wide ${highlightMode === mode ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-600 dark:bg-navy-700 dark:text-gray-300"}`}
+                >
+                  {match2dCopy[mode]}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPlayerNames((visible) => !visible)}
+              className="rounded bg-gray-100 px-2 py-1.5 text-left text-xs text-gray-700 dark:bg-navy-700 dark:text-gray-200"
+              aria-pressed={showPlayerNames}
+            >
+              {showPlayerNames ? match2dCopy.hideNames : match2dCopy.showNames}
+            </button>
+          </div>
+
           {!isSpectator && userSide && (
             <div className="p-4 border-b border-gray-200 dark:border-navy-700 flex flex-col gap-2">
               <h3 className="text-xs font-heading font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('match.teamControls')}</h3>
