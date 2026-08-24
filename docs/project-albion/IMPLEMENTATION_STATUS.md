@@ -678,3 +678,9 @@ falls back to a generic localized label for unknown codes. Local Match Centre
 event buttons now have localized accessible names. Protocol values remain
 unchanged; focused formatter tests cover Thai, English and unknown-code
 fallback behavior.
+
+Local-browser update: Main Menu startup now detects a non-Tauri browser demo
+before requesting native manager profiles, active-game state or an event
+listener. This keeps the desktop implementation unchanged while preventing
+browser-demo unhandled Tauri API rejections. The Main Menu regression suite
+passes 34 tests, and a local browser startup check reports no console errors.

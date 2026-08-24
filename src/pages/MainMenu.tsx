@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
@@ -339,6 +339,7 @@ export default function MainMenu() {
   }, [historyDepthYears]);
 
   useEffect(() => {
+    if (!isTauri()) return;
     invoke<ManagerProfile[]>("get_manager_profiles")
       .then((p) => setProfiles(p ?? []))
       .catch((error) => console.error("Failed to load manager profiles:", error));
@@ -346,6 +347,7 @@ export default function MainMenu() {
 
   // Check if a game is already active (e.g. loaded by MCP --mcp-auto-start before frontend mounted)
   useEffect(() => {
+    if (!isTauri()) return;
     invoke<GameStateData>("get_active_game")
       .then((state) => {
         const mgrName = `${state.manager.first_name} ${state.manager.last_name}`;
@@ -361,6 +363,7 @@ export default function MainMenu() {
 
   // Listen for game loaded by MCP auto-start (event may arrive after mount)
   useEffect(() => {
+    if (!isTauri()) return;
     const unlisten = listen("game-state-changed", async () => {
       try {
         const state = await invoke<GameStateData>("get_active_game");

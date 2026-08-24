@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { countryName } from "../lib/countries";
@@ -19,6 +19,7 @@ const translationState = {
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
+  isTauri: vi.fn(() => true),
 }));
 
 const openUrlMock = vi.fn();
@@ -194,6 +195,7 @@ vi.mock("../components/menu/WorldSelect", () => ({
 }));
 
 const mockedInvoke = vi.mocked(invoke);
+const mockedIsTauri = vi.mocked(isTauri);
 
 // The packages step sits between the create form and the generation/world-select
 // step. Its internals (installed-package list, stack validation) are covered by
@@ -303,6 +305,7 @@ describe("MainMenu", () => {
     latestDatePickerOnChange = null;
     translationState.language = "en";
     mockedInvoke.mockReset();
+    mockedIsTauri.mockReturnValue(true);
     mockedInvoke.mockImplementation(async (command: string) => {
       if (command === "list_installed_packages") {
         return [];
@@ -333,6 +336,16 @@ describe("MainMenu", () => {
       return 0;
     });
     vi.stubGlobal("alert", alertMock);
+  });
+
+  it("does not invoke desktop APIs when running the browser demo", async () => {
+    mockedIsTauri.mockReturnValue(false);
+
+    render(<MainMenu />);
+
+    await waitFor(() => expect(screen.getByText("menu.newGame")).toBeInTheDocument());
+    expect(mockedInvoke).not.toHaveBeenCalledWith("get_manager_profiles");
+    expect(mockedInvoke).not.toHaveBeenCalledWith("get_active_game");
   });
 
   afterEach(() => {
