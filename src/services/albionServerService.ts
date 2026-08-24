@@ -191,19 +191,21 @@ export class AlbionServerClient {
     this.socket = socket;
   }
 
-  sendCommand(session: AlbionSession, command: unknown, expectedRevision = this.cache.revision): void {
+  sendCommand(session: AlbionSession, command: unknown, expectedRevision = this.cache.revision): string {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       throw new Error("be.error.serverDisconnected");
     }
+    const messageId = crypto.randomUUID();
     this.socket.send(JSON.stringify({
       protocol_version: 1,
-      message_id: crypto.randomUUID(),
+      message_id: messageId,
       kind: "command",
       career_id: session.career_id,
       manager_id: session.manager_id,
       expected_revision: expectedRevision,
       payload: serializeAlbionCommand(command),
     }));
+    return messageId;
   }
 
   disconnect(): void {

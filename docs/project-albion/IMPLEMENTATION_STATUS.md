@@ -604,6 +604,12 @@ an authoritative interval, avoiding an invalid command while play is live.
 The server regression covers one-manager and two-manager readiness at
 half-time; the server crate suite passes 28 tests.
 
+2D/multiplayer acceptance update: a live formation command now remains
+`pending` in the lobby until the matching server command acknowledgement,
+then becomes `accepted` and only `applied` when the authoritative `MatchState`
+arrives.  A matching rejection is rendered as rejected.  No client-side
+formation or renderer state is changed optimistically.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new
