@@ -94,7 +94,7 @@ its working tree untouched.
 | 9 | Desktop client migration | IN PROGRESS |
 | 10 | Thai + accessibility | IN PROGRESS |
 | 11 | Production snapshot | BLOCKED (external data pending) |
-| 12 | Balance, soak, hardening | NOT STARTED |
+| 12 | Balance, soak, hardening | IN PROGRESS |
 | 13 | Release candidate checklist | NOT STARTED |
 
 ## Next session entry point
@@ -582,3 +582,11 @@ adapter, settings and MatchSimulation suites. The end-to-end two-human
 acceptance scenario in `10_2D_ENHANCED_MATCH_RENDERER.md` still remains in
 progress; in particular, visual QA across two browser/desktop clients and the
 developer diagnostics overlay are not yet accepted as complete.
+
+Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
+now passes after correcting protocol-test numeric grouping and small
+non-behavioural lint violations in rules, server and snapshot code. A new
+10-season daily-turn soak regression checks structural game invariants every
+31 days and passes in 8.30 seconds. The 100,000-match seed-42 sim-bench
+calibration was also executed. Remaining Phase 12 work is operational: clean
+machine/package verification and real two-machine private-network smoke.
