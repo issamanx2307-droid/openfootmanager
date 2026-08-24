@@ -453,6 +453,10 @@ send `RespondTransferOffer` over the authenticated WebSocket, and the offer is
 removed only after the server's resulting state delta. The canonical regression
 covers offer projection and the existing mutation regression covers rejection.
 
+Phase 9 update: the canonical lobby club card now includes the manager club's
+server-sourced financial balance, rendered as its raw in-game integer rather
+than inventing a currency or using frontend-local financial state.
+
 Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin

@@ -15,7 +15,7 @@ import { useGameStore } from "../store/gameStore";
 
 type ManagerDashboard = {
   currentDate: string;
-  club: { id: string; name: string; formation: string; playStyle: string };
+  club: { id: string; name: string; finance: number; formation: string; playStyle: string };
   training?: { focus: string; intensity: string };
   nextFixture?: { date: string; competition: string; homeTeam: string; awayTeam: string };
   squad: Array<{ id: string; name: string; position: string; condition: number; injured: boolean }>;
@@ -29,7 +29,7 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
   const club = record.club;
   if (typeof record.currentDate !== "string" || !club || typeof club !== "object") return null;
   const clubRecord = club as Record<string, unknown>;
-  if (typeof clubRecord.id !== "string" || typeof clubRecord.name !== "string" || typeof clubRecord.formation !== "string" || typeof clubRecord.playStyle !== "string") return null;
+  if (typeof clubRecord.id !== "string" || typeof clubRecord.name !== "string" || typeof clubRecord.finance !== "number" || typeof clubRecord.formation !== "string" || typeof clubRecord.playStyle !== "string") return null;
   const trainingRecord = record.training;
   const training = trainingRecord && typeof trainingRecord === "object"
     && typeof (trainingRecord as Record<string, unknown>).focus === "string"
@@ -67,7 +67,7 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
       ? [{ offerId: offer.offerId, playerName: offer.playerName, fromClub: offer.fromClub, fee: offer.fee }]
       : [];
   }) : [];
-  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad, inbox, incomingTransferOffers };
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, finance: clubRecord.finance, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad, inbox, incomingTransferOffers };
 }
 
 function applyDashboardDelta(value: unknown, changes: unknown): unknown {
@@ -122,6 +122,7 @@ export default function MultiplayerLobby() {
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
     events: "เหตุการณ์ล่าสุด",
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
+    finance: "การเงิน",
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
     squad: "ทีมของฉัน", noPlayers: "ยังไม่มีข้อมูลนักเตะ",
     inbox: "กล่องข้อความ", noMessages: "ยังไม่มีข้อความ",
@@ -141,6 +142,7 @@ export default function MultiplayerLobby() {
     matchFinished: "Match finished", score: "Score",
     events: "Latest events",
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
+    finance: "Finances",
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
     squad: "My squad", noPlayers: "No player data available",
     inbox: "Inbox", noMessages: "No messages",
@@ -392,6 +394,7 @@ export default function MultiplayerLobby() {
           <h2 className="font-bold">{copy.clubView} · {dashboardView.club.name}</h2>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
             <dt className="text-gray-300">{copy.date}</dt><dd>{dashboardView.currentDate}</dd>
+            <dt className="text-gray-300">{copy.finance}</dt><dd>{dashboardView.club.finance.toLocaleString()}</dd>
             <dt className="text-gray-300">{copy.tactics}</dt><dd>{dashboardView.club.formation}</dd>
             <dt className="text-gray-300">{copy.playStyle}</dt><dd>{localizedCanonicalLabel(dashboardView.club.playStyle, thai)}</dd>
             {dashboardView.training && <><dt className="text-gray-300">{copy.training}</dt><dd>{localizedCanonicalLabel(dashboardView.training.focus, thai)} · {localizedCanonicalLabel(dashboardView.training.intensity, thai)}</dd></>}
