@@ -34,7 +34,10 @@ pub async fn start_albion_host(
         saves.database_path(&save_id)?
     };
     let config = ServerConfig::open_save(save_path, join_secret)?;
-    let listener = tokio::net::TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0))
+    // Private LAN/Tailscale games need an externally reachable listener. The
+    // join secret is still enforced by albion_server; clients can replace the
+    // returned loopback URL with the host's LAN or Tailscale address.
+    let listener = tokio::net::TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0))
         .await
         .map_err(|_| "be.error.serverStartFailed")?;
     let port = listener.local_addr().map_err(|_| "be.error.serverStartFailed")?.port();

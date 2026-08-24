@@ -27,6 +27,7 @@ export default function MultiplayerLobby() {
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "ส่งคำสั่งระหว่างแข่งไปยังเซิร์ฟเวอร์แล้ว",
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
+    hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
     rejected: "Command rejected: refresh the view and try again", readyState: "Ready state updated; waiting for the other manager",
@@ -39,6 +40,7 @@ export default function MultiplayerLobby() {
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Live-match command sent to the server.",
     matchFinished: "Match finished", score: "Score",
+    hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
   const client = useRef(new AlbionServerClient());
@@ -220,6 +222,7 @@ export default function MultiplayerLobby() {
       <label className="block">{copy.hostUrl}
         <input value={serverUrl} onChange={(event) => setServerUrl(event.target.value)} placeholder="http://192.168.1.10:38421" className="mt-1 w-full rounded bg-navy-700 p-3" />
       </label>
+      <p className="text-sm text-gray-300">{copy.hostHint}</p>
       <div className="flex gap-3">
         <button type="button" disabled={busy || !joinSecret} onClick={() => void host()} className="rounded bg-primary-500 px-4 py-3 font-bold disabled:opacity-50">{copy.host}</button>
         <button type="button" disabled={busy || !joinSecret || !serverUrl} onClick={() => void join()} className="rounded bg-accent-500 px-4 py-3 font-bold disabled:opacity-50">{copy.join}</button>

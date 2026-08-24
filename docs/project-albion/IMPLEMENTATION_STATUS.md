@@ -363,3 +363,9 @@ Phase 9 update: the live controller now also renders canonical score, elapsed
 minute and phase from `MatchState`, announces them politely for assistive
 technology, and exits the live-control state on `MatchFinished`. The desktop
 therefore displays server output rather than deriving its own match clock.
+
+Phase 9 update: desktop-hosted careers now bind the authoritative server on
+all interfaces, enabling the documented private LAN/Tailscale use case rather
+than only a second client on the same machine. The lobby keeps a loopback URL
+for the host and explains how to substitute the host's LAN/Tailscale address
+when inviting a guest.
