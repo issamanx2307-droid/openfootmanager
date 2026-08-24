@@ -264,3 +264,9 @@ sender's match side, and advances matches through a mutex-gated server clock.
 It emits event batches/state snapshots and checkpoints the finished report
 before `MatchFinished`. The two-manager command-lane regression proves that
 competing mutations at one revision commit once and reject the stale command.
+
+Phase 8 update: migration `v047` persists authoritative-session metadata beside
+the canonical career. On a save-backed server, manager slots, club claims,
+reconnect tokens and the current revision are restored before admission resumes.
+Focused restart coverage creates a real career database, joins a manager, opens
+the same save again and reconnects through the original token.

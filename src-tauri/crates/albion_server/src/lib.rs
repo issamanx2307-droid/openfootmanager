@@ -30,7 +30,7 @@ use uuid::Uuid;
 use ofm_core::live_match_manager::LiveMatchSession;
 
 pub use canonical::{Advancement, CanonicalCareer};
-pub use store::SqliteCareerStore;
+pub use store::{PersistedSessionState, SqliteCareerStore};
 
 const MAX_MANAGER_SLOTS: usize = 2;
 
@@ -41,6 +41,7 @@ pub struct ServerConfig {
     pub versions: VersionSet,
     pub game: Option<ofm_core::game::Game>,
     store: Option<SqliteCareerStore>,
+    persisted_session: Option<PersistedSessionState>,
 }
 
 impl ServerConfig {
@@ -51,17 +52,20 @@ impl ServerConfig {
             versions: CURRENT_VERSIONS.to_owned_set(),
             game: None,
             store: None,
+            persisted_session: None,
         }
     }
 
     pub fn open_save(path: impl AsRef<std::path::Path>, join_secret: impl Into<String>) -> Result<Self, String> {
         let (store, game, career_id) = SqliteCareerStore::open(path)?;
+        let persisted_session = store.load_session_state()?;
         Ok(Self {
             career_id,
             join_secret: join_secret.into(),
             versions: CURRENT_VERSIONS.to_owned_set(),
             game: Some(game),
             store: Some(store),
+            persisted_session,
         })
     }
 
@@ -246,6 +250,12 @@ struct CareerSession {
     last_live_tick: Instant,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PersistedClaims {
+    slots: HashMap<Uuid, ManagerSlot>,
+    claimed_clubs: HashMap<Uuid, Uuid>,
+}
+
 struct ActiveLiveMatch {
     session: LiveMatchSession,
     next_event_sequence: u64,
@@ -255,12 +265,20 @@ impl CareerSession {
     fn new(mut config: ServerConfig) -> Self {
         let career = config.game.take().map(CanonicalCareer::new);
         let store = config.store.take();
+        let persisted_session = config.persisted_session.take();
+        let restored_claims = persisted_session
+            .as_ref()
+            .and_then(|state| serde_json::from_str::<PersistedClaims>(&state.claims_json).ok());
+        let reconnect_tokens = persisted_session
+            .as_ref()
+            .and_then(|state| serde_json::from_str::<HashMap<String, Uuid>>(&state.reconnect_tokens_json).ok())
+            .unwrap_or_default();
         Self {
             config,
-            revision: 0,
-            slots: HashMap::new(),
-            claimed_clubs: HashMap::new(),
-            reconnect_tokens: HashMap::new(),
+            revision: persisted_session.as_ref().map_or(0, |state| state.career_revision),
+            slots: restored_claims.as_ref().map_or_else(HashMap::new, |claims| claims.slots.clone()),
+            claimed_clubs: restored_claims.map_or_else(HashMap::new, |claims| claims.claimed_clubs),
+            reconnect_tokens,
             completed_commands: HashMap::new(),
             ready_managers: HashSet::new(),
             career,
@@ -309,6 +327,9 @@ impl CareerSession {
         self.claimed_clubs.insert(request.club_id, request.manager_id);
         let reconnect_token = Uuid::new_v4().to_string();
         self.reconnect_tokens.insert(reconnect_token.clone(), request.manager_id);
+        if self.persist_session_state().is_err() {
+            return Err(ApiError::protocol(ErrorCode::SaveCorrupt));
+        }
         Ok(JoinResponse {
             career_id: self.config.career_id,
             manager_id: request.manager_id,
@@ -339,6 +360,20 @@ impl CareerSession {
             .ok_or_else(|| ApiError::protocol(ErrorCode::AuthInvalid))
     }
 
+    fn persist_session_state(&self) -> Result<(), String> {
+        let Some(store) = &self.store else { return Ok(()); };
+        let claims = PersistedClaims {
+            slots: self.slots.clone(),
+            claimed_clubs: self.claimed_clubs.clone(),
+        };
+        store.checkpoint_session_state(&PersistedSessionState {
+            career_revision: self.revision,
+            claims_json: serde_json::to_string(&claims).map_err(|error| error.to_string())?,
+            reconnect_tokens_json: serde_json::to_string(&self.reconnect_tokens)
+                .map_err(|error| error.to_string())?,
+        })
+    }
+
     fn apply_command(
         &mut self,
         authenticated_manager_id: Uuid,
@@ -348,7 +383,16 @@ impl CareerSession {
         if let Some(previous) = self.completed_commands.get(&command_id) {
             return previous.clone();
         }
-        let event = self.apply_new_command(authenticated_manager_id, envelope);
+        let mut event = self.apply_new_command(authenticated_manager_id, envelope);
+        if event.iter().any(|item| matches!(item, ServerEvent::CommandAck(_)))
+            && self.persist_session_state().is_err()
+        {
+            event = vec![ServerEvent::CommandRejected(CommandRejectedBody {
+                command_id,
+                current_revision: self.revision,
+                error: ProtocolError::new(ErrorCode::SaveCorrupt),
+            })];
+        }
         self.completed_commands.insert(command_id, event.clone());
         event
     }
@@ -664,6 +708,8 @@ mod tests {
     use axum::http::Request;
     use axum::http::header::CONTENT_TYPE;
     use chrono::{TimeZone, Utc};
+    use db::game_database::GameDatabase;
+    use db::game_persistence::GamePersistenceWriter;
     use domain::manager::Manager;
     use domain::team::Team;
     use futures_util::{SinkExt, StreamExt};
@@ -673,6 +719,7 @@ mod tests {
     use tower::ServiceExt;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
+    use tempfile::tempdir;
 
     fn session() -> CareerSession {
         CareerSession::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"))
@@ -772,6 +819,34 @@ mod tests {
         assert_eq!(second.applied_revision, 1);
         assert!(matches!(session.apply_command(manager, ready_envelope(&session, manager, command_id))[1], ServerEvent::ReadyStateChanged(_)));
         assert_eq!(session.revision, 1);
+    }
+
+    #[test]
+    fn restart_restores_claim_and_reconnect_token_from_sqlite() {
+        let directory = tempdir().unwrap();
+        let path = directory.path().join("albion.db");
+        let (game, manager_a, _, club_a, _) = two_manager_game();
+        let db = GameDatabase::open(&path).unwrap();
+        GamePersistenceWriter::write_game(&db, &game, "albion-save", "Albion").unwrap();
+        drop(db);
+
+        let config = ServerConfig::open_save(&path, "private-secret").unwrap();
+        let mut original = CareerSession::new(config);
+        let joined = original.join(join_request(manager_a, club_a)).unwrap();
+        let command = tactics_envelope(&original, manager_a, 0);
+        assert!(matches!(original.apply_command(manager_a, command)[0], ServerEvent::CommandAck(_)));
+        drop(original);
+
+        let restarted = CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
+        let reconnected = restarted.reconnect(ReconnectRequest {
+            reconnect_token: joined.reconnect_token.clone(),
+            client_versions: CURRENT_VERSIONS.to_owned_set(),
+        }).unwrap();
+        assert_eq!(reconnected.manager_id, manager_a);
+        assert_eq!(reconnected.slot, ManagerSlot::Host);
+        assert_eq!(reconnected.reconnect_token, joined.reconnect_token);
+        assert_eq!(reconnected.current_revision, 1);
+        assert_eq!(restarted.claimed_clubs.get(&club_a), Some(&manager_a));
     }
 
     #[tokio::test]
