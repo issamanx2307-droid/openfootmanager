@@ -159,7 +159,7 @@ export default function MultiplayerLobby() {
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "กำลังรอเซิร์ฟเวอร์ยืนยันคำสั่ง", liveAccepted: "เซิร์ฟเวอร์ยอมรับคำสั่ง กำลังใช้กับแมตช์", liveApplied: "ใช้คำสั่งกับแมตช์แล้ว", liveRejected: "เซิร์ฟเวอร์ปฏิเสธคำสั่งระหว่างแข่ง", replayLatest: "ดูเหตุการณ์สำคัญล่าสุด", stopReplay: "กลับสู่ถ่ายทอดสด", presentationSpeed: "ความเร็วภาพถ่ายทอดสด",
     matchFinished: "การแข่งขันจบแล้ว", score: "สกอร์",
-    events: "เหตุการณ์ล่าสุด", possession: "การครองบอล",
+    events: "เหตุการณ์ล่าสุด", possession: "การครองบอล", postMatch: "สรุปหลังการแข่งขัน", shots: "ยิง", onTarget: "เข้ากรอบ",
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
     finance: "การเงิน",
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
@@ -179,7 +179,7 @@ export default function MultiplayerLobby() {
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Waiting for the server to confirm the command.", liveAccepted: "Server accepted the command; applying it to the match.", liveApplied: "Command applied to the match.", liveRejected: "Server rejected the live-match command.", replayLatest: "Replay latest highlight", stopReplay: "Return to live view", presentationSpeed: "Presentation speed",
     matchFinished: "Match finished", score: "Score",
-    events: "Latest events", possession: "Possession",
+    events: "Latest events", possession: "Possession", postMatch: "Post-match summary", shots: "Shots", onTarget: "On target",
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
     finance: "Finances",
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
@@ -497,6 +497,14 @@ export default function MultiplayerLobby() {
             : latestReplayableEvent && <button type="button" onClick={() => setLiveReplayEvent(latestReplayableEvent)} className="w-fit rounded bg-accent-500 px-3 py-2 text-sm font-bold">{copy.replayLatest}</button>}
           {livePresentation.snapshot && <div className="h-72 overflow-hidden rounded border border-navy-600"><Match2DRenderer snapshot={livePresentation.snapshot} homeColor="#10b981" awayColor="#6366f1" speed={livePresentationSpeed} highlightMode="full" reducedMotion={reducedMotion} replayEvent={liveReplayEvent} ariaLabel={t("match.twoD.pitch")} /></div>}
           {livePresentation.events.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{livePresentation.events.slice(-6).map((event) => <li key={`${event.minute}-${event.event_type}-${event.player_id ?? "unknown"}-${event.secondary_player_id ?? "none"}`}>{isReplayableAlbionEvent(event) ? <button type="button" onClick={() => setLiveReplayEvent(event)} className="text-left underline decoration-dotted">{formatAlbionLiveEvent(event, thai)}</button> : formatAlbionLiveEvent(event, thai)}</li>)}</ul></div>}
+          {livePresentation.finished && livePresentation.report && <section className="rounded border border-navy-600 p-3" aria-label={copy.postMatch}>
+            <h2 className="font-semibold">{copy.postMatch}</h2>
+            <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+              <dt>{copy.shots}</dt><dd className="text-right">{livePresentation.report.homeStats.shots}</dd><dd>{livePresentation.report.awayStats.shots}</dd>
+              <dt>{copy.onTarget}</dt><dd className="text-right">{livePresentation.report.homeStats.shotsOnTarget}</dd><dd>{livePresentation.report.awayStats.shotsOnTarget}</dd>
+              <dt>{copy.possession}</dt><dd className="text-right">{livePresentation.report.homePossession.toFixed(0)}%</dd><dd>{(100 - livePresentation.report.homePossession).toFixed(0)}%</dd>
+            </dl>
+          </section>}
         </fieldset>}
         {dashboardView && <section className="mt-4 rounded border border-navy-600 p-3" aria-label={copy.clubView}>
           <h2 className="font-bold">{copy.clubView} · {dashboardView.club.name}</h2>

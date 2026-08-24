@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MatchEvent } from "../components/match/types";
 
-import { EMPTY_ALBION_LIVE_MATCH, isReplayableAlbionEvent, needsAlbionIntermissionReady, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
+import { EMPTY_ALBION_LIVE_MATCH, isReplayableAlbionEvent, needsAlbionIntermissionReady, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, readAlbionPostMatchReport, reduceAlbionLiveMatch } from "./albionMatchPresentation";
 
 const opened = { type: "MatchOpened", body: { match_id: "match-1" } };
 const goal: MatchEvent = { minute: 12, event_type: "Goal", side: "Home", zone: "AttackingBox", player_id: "p-9", secondary_player_id: null };
@@ -53,5 +53,20 @@ describe("Albion live-match presentation adapter", () => {
   it("replays only already-published important events", () => {
     expect(isReplayableAlbionEvent(goal)).toBe(true);
     expect(isReplayableAlbionEvent({ ...goal, event_type: "PassCompleted" })).toBe(false);
+  });
+
+  it("keeps only a complete authoritative post-match summary", () => {
+    const report = { home_goals: 2, away_goals: 1, home_possession: 55, home_stats: { shots: 12, shots_on_target: 6 }, away_stats: { shots: 8, shots_on_target: 3 } };
+    expect(readAlbionPostMatchReport(report)).toMatchObject({ homePossession: 55, awayStats: { shotsOnTarget: 3 } });
+    expect(readAlbionPostMatchReport({ home_goals: 2 })).toBeNull();
+  });
+
+  it("attaches the verified report only when the matching match finishes", () => {
+    const state = reduceAlbionLiveMatch(EMPTY_ALBION_LIVE_MATCH, opened);
+    const finished = reduceAlbionLiveMatch(state, { type: "MatchFinished", body: {
+      match_id: "match-1", home_score: 2, away_score: 1,
+      report: { home_goals: 2, away_goals: 1, home_possession: 55, home_stats: { shots: 12, shots_on_target: 6 }, away_stats: { shots: 8, shots_on_target: 3 } },
+    } });
+    expect(finished).toMatchObject({ finished: true, report: { homeStats: { shots: 12 } } });
   });
 });

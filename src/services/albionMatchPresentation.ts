@@ -18,6 +18,15 @@ export type AlbionLiveMatchPresentation = {
   events: MatchEvent[];
   snapshot: MatchSnapshot | null;
   finished: boolean;
+  report: AlbionPostMatchReport | null;
+};
+
+export type AlbionPostMatchReport = {
+  homeGoals: number;
+  awayGoals: number;
+  homePossession: number;
+  homeStats: { shots: number; shotsOnTarget: number };
+  awayStats: { shots: number; shotsOnTarget: number };
 };
 
 export const EMPTY_ALBION_LIVE_MATCH: AlbionLiveMatchPresentation = {
@@ -30,6 +39,7 @@ export const EMPTY_ALBION_LIVE_MATCH: AlbionLiveMatchPresentation = {
   events: [],
   snapshot: null,
   finished: false,
+  report: null,
 };
 
 /** Server phases at which human managers must explicitly resume the match. */
@@ -48,6 +58,21 @@ export function isReplayableAlbionEvent(event: MatchEvent): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function readAlbionPostMatchReport(value: unknown): AlbionPostMatchReport | null {
+  if (!isRecord(value) || !isRecord(value.home_stats) || !isRecord(value.away_stats)) return null;
+  const number = (candidate: unknown): number | null => typeof candidate === "number" && Number.isFinite(candidate) ? candidate : null;
+  const homeGoals = number(value.home_goals);
+  const awayGoals = number(value.away_goals);
+  const homePossession = number(value.home_possession);
+  const homeShots = number(value.home_stats.shots);
+  const homeOnTarget = number(value.home_stats.shots_on_target);
+  const awayShots = number(value.away_stats.shots);
+  const awayOnTarget = number(value.away_stats.shots_on_target);
+  if (homeGoals === null || awayGoals === null || homePossession === null
+    || homeShots === null || homeOnTarget === null || awayShots === null || awayOnTarget === null) return null;
+  return { homeGoals, awayGoals, homePossession, homeStats: { shots: homeShots, shotsOnTarget: homeOnTarget }, awayStats: { shots: awayShots, shotsOnTarget: awayOnTarget } };
 }
 
 /** Accept only the exact, semantic event shape emitted by the Rust engine. */
@@ -123,7 +148,7 @@ export function reduceAlbionLiveMatch(
     return { ...current, lastSequence: body.to_seq, events: [...current.events, ...canonicalEvents] };
   }
   if (event.type === "MatchFinished" && typeof body.home_score === "number" && typeof body.away_score === "number") {
-    return { ...current, homeScore: body.home_score, awayScore: body.away_score, finished: true };
+    return { ...current, homeScore: body.home_score, awayScore: body.away_score, finished: true, report: readAlbionPostMatchReport(body.report) };
   }
   return current;
 }

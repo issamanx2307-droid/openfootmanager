@@ -626,6 +626,12 @@ the home/away possession split directly from the authoritative MatchState
 snapshot, with numeric percentages and a labelled bar.  It does not derive
 possession from client event timing or Canvas state.
 
+2D/multiplayer acceptance update: the client now retains the authoritative
+`MatchFinished.report` after runtime validation and renders a compact
+post-match H2H summary for shots, shots on target and possession.  A malformed
+or incomplete report is safely omitted rather than guessed or rendered as
+client-generated football data.
+
 2D/multiplayer acceptance update: the server suite now contains a single
 two-human full-match regression.  It opens a canonical fixture, applies a
 server-authorized substitution from the bench, observes the half-time ready
