@@ -503,6 +503,12 @@ status through an atomic polite live region. Training intensity has a textual
 range value, while every starting-XI checkbox describes the player's condition
 or injury state in addition to its visible non-colour indicator.
 
+Phase 10 update: the existing Settings flow for updating the bundled FPL Core
+Insights source and importing an Albion snapshot now uses English/Thai locale
+keys instead of hard-coded English. It remains a desktop action that invokes
+the existing data-source commands; a production Vite build passes with the
+localized Settings page.
+
 Phase 9 update: the canonical dashboard now exposes a narrow transfer market
 of transfer-listed players only (identity, position and known market value),
 excluding hidden attributes. The lobby can submit a whole-currency bid through
