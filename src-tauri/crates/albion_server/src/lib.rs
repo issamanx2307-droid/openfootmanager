@@ -894,7 +894,7 @@ impl IntoResponse for ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use albion_protocol::command::SetTacticsBody;
+    use albion_protocol::command::{ApplyLiveMatchCommandBody, LiveMatchCommandKind, SetTacticsBody};
     use axum::body::Body;
     use axum::body::to_bytes;
     use axum::http::Request;
@@ -1215,6 +1215,74 @@ mod tests {
         let resumed = session.tick_live_matches();
         assert!(resumed.iter().any(|event| matches!(event, ServerEvent::MatchState(body) if body.phase == "SecondHalf")));
         assert!(session.ready_managers.is_empty(), "intermission readiness is consumed after resuming");
+    }
+
+    #[test]
+    fn two_humans_complete_one_authoritative_match_with_live_command_and_half_time_barrier() {
+        let (mut game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        game.players.push(live_player("a-sub".into(), &club_a, Position::Forward));
+        game.teams.iter_mut().find(|team| team.id == club_a.to_string()).unwrap()
+            .starting_xi_ids = (0..11).map(|index| format!("a-{index}")).collect();
+        let mut session = CareerSession::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        session.join(join_request(manager_a, club_a)).unwrap();
+        session.join(join_request(manager_b, club_b)).unwrap();
+        session.manager_connected(manager_a);
+        session.manager_connected(manager_b);
+        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        let match_id = *session.live_matches.keys().next().unwrap();
+
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        assert!(session.tick_live_matches().iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+
+        let substitute = Envelope {
+            protocol_version: session.config.versions.protocol_version,
+            message_id: Uuid::new_v4(),
+            kind: MessageKind::Command,
+            career_id: session.config.career_id,
+            manager_id: manager_a,
+            expected_revision: Some(session.revision),
+            payload: EnvelopePayload::Command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
+                match_id,
+                command: LiveMatchCommandKind::Substitute {
+                    player_out_id: "a-10".into(),
+                    player_in_id: "a-sub".into(),
+                },
+            })),
+        };
+        let command_events = session.apply_command(manager_a, substitute);
+        assert!(command_events.iter().any(|event| matches!(event, ServerEvent::CommandAck(_))));
+        assert!(command_events.iter().any(|event| matches!(event, ServerEvent::MatchState(body)
+            if body.snapshot["substitutions"].as_array().is_some_and(|subs| !subs.is_empty()))));
+
+        let mut final_score = None;
+        for _ in 0..160 {
+            if session.live_matches.is_empty() {
+                break;
+            }
+            let at_intermission = session.live_matches.values().any(|active| {
+                matches!(active.session.match_state.phase(), engine::MatchPhase::HalfTime | engine::MatchPhase::ExtraTimeHalfTime)
+            });
+            if at_intermission {
+                session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+                session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+            }
+            session.last_live_tick = Instant::now() - Duration::from_millis(501);
+            for event in session.tick_live_matches() {
+                if let ServerEvent::MatchFinished(body) = event {
+                    final_score = Some((body.home_score, body.away_score));
+                }
+            }
+        }
+
+        let (home_score, away_score) = final_score.expect("match must finish through canonical server ticks");
+        assert!(session.live_matches.is_empty());
+        let career = session.career.as_ref().expect("canonical career remains available");
+        let fixture = &career.game().competitions[0].fixtures[0];
+        assert_eq!(fixture.status, FixtureStatus::Completed);
+        assert_eq!(fixture.result.as_ref().map(|result| (result.home_goals, result.away_goals)), Some((home_score, away_score)));
     }
 
     #[test]

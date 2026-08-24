@@ -621,6 +621,13 @@ local presentation speed in the multiplayer Match Centre.  This changes only
 Canvas timeline playback on that client; it is neither sent to nor applied by
 the authoritative server clock.
 
+2D/multiplayer acceptance update: the server suite now contains a single
+two-human full-match regression.  It opens a canonical fixture, applies a
+server-authorized substitution from the bench, observes the half-time ready
+barrier, runs to `MatchFinished`, and compares the published final score with
+the persisted completed fixture.  `cargo test -p albion_server` passes 29
+tests and strict server clippy passes.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new
