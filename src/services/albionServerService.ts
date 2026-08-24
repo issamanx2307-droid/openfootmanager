@@ -61,6 +61,25 @@ export type AlbionViewCache = {
   views: ReadonlyMap<string, unknown>;
 };
 
+const LIVE_EVENT_LABELS: Record<string, { en: string; th: string }> = {
+  Goal: { en: "Goal", th: "ประตู" }, PenaltyGoal: { en: "Penalty goal", th: "จุดโทษเข้า" },
+  ShotOnTarget: { en: "Shot on target", th: "ยิงเข้ากรอบ" }, ShotSaved: { en: "Save", th: "ผู้รักษาประตูเซฟ" },
+  YellowCard: { en: "Yellow card", th: "ใบเหลือง" }, RedCard: { en: "Red card", th: "ใบแดง" },
+  Substitution: { en: "Substitution", th: "เปลี่ยนตัว" }, HalfTime: { en: "Half time", th: "จบครึ่งแรก" },
+  FullTime: { en: "Full time", th: "จบการแข่งขัน" }, KickOff: { en: "Kick-off", th: "เริ่มการแข่งขัน" },
+};
+
+/** Formats only facts received in the canonical event stream. */
+export function formatAlbionLiveEvent(event: unknown, thai: boolean): string {
+  if (!event || typeof event !== "object") return thai ? "เหตุการณ์การแข่งขัน" : "Match event";
+  const record = event as Record<string, unknown>;
+  const minute = typeof record.minute === "number" ? `${record.minute}′ ` : "";
+  const type = typeof record.event_type === "string" ? record.event_type : "Match event";
+  const side = typeof record.side === "string" ? ` · ${record.side}` : "";
+  const label = LIVE_EVENT_LABELS[type]?.[thai ? "th" : "en"] ?? type;
+  return `${minute}${label}${side}`;
+}
+
 export function applyAlbionServerEvent(
   cache: AlbionViewCache,
   event: AlbionServerEvent,

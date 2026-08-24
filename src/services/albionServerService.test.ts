@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyAlbionServerEvent,
   clearAlbionSession,
+  formatAlbionLiveEvent,
   loadAlbionSession,
   saveAlbionSession,
 } from "./albionServerService";
@@ -29,6 +30,14 @@ describe("applyAlbionServerEvent", () => {
       body: { current_revision: 7 },
     });
     expect(cache.revision).toBe(7);
+  });
+});
+
+describe("formatAlbionLiveEvent", () => {
+  it("renders canonical event facts in English and Thai", () => {
+    const event = { minute: 72, event_type: "Goal", side: "Home" };
+    expect(formatAlbionLiveEvent(event, false)).toBe("72′ Goal · Home");
+    expect(formatAlbionLiveEvent(event, true)).toBe("72′ ประตู · Home");
   });
 });
 

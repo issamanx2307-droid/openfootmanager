@@ -6,6 +6,7 @@ import { startAlbionHost, stopAlbionHost } from "../services/albionHostService";
 import {
   AlbionServerClient,
   clearAlbionSession,
+  formatAlbionLiveEvent,
   loadAlbionSession,
   saveAlbionSession,
   type AlbionSession,
@@ -15,6 +16,7 @@ import { useGameStore } from "../store/gameStore";
 export default function MultiplayerLobby() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
+  const thai = i18n.language.startsWith("th");
   const copy = i18n.language.startsWith("th") ? {
     initial: "เลือกเป็นโฮสต์หรือเข้าร่วมเกมส่วนตัว", noCareer: "ต้องเปิด career และเลือกสโมสรก่อนเริ่มเล่นร่วมกัน",
     rejected: "คำสั่งถูกปฏิเสธ: กรุณารีเฟรชข้อมูลแล้วลองใหม่", readyState: "อัปเดตสถานะพร้อมแล้ว รอผู้จัดการอีกฝ่าย",
@@ -59,7 +61,7 @@ export default function MultiplayerLobby() {
   const [trainingFocus, setTrainingFocus] = useState("tactical");
   const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
   const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
-  const [liveEvents, setLiveEvents] = useState<unknown[]>([]);
+  const [liveEvents, setLiveEvents] = useState<string[]>([]);
 
   useEffect(() => () => {
     client.current.disconnect();
@@ -101,7 +103,7 @@ export default function MultiplayerLobby() {
       }
       const batchEvents = event.body?.events;
       if (event.type === "MatchEventBatch" && Array.isArray(batchEvents)) {
-        setLiveEvents((previous) => [...previous, ...batchEvents].slice(-6));
+        setLiveEvents((previous) => [...previous, ...batchEvents.map((item) => formatAlbionLiveEvent(item, thai))].slice(-6));
       }
       if (event.type === "MatchFinished") {
         setLiveMatchId(null);
@@ -160,7 +162,7 @@ export default function MultiplayerLobby() {
         }
         const batchEvents = event.body?.events;
         if (event.type === "MatchEventBatch" && Array.isArray(batchEvents)) {
-          setLiveEvents((previous) => [...previous, ...batchEvents].slice(-6));
+          setLiveEvents((previous) => [...previous, ...batchEvents.map((item) => formatAlbionLiveEvent(item, thai))].slice(-6));
         }
         if (event.type === "MatchFinished") {
           setLiveMatchId(null);
@@ -258,7 +260,7 @@ export default function MultiplayerLobby() {
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
           {liveState && <p aria-live="polite">{copy.score}: {liveState.home}–{liveState.away} · {Math.floor(liveState.second / 60)}′ · {liveState.phase}</p>}
           <button type="button" onClick={applyLiveFormation} className="w-fit rounded bg-primary-500 px-3 py-2 font-bold">{copy.liveFormation}: {formation}</button>
-          {liveEvents.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{liveEvents.map((event, index) => <li key={index}>{String(JSON.stringify(event))}</li>)}</ul></div>}
+          {liveEvents.length > 0 && <div aria-live="polite"><p className="font-semibold">{copy.events}</p><ul className="list-disc pl-5 text-sm">{liveEvents.map((event, index) => <li key={index}>{event}</li>)}</ul></div>}
         </fieldset>}
         {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
       </section>}
