@@ -60,6 +60,23 @@ fn every_command_variant_round_trips() {
 }
 
 #[test]
+fn react_command_wire_shape_deserializes() {
+    let command: Command = serde_json::from_value(serde_json::json!({
+        "type": "SetStartingXi",
+        "body": {
+            "fixture_id": "fpl-fixture-2026-08-01-ars-che",
+            "player_ids": ["fpl-1", "fpl-2"],
+            "formation": "4-4-2"
+        }
+    })).unwrap();
+    let Command::SetStartingXi(body) = command else {
+        panic!("expected SetStartingXi command");
+    };
+    assert_eq!(body.fixture_id, "fpl-fixture-2026-08-01-ars-che");
+    assert_eq!(body.player_ids, ["fpl-1", "fpl-2"]);
+}
+
+#[test]
 fn representative_server_events_round_trip() {
     let career_id = Uuid::new_v4();
     let manager_id = Uuid::new_v4();

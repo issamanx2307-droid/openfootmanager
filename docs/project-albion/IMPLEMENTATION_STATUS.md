@@ -491,3 +491,4 @@ Phase 9 update: `albionServerService` now serializes every ergonomic React
 command into the protocol's required internally-tagged `{ type, body }` wire
 form before WebSocket transmission. A focused regression covers the FPL-style
 starting-XI payload, so lobby actions no longer depend on an invalid enum shape.
+The matching protocol regression deserializes that exact wire shape.
