@@ -595,6 +595,15 @@ camera, highlight and player-name choices.  The renderer derives concise role
 labels from the existing snapshot player role; it does not create a tactical
 state or send a command to the match engine.
 
+2D/multiplayer acceptance update: the authoritative server now pauses a
+human-v-human live match at half-time and extra-time half-time until every
+connected manager controlling that fixture sends the existing idempotent
+`MarkReady` command.  Readiness is consumed when play resumes and is cleared
+on disconnect.  The lobby exposes the Ready action only before a match or at
+an authoritative interval, avoiding an invalid command while play is live.
+The server regression covers one-manager and two-manager readiness at
+half-time; the server crate suite passes 28 tests.
+
 Phase 12 update: strict `cargo clippy --workspace --all-targets -- -D warnings`
 now passes after correcting protocol-test numeric grouping and small
 non-behavioural lint violations in rules, server and snapshot code. A new

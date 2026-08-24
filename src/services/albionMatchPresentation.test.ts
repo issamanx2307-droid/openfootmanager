@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_ALBION_LIVE_MATCH, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
+import { EMPTY_ALBION_LIVE_MATCH, needsAlbionIntermissionReady, normalizeAlbionMatchEvent, readAlbionMatchSnapshot, reduceAlbionLiveMatch } from "./albionMatchPresentation";
 
 const opened = { type: "MatchOpened", body: { match_id: "match-1" } };
 const goal = { minute: 12, event_type: "Goal", side: "Home", zone: "AttackingBox", player_id: "p-9", secondary_player_id: null };
@@ -41,5 +41,11 @@ describe("Albion live-match presentation adapter", () => {
     );
     expect(reconnected.events).toEqual([goal]);
     expect(reconnected.snapshot).toMatchObject({ current_minute: 12 });
+  });
+
+  it("requires both managers to resume only at authoritative intervals", () => {
+    expect(needsAlbionIntermissionReady("HalfTime")).toBe(true);
+    expect(needsAlbionIntermissionReady("ExtraTimeHalfTime")).toBe(true);
+    expect(needsAlbionIntermissionReady("SecondHalf")).toBe(false);
   });
 });

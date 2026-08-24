@@ -16,6 +16,7 @@ import {
 } from "../services/albionServerService";
 import {
   EMPTY_ALBION_LIVE_MATCH,
+  needsAlbionIntermissionReady,
   reduceAlbionLiveMatch,
 } from "../services/albionMatchPresentation";
 import { useGameStore } from "../store/gameStore";
@@ -144,7 +145,7 @@ export default function MultiplayerLobby() {
     hostFailed: "ไม่สามารถเปิดเซิร์ฟเวอร์ได้ ตรวจสอบ save และรหัสเข้าร่วม", joinFailed: "ไม่สามารถเข้าร่วมได้ ตรวจสอบ URL รหัส และเวอร์ชันของเกม",
     restored: "เชื่อมต่อ session เดิมสำเร็จ", stale: "session เดิมหมดอายุหรือเซิร์ฟเวอร์ไม่พร้อม กรุณาเข้าร่วมใหม่", readySent: "ส่งสถานะพร้อมแล้ว",
     disconnected: "การเชื่อมต่อขาดหาย กรุณาเชื่อมต่อใหม่", back: "← กลับสู่สโมสร", title: "เล่นร่วมกัน", secret: "รหัสเข้าร่วม",
-    hostUrl: "URL ของโฮสต์", host: "เป็นโฮสต์", join: "เข้าร่วม", reconnect: "เชื่อมต่อเดิม", connectedAt: "เชื่อมต่อสำเร็จ · revision", ready: "พร้อมดำเนินเกม",
+    hostUrl: "URL ของโฮสต์", host: "เป็นโฮสต์", join: "เข้าร่วม", reconnect: "เชื่อมต่อเดิม", connectedAt: "เชื่อมต่อสำเร็จ · revision", ready: "พร้อมดำเนินเกม", readySecondHalf: "พร้อมเริ่มครึ่งต่อไป", matchInProgress: "การแข่งขันกำลังดำเนินอยู่",
     tactics: "แท็กติก", formation: "แผนการเล่น", mentality: "แนวทาง", applyTactics: "บันทึกแท็กติก", tacticsSent: "ส่งแท็กติกไปยังเซิร์ฟเวอร์แล้ว",
     training: "การฝึกซ้อม", intensity: "ความเข้มข้น", focus: "จุดเน้น", applyTraining: "บันทึกแผนฝึก", trainingSent: "ส่งแผนฝึกไปยังเซิร์ฟเวอร์แล้ว",
     liveMatch: "ศูนย์การแข่งขัน", liveFormation: "เปลี่ยนแผนระหว่างแข่ง", liveSent: "ส่งคำสั่งระหว่างแข่งไปยังเซิร์ฟเวอร์แล้ว",
@@ -164,7 +165,7 @@ export default function MultiplayerLobby() {
     hostFailed: "Could not start the server. Check the save and join code.", joinFailed: "Could not join. Check the URL, code, and game version.",
     restored: "Previous session restored", stale: "The previous session expired or the server is unavailable. Please join again.", readySent: "Ready status sent.",
     disconnected: "Connection lost. Please reconnect.", back: "← Back to club", title: "Play Together", secret: "Join code",
-    hostUrl: "Host URL", host: "Host game", join: "Join game", reconnect: "Reconnect", connectedAt: "Connected · revision", ready: "Ready to continue",
+    hostUrl: "Host URL", host: "Host game", join: "Join game", reconnect: "Reconnect", connectedAt: "Connected · revision", ready: "Ready to continue", readySecondHalf: "Ready for the next half", matchInProgress: "Match in progress",
     tactics: "Tactics", formation: "Formation", mentality: "Approach", applyTactics: "Save tactics", tacticsSent: "Tactics sent to the server.",
     training: "Training", intensity: "Intensity", focus: "Focus", applyTraining: "Save training", trainingSent: "Training plan sent to the server.",
     liveMatch: "Match centre", liveFormation: "Change live formation", liveSent: "Live-match command sent to the server.",
@@ -197,6 +198,7 @@ export default function MultiplayerLobby() {
   const [contractWages, setContractWages] = useState<Record<string, string>>({});
   const [contractYears, setContractYears] = useState<Record<string, string>>({});
   const [livePresentation, setLivePresentation] = useState(EMPTY_ALBION_LIVE_MATCH);
+  const requiresIntermissionReady = needsAlbionIntermissionReady(livePresentation.phase);
   const dashboardView = readManagerDashboard(dashboard);
 
   useEffect(() => () => {
@@ -408,7 +410,11 @@ export default function MultiplayerLobby() {
       </div>
       {session && <section className="rounded bg-navy-700 p-4" aria-live="polite">
         <p>{copy.connectedAt} {session.current_revision}</p>
-        <button type="button" onClick={markReady} className="mt-3 rounded bg-primary-500 px-4 py-2 font-bold">{copy.ready}</button>
+        {(!livePresentation.matchId || requiresIntermissionReady) ? (
+          <button type="button" onClick={markReady} className="mt-3 rounded bg-primary-500 px-4 py-2 font-bold">
+            {requiresIntermissionReady ? copy.readySecondHalf : copy.ready}
+          </button>
+        ) : <p className="mt-3 text-sm text-gray-300">{copy.matchInProgress}</p>}
         <fieldset className="mt-4 grid gap-2 rounded border border-navy-600 p-3">
           <legend className="px-1 font-bold">{copy.tactics}</legend>
           <label>{copy.formation}<input value={formation} onChange={(event) => setFormation(event.target.value)} className="ml-2 rounded bg-navy-800 p-2" /></label>

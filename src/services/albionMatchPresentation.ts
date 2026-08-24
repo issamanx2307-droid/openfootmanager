@@ -32,6 +32,11 @@ export const EMPTY_ALBION_LIVE_MATCH: AlbionLiveMatchPresentation = {
   finished: false,
 };
 
+/** Server phases at which human managers must explicitly resume the match. */
+export function needsAlbionIntermissionReady(phase: string | null): boolean {
+  return phase === "HalfTime" || phase === "ExtraTimeHalfTime";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

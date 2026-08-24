@@ -449,6 +449,35 @@ impl CareerSession {
         }
     }
 
+    fn live_match_managers(&self, live_match: &LiveMatchSession) -> Vec<Uuid> {
+        [live_match.home_team_id.as_str(), live_match.away_team_id.as_str()]
+            .into_iter()
+            .filter_map(|club_id| Uuid::parse_str(club_id).ok())
+            .filter_map(|club_id| self.claimed_clubs.get(&club_id).copied())
+            .collect()
+    }
+
+    fn live_match_needs_ready(live_match: &LiveMatchSession) -> bool {
+        matches!(
+            live_match.match_state.phase(),
+            engine::MatchPhase::HalfTime | engine::MatchPhase::ExtraTimeHalfTime
+        )
+    }
+
+    fn manager_has_intermission_ready_barrier(&self, manager_id: Uuid) -> bool {
+        self.live_matches.values().any(|active| {
+            Self::live_match_needs_ready(&active.session)
+                && self.live_match_managers(&active.session).contains(&manager_id)
+        })
+    }
+
+    fn live_match_waits_for_ready(&self, live_match: &LiveMatchSession) -> bool {
+        Self::live_match_needs_ready(live_match)
+            && self.live_match_managers(live_match).iter().any(|manager_id| {
+                !self.manager_is_connected(manager_id) || !self.ready_managers.contains(manager_id)
+            })
+    }
+
     fn manager_is_connected(&self, manager_id: &Uuid) -> bool {
         self.manager_connection_counts.get(manager_id).is_some_and(|count| *count > 0)
     }
@@ -515,13 +544,17 @@ impl CareerSession {
         };
         match command {
             Command::MarkReady(MarkReadyBody {}) => {
+                if !self.live_matches.is_empty() && !self.manager_has_intermission_ready_barrier(manager_id) {
+                    return vec![reject(ErrorCode::MatchCommandNotAllowed)];
+                }
                 self.ready_managers.insert(manager_id);
                 self.revision += 1;
                 let mut events = vec![ServerEvent::CommandAck(CommandAckBody {
                     command_id,
                     applied_revision: self.revision,
                 }), self.ready_state_event(manager_id)];
-                if self.ready_managers.len() == self.slots.len()
+                if self.live_matches.is_empty()
+                    && self.ready_managers.len() == self.slots.len()
                     && self.slots.keys().all(|manager_id| self.manager_is_connected(manager_id))
                 {
                     events.extend(self.advance_ready_barrier());
@@ -763,6 +796,15 @@ impl CareerSession {
             if self.has_disconnected_human_for_match(&active.session) {
                 self.live_matches.insert(match_id, active);
                 continue;
+            }
+            if self.live_match_waits_for_ready(&active.session) {
+                self.live_matches.insert(match_id, active);
+                continue;
+            }
+            if Self::live_match_needs_ready(&active.session) {
+                for manager_id in self.live_match_managers(&active.session) {
+                    self.ready_managers.remove(&manager_id);
+                }
             }
             let minute = active.session.step();
             let snapshot = active.session.snapshot();
@@ -1139,6 +1181,40 @@ mod tests {
         session.manager_connected(manager_b);
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
         assert!(session.tick_live_matches().iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+    }
+
+    #[test]
+    fn human_live_match_waits_for_both_managers_at_half_time() {
+        let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        let mut session = CareerSession::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        session.join(join_request(manager_a, club_a)).unwrap();
+        session.join(join_request(manager_b, club_b)).unwrap();
+        session.manager_connected(manager_a);
+        session.manager_connected(manager_b);
+        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        let match_id = *session.live_matches.keys().next().unwrap();
+
+        let active = session.live_matches.get_mut(&match_id).unwrap();
+        while active.session.match_state.phase() != engine::MatchPhase::HalfTime {
+            active.session.step();
+        }
+
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        assert!(session.tick_live_matches().is_empty(), "half time must not auto-resume");
+
+        let first_ready = session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+        assert!(first_ready.iter().any(|event| matches!(event, ServerEvent::ReadyStateChanged(body) if body.is_ready)));
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        assert!(session.tick_live_matches().is_empty(), "one manager is not enough to resume");
+
+        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        let resumed = session.tick_live_matches();
+        assert!(resumed.iter().any(|event| matches!(event, ServerEvent::MatchState(body) if body.phase == "SecondHalf")));
+        assert!(session.ready_managers.is_empty(), "intermission readiness is consumed after resuming");
     }
 
     #[test]
