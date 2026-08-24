@@ -48,6 +48,20 @@ function applyDashboardDelta(value: unknown, changes: unknown): unknown {
   return next;
 }
 
+function localizedCanonicalLabel(value: string, thai: boolean): string {
+  if (!thai) return value;
+  const labels: Record<string, string> = {
+    balanced: "สมดุล", Balanced: "สมดุล", attacking: "เกมรุก", Attacking: "เกมรุก",
+    defensive: "เกมรับ", Defensive: "เกมรับ", possession: "ครองบอล", Possession: "ครองบอล",
+    counter: "สวนกลับ", Counter: "สวนกลับ", high_press: "เพรสซิ่งสูง", HighPress: "เพรสซิ่งสูง",
+    physical: "ร่างกาย", Physical: "ร่างกาย", technical: "เทคนิค", Technical: "เทคนิค",
+    tactical: "แท็กติก", Tactical: "แท็กติก", defending: "เกมรับ", Defending: "เกมรับ",
+    recovery: "ฟื้นฟู", Recovery: "ฟื้นฟู", light: "เบา", Light: "เบา",
+    medium: "ปานกลาง", Medium: "ปานกลาง", high: "สูง", High: "สูง",
+  };
+  return labels[value] ?? value;
+}
+
 export default function MultiplayerLobby() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -287,13 +301,13 @@ export default function MultiplayerLobby() {
         <fieldset className="mt-4 grid gap-2 rounded border border-navy-600 p-3">
           <legend className="px-1 font-bold">{copy.tactics}</legend>
           <label>{copy.formation}<input value={formation} onChange={(event) => setFormation(event.target.value)} className="ml-2 rounded bg-navy-800 p-2" /></label>
-          <label>{copy.mentality}<select value={mentality} onChange={(event) => setMentality(event.target.value)} className="ml-2 rounded bg-navy-800 p-2"><option value="balanced">Balanced</option><option value="attacking">Attacking</option><option value="defensive">Defensive</option><option value="possession">Possession</option><option value="counter">Counter</option><option value="high_press">High press</option></select></label>
+          <label>{copy.mentality}<select value={mentality} onChange={(event) => setMentality(event.target.value)} className="ml-2 rounded bg-navy-800 p-2">{["balanced", "attacking", "defensive", "possession", "counter", "high_press"].map((value) => <option key={value} value={value}>{localizedCanonicalLabel(value, thai)}</option>)}</select></label>
           <button type="button" onClick={applyTactics} className="w-fit rounded bg-accent-500 px-3 py-2 font-bold">{copy.applyTactics}</button>
         </fieldset>
         <fieldset className="mt-4 grid gap-2 rounded border border-navy-600 p-3">
           <legend className="px-1 font-bold">{copy.training}</legend>
           <label>{copy.intensity}<input type="range" min="0" max="100" value={trainingIntensity} onChange={(event) => setTrainingIntensity(Number(event.target.value))} className="ml-2 align-middle" /><output className="ml-2">{trainingIntensity}</output></label>
-          <label>{copy.focus}<select value={trainingFocus} onChange={(event) => setTrainingFocus(event.target.value)} className="ml-2 rounded bg-navy-800 p-2"><option value="physical">Physical</option><option value="technical">Technical</option><option value="tactical">Tactical</option><option value="defending">Defending</option><option value="attacking">Attacking</option><option value="recovery">Recovery</option></select></label>
+          <label>{copy.focus}<select value={trainingFocus} onChange={(event) => setTrainingFocus(event.target.value)} className="ml-2 rounded bg-navy-800 p-2">{["physical", "technical", "tactical", "defending", "attacking", "recovery"].map((value) => <option key={value} value={value}>{localizedCanonicalLabel(value, thai)}</option>)}</select></label>
           <button type="button" onClick={applyTraining} className="w-fit rounded bg-accent-500 px-3 py-2 font-bold">{copy.applyTraining}</button>
         </fieldset>
         {liveMatchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
@@ -307,8 +321,8 @@ export default function MultiplayerLobby() {
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
             <dt className="text-gray-300">{copy.date}</dt><dd>{dashboardView.currentDate}</dd>
             <dt className="text-gray-300">{copy.tactics}</dt><dd>{dashboardView.club.formation}</dd>
-            <dt className="text-gray-300">{copy.playStyle}</dt><dd>{dashboardView.club.playStyle}</dd>
-            {dashboardView.training && <><dt className="text-gray-300">{copy.training}</dt><dd>{dashboardView.training.focus} · {dashboardView.training.intensity}</dd></>}
+            <dt className="text-gray-300">{copy.playStyle}</dt><dd>{localizedCanonicalLabel(dashboardView.club.playStyle, thai)}</dd>
+            {dashboardView.training && <><dt className="text-gray-300">{copy.training}</dt><dd>{localizedCanonicalLabel(dashboardView.training.focus, thai)} · {localizedCanonicalLabel(dashboardView.training.intensity, thai)}</dd></>}
           </dl>
         </section>}
       </section>}

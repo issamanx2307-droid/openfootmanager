@@ -440,3 +440,7 @@ Phase 10 update: the Thai catalogue now covers the core new-career wizard:
 manager creation, validation errors, world selection, generated-history
 choices and generation progress. The lazy-load regression asserts translated
 keys from each wizard step rather than accepting English fallback text.
+
+Phase 10 update: the private-play lobby now localizes visible tactic and
+training option labels plus the corresponding canonical dashboard values,
+while retaining stable English protocol values in every command payload.
