@@ -314,3 +314,8 @@ Phase 8 update: connection tracking is reference counted per manager, so an
 extra browser tab or transient duplicate socket cannot mark a still-connected
 manager as absent and pause the shared career. The disconnect regression now
 covers both final-socket cleanup and the multi-tab case.
+
+Phase 9 update: reconnect UX now persists only the server URL and issued
+reconnect session token locally. The lobby offers one-click restoration through
+the server's reconnect endpoint and clears stale data on failure; a focused
+browser-storage regression covers save, restore and cleanup.

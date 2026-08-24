@@ -29,6 +29,28 @@ export type AlbionSession = {
   slot: "host" | "guest";
 };
 
+export type AlbionStoredSession = AlbionSession & { server_url: string };
+
+const SESSION_STORAGE_KEY = "albion.active-session.v1";
+
+export function saveAlbionSession(session: AlbionStoredSession): void {
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+export function loadAlbionSession(): AlbionStoredSession | null {
+  try {
+    const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    return stored ? JSON.parse(stored) as AlbionStoredSession : null;
+  } catch {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
+}
+
+export function clearAlbionSession(): void {
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+}
+
 export type AlbionServerEvent = {
   type: string;
   body?: Record<string, unknown>;

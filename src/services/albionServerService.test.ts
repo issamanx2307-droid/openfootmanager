@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { applyAlbionServerEvent } from "./albionServerService";
+import {
+  applyAlbionServerEvent,
+  clearAlbionSession,
+  loadAlbionSession,
+  saveAlbionSession,
+} from "./albionServerService";
 
 describe("applyAlbionServerEvent", () => {
   it("keeps a manager-specific view and advances its authoritative revision", () => {
@@ -24,5 +29,19 @@ describe("applyAlbionServerEvent", () => {
       body: { current_revision: 7 },
     });
     expect(cache.revision).toBe(7);
+  });
+});
+
+describe("Albion session storage", () => {
+  it("restores the reconnect token and can clear it", () => {
+    clearAlbionSession();
+    saveAlbionSession({
+      server_url: "http://127.0.0.1:38421",
+      career_id: "career", manager_id: "manager", reconnect_token: "token",
+      current_revision: 3, slot: "host",
+    });
+    expect(loadAlbionSession()?.reconnect_token).toBe("token");
+    clearAlbionSession();
+    expect(loadAlbionSession()).toBeNull();
   });
 });

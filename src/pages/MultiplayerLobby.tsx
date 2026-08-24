@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { startAlbionHost, stopAlbionHost } from "../services/albionHostService";
-import { AlbionServerClient, type AlbionSession } from "../services/albionServerService";
+import {
+  AlbionServerClient,
+  clearAlbionSession,
+  loadAlbionSession,
+  saveAlbionSession,
+  type AlbionSession,
+} from "../services/albionServerService";
 import { useGameStore } from "../store/gameStore";
 
 export default function MultiplayerLobby() {
@@ -22,7 +28,13 @@ export default function MultiplayerLobby() {
     if (hostedHere.current) void stopAlbionHost();
   }, []);
 
-  if (!game?.manager.team_id) {
+  useEffect(() => {
+    const stored = loadAlbionSession();
+    if (stored) setServerUrl(stored.server_url);
+  }, []);
+
+  const managerClubId = game?.manager.team_id;
+  if (!game || !managerClubId) {
     return <main className="min-h-screen p-8 bg-navy-900 text-white">ต้องเปิด career และเลือกสโมสรก่อนเริ่มเล่นร่วมกัน</main>;
   }
 
@@ -31,13 +43,14 @@ export default function MultiplayerLobby() {
     const joined = await client.current.join(url, {
       join_secret: joinSecret,
       manager_id: game.manager.id,
-      club_id: game.manager.team_id,
+      club_id: managerClubId,
       client_versions: versions,
     });
     client.current.connect(url, joined, (event, cache) => {
       if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
       if (event.type === "CommandRejected") setMessage("คำสั่งถูกปฏิเสธ: กรุณารีเฟรชข้อมูลแล้วลองใหม่");
     });
+    saveAlbionSession({ ...joined, server_url: url });
     setSession(joined);
     setMessage(`เชื่อมต่อแล้วในฐานะ ${joined.slot === "host" ? "โฮสต์" : "ผู้ร่วมเล่น"}`);
   };
@@ -67,6 +80,26 @@ export default function MultiplayerLobby() {
     }
   };
 
+  const reconnect = async () => {
+    const stored = loadAlbionSession();
+    if (!stored) return;
+    setBusy(true);
+    try {
+      const versions = await client.current.version(stored.server_url);
+      const restored = await client.current.reconnect(stored.server_url, stored.reconnect_token, versions);
+      client.current.connect(stored.server_url, restored, (event, cache) => {
+        if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
+      });
+      setSession(restored);
+      setMessage("เชื่อมต่อ session เดิมสำเร็จ");
+    } catch {
+      clearAlbionSession();
+      setMessage("session เดิมหมดอายุหรือเซิร์ฟเวอร์ไม่พร้อม กรุณาเข้าร่วมใหม่");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return <main className="min-h-screen bg-navy-900 text-white p-6 sm:p-10">
     <div className="mx-auto max-w-xl space-y-5 rounded-2xl bg-navy-800 p-6 shadow-xl">
       <button type="button" onClick={() => navigate("/dashboard")} className="text-accent-300 hover:text-accent-100">← กลับสู่สโมสร</button>
@@ -81,6 +114,7 @@ export default function MultiplayerLobby() {
       <div className="flex gap-3">
         <button type="button" disabled={busy || !joinSecret} onClick={() => void host()} className="rounded bg-primary-500 px-4 py-3 font-bold disabled:opacity-50">เป็นโฮสต์</button>
         <button type="button" disabled={busy || !joinSecret || !serverUrl} onClick={() => void join()} className="rounded bg-accent-500 px-4 py-3 font-bold disabled:opacity-50">เข้าร่วม</button>
+        {loadAlbionSession() && <button type="button" disabled={busy} onClick={() => void reconnect()} className="rounded bg-navy-600 px-4 py-3 font-bold disabled:opacity-50">เชื่อมต่อเดิม</button>}
       </div>
       {session && <section className="rounded bg-navy-700 p-4" aria-live="polite">
         <p>เชื่อมต่อสำเร็จ · revision {session.current_revision}</p>
