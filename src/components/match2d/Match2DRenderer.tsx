@@ -13,6 +13,7 @@ type Match2DRendererProps = {
   reducedMotion?: boolean;
   showNames?: boolean;
   showRoleLabels?: boolean;
+  showFormationShape?: boolean;
   /** A viewer-selected server event. This changes presentation playback only. */
   replayEvent?: MatchEvent | null;
   cameraMode?: CameraMode;
@@ -175,6 +176,29 @@ function drawPlayer(
   context.restore();
 }
 
+function drawFormationShape(context: CanvasRenderingContext2D, players: readonly PresentationPlayer[], width: number, height: number, homeColor: string, awayColor: string): void {
+  for (const side of ["Home", "Away"] as const) {
+    const team = players.filter((player) => player.side === side && !player.goalkeeper);
+    context.save();
+    context.strokeStyle = side === "Home" ? homeColor : awayColor;
+    context.globalAlpha = 0.4;
+    context.lineWidth = 1.5;
+    team.forEach((player, index) => {
+      const nearest = team.slice(index + 1).reduce<PresentationPlayer | null>((candidate, other) => {
+        if (!candidate) return other;
+        const currentDistance = (candidate.point.x - player.point.x) ** 2 + (candidate.point.y - player.point.y) ** 2;
+        const nextDistance = (other.point.x - player.point.x) ** 2 + (other.point.y - player.point.y) ** 2;
+        return nextDistance < currentDistance ? other : candidate;
+      }, null);
+      if (!nearest) return;
+      const [x1, y1] = toCanvas(player.point, width, height);
+      const [x2, y2] = toCanvas(nearest.point, width, height);
+      context.beginPath(); context.moveTo(x1, y1); context.lineTo(x2, y2); context.stroke();
+    });
+    context.restore();
+  }
+}
+
 /** Development-only shape and movement guides. They remain wholly visual. */
 function drawDebugPitchGuides(
   context: CanvasRenderingContext2D,
@@ -247,6 +271,7 @@ export default function Match2DRenderer({
   reducedMotion = false,
   showNames = false,
   showRoleLabels = false,
+  showFormationShape = false,
   replayEvent = null,
   cameraMode = "full",
   zoom = MATCH_2D_CONFIG.camera.minZoom,
@@ -333,6 +358,7 @@ export default function Match2DRenderer({
           status.injured,
         );
       });
+      if (showFormationShape) drawFormationShape(context, frame.players, pitchViewport.width, pitchViewport.height, homeColor, awayColor);
       const [ballX, ballY] = toCanvas(frame.ball, pitchViewport.width, pitchViewport.height);
       if (frame.activeClip && frame.ballTrajectory !== "ground") {
         const [fromX, fromY] = toCanvas(frame.activeClip.ballFrom, pitchViewport.width, pitchViewport.height);
@@ -375,7 +401,7 @@ export default function Match2DRenderer({
       cancelAnimationFrame(frameId);
       observer.disconnect();
     };
-  }, [awayColor, cameraMode, eventLabel, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showNames, showRoleLabels, snapshot, speed, zoom]);
+  }, [awayColor, cameraMode, eventLabel, highlightMode, homeColor, onRendererUnavailable, playerNumbers, reducedMotion, replayEvent, showFormationShape, showNames, showRoleLabels, snapshot, speed, zoom]);
 
   return <canvas ref={canvasRef} aria-label={ariaLabel} className="block h-full min-h-80 w-full bg-slate-950" />;
 }

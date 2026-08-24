@@ -18,6 +18,7 @@ export interface AppSettings {
   match_highlight_mode: "key" | "extended" | "full";
   show_match_player_names: boolean;
   show_match_role_labels: boolean;
+  show_match_formation_shape: boolean;
 }
 
 export interface CurrencyDefinition {
@@ -49,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   match_highlight_mode: "full",
   show_match_player_names: false,
   show_match_role_labels: false,
+  show_match_formation_shape: false,
 };
 
 const DEFAULT_CURRENCY: CurrencyDefinition = {

@@ -35,6 +35,8 @@ pub struct AppSettings {
     pub show_match_player_names: bool,
     #[serde(default)]
     pub show_match_role_labels: bool,
+    #[serde(default)]
+    pub show_match_formation_shape: bool,
     /// When true, the Continue button rolls forward several days until the next
     /// event (user match, blocker, transfer deadline, high-priority inbox).
     #[serde(default)]
@@ -75,6 +77,7 @@ impl Default for AppSettings {
             match_highlight_mode: default_match_highlight_mode(),
             show_match_player_names: false,
             show_match_role_labels: false,
+            show_match_formation_shape: false,
             continue_to_next_event: false,
         }
     }

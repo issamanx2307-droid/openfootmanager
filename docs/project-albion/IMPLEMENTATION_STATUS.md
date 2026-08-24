@@ -684,3 +684,10 @@ before requesting native manager profiles, active-game state or an event
 listener. This keeps the desktop implementation unchanged while preventing
 browser-demo unhandled Tauri API rejections. The Main Menu regression suite
 passes 34 tests, and a local browser startup check reports no console errors.
+
+2D tactical-readability update: the Match Centre now has a persisted local
+toggle for a formation-shape overlay. It draws subtle nearest-neighbour lines
+between each side's authoritative active outfield markers, so a confirmed
+formation or red-card shape change is easier to read without creating a new
+tactical state. The preference is stored in browser/Tauri settings only and
+never crosses the match command boundary.

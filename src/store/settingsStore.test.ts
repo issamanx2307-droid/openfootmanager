@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   match_highlight_mode: "full",
   show_match_player_names: false,
   show_match_role_labels: false,
+  show_match_formation_shape: false,
 } as const;
 
 const SUPPORTED_CURRENCIES = [
@@ -164,6 +165,7 @@ describe("useSettingsStore", () => {
       match_highlight_mode: "key",
       show_match_player_names: true,
       show_match_role_labels: true,
+      show_match_formation_shape: true,
     });
 
     expect(useSettingsStore.getState().settings).toMatchObject({
@@ -171,6 +173,7 @@ describe("useSettingsStore", () => {
       match_highlight_mode: "key",
       show_match_player_names: true,
       show_match_role_labels: true,
+      show_match_formation_shape: true,
       match_speed: "normal",
     });
   });
