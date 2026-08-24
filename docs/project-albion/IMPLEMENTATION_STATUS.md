@@ -91,7 +91,7 @@ its working tree untouched.
 | 6 | Albion match engine v1 | DONE |
 | 7 | AI managers | DONE |
 | 8 | Authoritative server | IN PROGRESS |
-| 9 | Desktop client migration | NOT STARTED |
+| 9 | Desktop client migration | IN PROGRESS |
 | 10 | Thai + accessibility | NOT STARTED |
 | 11 | Production snapshot | BLOCKED (external data pending) |
 | 12 | Balance, soak, hardening | NOT STARTED |
@@ -275,3 +275,10 @@ Phase 8 update: WebSocket connection state now implements the default disconnect
 policy: a disconnected manager loses Ready status, advancement waits for both
 managers to reconnect and re-ready, and any live fixture controlled by a
 disconnected human pauses rather than silently assigning AI takeover.
+
+Phase 9 progress: the React client now has an `albionServerService` transport
+boundary for server join/reconnect, typed WebSocket events and command envelopes.
+It keeps only manager-specific view snapshots and the server revision in its
+cache; it never treats frontend state as authoritative. Focused tests cover
+snapshot/revision updates and stale-revision resync behavior. Existing Tauri
+screens have not yet been switched over, so Phase 9 remains in progress.
