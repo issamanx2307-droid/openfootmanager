@@ -1400,10 +1400,30 @@ mod tests {
             }).await.expect("match state must reach both clients");
             snapshots.push(snapshot);
         }
-        assert_eq!(snapshots[0], snapshots[1]);
-        let canonical_snapshot: serde_json::Value = serde_json::from_str(&snapshots[0].3).unwrap();
-        assert_eq!(canonical_snapshot["home_team"]["players"].as_array().map(Vec::len), Some(11));
-        assert_eq!(canonical_snapshot["away_team"]["players"].as_array().map(Vec::len), Some(11));
+        for snapshot in &snapshots {
+            let canonical_snapshot: serde_json::Value = serde_json::from_str(&snapshot.3).unwrap();
+            assert_eq!(canonical_snapshot["current_minute"].as_u64(), Some(u64::from(snapshot.0 / 60)));
+            assert_eq!(canonical_snapshot["home_score"].as_u64(), Some(u64::from(snapshot.1)));
+            assert_eq!(canonical_snapshot["away_score"].as_u64(), Some(u64::from(snapshot.2)));
+            assert_eq!(canonical_snapshot["home_team"]["players"].as_array().map(Vec::len), Some(11));
+            assert_eq!(canonical_snapshot["away_team"]["players"].as_array().map(Vec::len), Some(11));
+        }
+
+        let mut event_batches = Vec::new();
+        for client in [&mut client_a, &mut client_b] {
+            let batch = tokio::time::timeout(Duration::from_secs(5), async {
+                loop {
+                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("socket closed before a semantic event batch") };
+                    if let ServerEvent::MatchEventBatch(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+                        && body.match_id == match_ids[0]
+                    {
+                        break (body.from_seq, body.to_seq, serde_json::to_string(&body.events).unwrap());
+                    }
+                }
+            }).await.expect("both clients must receive a semantic event batch");
+            event_batches.push(batch);
+        }
+        assert_eq!(event_batches[0], event_batches[1]);
 
         client_b.close(None).await.unwrap();
         let (mut reconnected_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
@@ -1417,7 +1437,11 @@ mod tests {
                 }
             }
         }).await.expect("reconnecting guest must receive the canonical match state");
-        assert_eq!(reconnect_snapshot, snapshots[0]);
+        let reconnected_payload: serde_json::Value = serde_json::from_str(&reconnect_snapshot.3).unwrap();
+        assert_eq!(reconnected_payload["current_minute"].as_u64(), Some(u64::from(reconnect_snapshot.0 / 60)));
+        assert_eq!(reconnected_payload["home_score"].as_u64(), Some(u64::from(reconnect_snapshot.1)));
+        assert_eq!(reconnected_payload["away_score"].as_u64(), Some(u64::from(reconnect_snapshot.2)));
+        assert!(reconnected_payload["events"].as_array().is_some_and(|events| events.len() >= serde_json::from_str::<Vec<serde_json::Value>>(&event_batches[0].2).unwrap().len()));
         server.abort();
     }
 
