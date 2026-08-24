@@ -442,6 +442,11 @@ message summaries in the lobby. The manager-specific server filter exposes
 only messages for the controlled club (plus global messages), with a
 regression proving another club's private message is omitted.
 
+Phase 9 update: when a manager joins or reconnects, the lobby now initializes
+its tactic formation, approach and training form controls from the canonical
+dashboard snapshot rather than client defaults. Subsequent commands still use
+the stable protocol values derived from those server values.
+
 Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin

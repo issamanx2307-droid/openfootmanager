@@ -89,6 +89,10 @@ function localizedCanonicalLabel(value: string, thai: boolean): string {
   return labels[value] ?? value;
 }
 
+function canonicalProtocolValue(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+}
+
 export default function MultiplayerLobby() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -157,6 +161,18 @@ export default function MultiplayerLobby() {
     const stored = loadAlbionSession();
     if (stored) setServerUrl(stored.server_url);
   }, []);
+
+  useEffect(() => {
+    const view = readManagerDashboard(dashboard);
+    if (!view) return;
+    setFormation(view.club.formation);
+    setMentality(canonicalProtocolValue(view.club.playStyle));
+    if (view.training) {
+      setTrainingFocus(canonicalProtocolValue(view.training.focus));
+      const intensityByCanonicalValue: Record<string, number> = { Low: 20, Medium: 60, High: 80 };
+      setTrainingIntensity(intensityByCanonicalValue[view.training.intensity] ?? 60);
+    }
+  }, [dashboard]);
 
   const managerClubId = game?.manager.team_id;
   if (!game || !managerClubId) {
