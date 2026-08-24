@@ -332,9 +332,18 @@ export function presentationFrame(
       y: activeClip.ballFrom.y + (activeClip.ballTo.y - activeClip.ballFrom.y) * eased,
     };
   const shapedPlayers = applyContextualTeamShape(players, activeClip, ball, eased);
+  const semanticPlayers = applySemanticPlayerMovement(shapedPlayers, activeClip, ball, eased);
+  // A dribble is controlled possession, not a second independent ball path.
+  // Keep the rendered ball close to the authoritative actor marker while the
+  // underlying zone-to-zone interpolation remains available for every other
+  // event type.
+  const actor = activeClip.event.event_type === "Dribble"
+    ? semanticPlayers.find((player) => player.id === activeClip.event.player_id)
+    : undefined;
+  const presentationBall = actor ? moveTowards(actor.point, ball, 0.15) : ball;
   return {
-    players: applySemanticPlayerMovement(shapedPlayers, activeClip, ball, eased),
-    ball,
+    players: semanticPlayers,
+    ball: presentationBall,
     activeClip,
     ballTrajectory: trajectoryForEvent(activeClip.event),
     ballState: ballStateForEvent(activeClip.event),

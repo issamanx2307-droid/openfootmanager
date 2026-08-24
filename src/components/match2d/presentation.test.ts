@@ -124,6 +124,21 @@ describe("2D match presentation", () => {
     expect(mid.players.find((item) => item.id === "gk")?.point).toEqual(start.players.find((item) => item.id === "gk")?.point);
   });
 
+  it("keeps the ball close to its authoritative dribble actor", () => {
+    const players = [player("gk", "Goalkeeper"), player("runner", "Forward")];
+    const input = {
+      home_team: { id: "home", name: "Home", formation: "4-3-3", play_style: "Balanced", players },
+      away_team: { id: "away", name: "Away", formation: "4-3-3", play_style: "Balanced", players: [player("away-gk", "Goalkeeper")] },
+      sent_off: [], ball_zone: "MidfieldCentre", current_minute: 20,
+      events: [{ ...event(10, "Dribble", "Home", "AttackingCentre"), player_id: "runner" }],
+    };
+    const live = presentationFrame(input, 280);
+    const runner = live.players.find((item) => item.id === "runner")!;
+    const distanceToBall = Math.hypot(runner.point.x - live.ball.x, runner.point.y - live.ball.y);
+
+    expect(distanceToBall).toBeLessThan(0.05);
+  });
+
   it("brings the authoritative incoming substitute on from the touchline", () => {
     const incoming = player("incoming", "Forward");
     const input = {

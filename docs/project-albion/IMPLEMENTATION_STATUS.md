@@ -741,3 +741,8 @@ controlled, passing, crossing, shot, loose, save, restart, penalty and
 out-of-play ball states. Distinct colour/ring treatment makes saves, restarts,
 penalties and shots that leave play readable while retaining the existing
 event-derived trajectory. No physics or game state is added to the client.
+
+2D dribble update: a dribble now renders the ball close to the authoritative
+actor marker throughout the clip, instead of looking like a separate zone-only
+object. The same deterministic event interpolation remains the source of the
+movement; focused coverage constrains the rendered ball-to-actor distance.
