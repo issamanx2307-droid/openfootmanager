@@ -102,6 +102,10 @@
     "packageVersion": "v{{version}}"
   },
   "generation": { "title": "สร้างและเตรียมโลก", "coverage": "แพ็กเกจของคุณครอบคลุม" },
+  "continueMenu": { "goToField": "ไปสนาม", "goToFieldDesc": "ควบคุมการแข่งขันเต็มรูปแบบ (ค่าเริ่มต้น)", "watchSpectator": "ชมในฐานะผู้ชม", "watchSpectatorDesc": "ชมการแข่งขันโดยไม่มีการควบคุม", "delegateAssistant": "มอบหมายผู้ช่วย", "delegateAssistantDesc": "AI จัดการทุกอย่างทันที", "skipToMatchDay": "ข้ามไปวันแข่งขัน", "skipToMatchDayDesc": "ข้ามเวลาไปยังนัดถัดไป", "matchDayTitle": "วันแข่งขัน", "delegateWarning": "ผู้ช่วยของคุณจะจัดการการแข่งขัน คุณจะไม่สามารถแทรกแซงได้" },
+  "exitConfirm": { "title": "ออกสู่เมนูหลัก?", "message": "เกมจะบันทึกอัตโนมัติก่อนกลับสู่เมนูหลัก", "cancel": "ยกเลิก", "saveExit": "บันทึกและออก", "savingTitle": "กำลังบันทึกเกม...", "savingMessage": "กรุณารอระหว่างบันทึกความคืบหน้าและกลับสู่เมนูหลัก" },
+  "closeConfirm": { "title": "มีการเปลี่ยนแปลงที่ยังไม่บันทึก", "message": "คุณมีการเปลี่ยนแปลงที่ยังไม่บันทึก ต้องการทำอะไร?", "saveQuit": "บันทึกและออก", "quitNoSave": "ออกโดยไม่บันทึก" },
+  "onboarding": { "title": "เริ่มต้นเล่น", "description": "ทำตามขั้นตอนเหล่านี้เพื่อเตรียมทีมสำหรับฤดูกาลใหม่ ทีมงานช่วยพัฒนาการฝึกและการฟื้นฟู", "reviewSquad": "ตรวจทีม", "reviewSquadDesc": "ดูสถิติ สภาพ และลักษณะนักเตะ", "hireStaff": "จ้างทีมงาน", "hireStaffDesc": "ทีมงานเพิ่มคุณภาพการฝึกและการฟื้นฟู — จ้างโค้ชและนักกายภาพ", "setTactics": "ตั้งแผนและแท็กติก", "setTacticsDesc": "เลือกแผนและแนวทางที่เหมาะกับทีม", "configTraining": "กำหนดการฝึก", "configTrainingDesc": "เลือกจุดเน้นและตารางเพื่อพัฒนานักเตะ", "readMessages": "อ่านข้อความ", "readMessagesDesc": "ข้อมูลสำคัญจากบอร์ดและทีมงานกำลังรอคุณ" },
   "dashboard": {
     "home": "หน้าแรก",
     "inbox": "กล่องข้อความ",
