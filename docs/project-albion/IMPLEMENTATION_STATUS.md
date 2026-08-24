@@ -761,3 +761,8 @@ successfully. It ran the strict TypeScript build, Vite production build and
 Rust/Tauri link, producing `src-tauri/target/debug/openfootmanager.exe`. This
 confirms the desktop client can be built from the current branch; it does not
 replace the remaining two-native-client visual acceptance scenario.
+
+Native smoke update: the freshly built debug executable was launched in a
+local smoke check, remained running for five seconds, and was then cleanly
+stopped. This verifies basic desktop process startup in addition to build
+linking; live host/guest visual QA remains a separate acceptance requirement.
