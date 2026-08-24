@@ -17,7 +17,8 @@ type ManagerDashboard = {
   currentDate: string;
   club: { id: string; name: string; finance: number; formation: string; playStyle: string };
   training?: { focus: string; intensity: string };
-  nextFixture?: { date: string; competition: string; homeTeam: string; awayTeam: string };
+  nextFixture?: { id: string; date: string; competition: string; homeTeam: string; awayTeam: string };
+  startingXiPlayerIds: string[];
   squad: Array<{ id: string; name: string; position: string; condition: number; injured: boolean }>;
   inbox: Array<{ id: string; subject: string; sender: string; date: string; read: boolean; priority: string }>;
   incomingTransferOffers: Array<{ offerId: string; playerName: string; fromClub: string; fee: number }>;
@@ -38,6 +39,7 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
     : undefined;
   const fixtureRecord = record.nextFixture;
   const nextFixture = fixtureRecord && typeof fixtureRecord === "object"
+    && typeof (fixtureRecord as Record<string, unknown>).id === "string"
     && typeof (fixtureRecord as Record<string, unknown>).date === "string"
     && typeof (fixtureRecord as Record<string, unknown>).competition === "string"
     && typeof (fixtureRecord as Record<string, unknown>).homeTeam === "string"
@@ -52,6 +54,9 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
       ? [{ id: player.id, name: player.name, position: player.position, condition: player.condition, injured: player.injured }]
       : [];
   }) : [];
+  const startingXiPlayerIds = Array.isArray(record.startingXiPlayerIds)
+    ? record.startingXiPlayerIds.filter((id): id is string => typeof id === "string")
+    : [];
   const inbox = Array.isArray(record.inbox) ? record.inbox.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const message = item as Record<string, unknown>;
@@ -67,7 +72,7 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
       ? [{ offerId: offer.offerId, playerName: offer.playerName, fromClub: offer.fromClub, fee: offer.fee }]
       : [];
   }) : [];
-  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, finance: clubRecord.finance, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad, inbox, incomingTransferOffers };
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, finance: clubRecord.finance, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, startingXiPlayerIds, squad, inbox, incomingTransferOffers };
 }
 
 function applyDashboardDelta(value: unknown, changes: unknown): unknown {
@@ -80,6 +85,9 @@ function applyDashboardDelta(value: unknown, changes: unknown): unknown {
   if (typeof delta.mentality === "string") next.club.playStyle = delta.mentality;
   if (typeof delta.teamFocus === "string") next.training = { focus: delta.teamFocus, intensity: next.training?.intensity ?? "" };
   if (typeof delta.weeklyIntensity === "number") next.training = { focus: next.training?.focus ?? "", intensity: String(delta.weeklyIntensity) };
+  if (Array.isArray(delta.playerIds) && delta.playerIds.every((id) => typeof id === "string")) {
+    next.startingXiPlayerIds = delta.playerIds;
+  }
   if (typeof delta.offerId === "string") {
     next.incomingTransferOffers = next.incomingTransferOffers.filter((offer) => offer.offerId !== delta.offerId);
   }
@@ -124,7 +132,7 @@ export default function MultiplayerLobby() {
     clubView: "ข้อมูลสโมสรจากเซิร์ฟเวอร์", date: "วันในเกม", playStyle: "แนวทาง",
     finance: "การเงิน",
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
-    squad: "ทีมของฉัน", noPlayers: "ยังไม่มีข้อมูลนักเตะ",
+    squad: "ทีมของฉัน", noPlayers: "ยังไม่มีข้อมูลนักเตะ", startingXi: "11 ตัวจริง", selected: "เลือกแล้ว", saveStartingXi: "บันทึก 11 ตัวจริง", startingXiSent: "ส่ง 11 ตัวจริงไปยังเซิร์ฟเวอร์แล้ว", selectEleven: "กรุณาเลือกนักเตะ 11 คนที่พร้อมลงเล่น",
     inbox: "กล่องข้อความ", noMessages: "ยังไม่มีข้อความ",
     transferOffers: "ข้อเสนอซื้อ", accept: "รับข้อเสนอ", reject: "ปฏิเสธ", transferResponseSent: "ส่งคำตอบข้อเสนอแล้ว",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
@@ -144,7 +152,7 @@ export default function MultiplayerLobby() {
     clubView: "Server club view", date: "Game date", playStyle: "Approach",
     finance: "Finances",
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
-    squad: "My squad", noPlayers: "No player data available",
+    squad: "My squad", noPlayers: "No player data available", startingXi: "Starting XI", selected: "selected", saveStartingXi: "Save starting XI", startingXiSent: "Starting XI sent to the server.", selectEleven: "Select exactly 11 fit players first.",
     inbox: "Inbox", noMessages: "No messages",
     transferOffers: "Transfer offers", accept: "Accept offer", reject: "Reject", transferResponseSent: "Transfer response sent.",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
@@ -162,6 +170,7 @@ export default function MultiplayerLobby() {
   const [mentality, setMentality] = useState("balanced");
   const [trainingIntensity, setTrainingIntensity] = useState(60);
   const [trainingFocus, setTrainingFocus] = useState("tactical");
+  const [startingXiPlayerIds, setStartingXiPlayerIds] = useState<string[]>([]);
   const [liveMatchId, setLiveMatchId] = useState<string | null>(null);
   const [liveState, setLiveState] = useState<{ phase: string; second: number; home: number; away: number } | null>(null);
   const [liveEvents, setLiveEvents] = useState<string[]>([]);
@@ -187,6 +196,7 @@ export default function MultiplayerLobby() {
       const intensityByCanonicalValue: Record<string, number> = { Low: 20, Medium: 60, High: 80 };
       setTrainingIntensity(intensityByCanonicalValue[view.training.intensity] ?? 60);
     }
+    setStartingXiPlayerIds(view.startingXiPlayerIds);
   }, [dashboard]);
 
   const managerClubId = game?.manager.team_id;
@@ -327,6 +337,28 @@ export default function MultiplayerLobby() {
     }
   };
 
+  const toggleStartingXiPlayer = (playerId: string) => {
+    setStartingXiPlayerIds((selected) => selected.includes(playerId)
+      ? selected.filter((id) => id !== playerId)
+      : selected.length < 11 ? [...selected, playerId] : selected);
+  };
+
+  const applyStartingXi = () => {
+    if (!session || !dashboardView?.nextFixture) return;
+    if (startingXiPlayerIds.length !== 11) {
+      setMessage(copy.selectEleven);
+      return;
+    }
+    try {
+      client.current.sendCommand(session, {
+        SetStartingXi: { fixture_id: dashboardView.nextFixture.id, player_ids: startingXiPlayerIds, formation },
+      });
+      setMessage(copy.startingXiSent);
+    } catch {
+      setMessage(copy.disconnected);
+    }
+  };
+
   const applyLiveFormation = () => {
     if (!session || !liveMatchId) return;
     try {
@@ -406,9 +438,9 @@ export default function MultiplayerLobby() {
               : <p className="text-gray-300">{copy.noFixture}</p>}
           </div>
           <div className="mt-3 border-t border-navy-600 pt-3 text-sm">
-            <p className="font-semibold">{copy.squad}</p>
+            <p className="font-semibold">{copy.squad} · {copy.startingXi}: {startingXiPlayerIds.length}/11 {copy.selected}</p>
             {dashboardView.squad.length > 0
-              ? <ul className="mt-1 divide-y divide-navy-600">{dashboardView.squad.map((player) => <li key={player.id} className="flex justify-between py-1"><span>{player.name} · {player.position}</span><span>{player.injured ? "⚠" : `${player.condition}%`}</span></li>)}</ul>
+              ? <><ul className="mt-1 divide-y divide-navy-600">{dashboardView.squad.map((player) => <li key={player.id} className="flex justify-between py-1"><label className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={startingXiPlayerIds.includes(player.id)} disabled={player.injured || (!startingXiPlayerIds.includes(player.id) && startingXiPlayerIds.length >= 11)} onChange={() => toggleStartingXiPlayer(player.id)} /><span>{player.name} · {player.position}</span></label><span>{player.injured ? "⚠" : `${player.condition}%`}</span></li>)}</ul>{dashboardView.nextFixture && <button type="button" onClick={applyStartingXi} disabled={startingXiPlayerIds.length !== 11} className="mt-2 rounded bg-accent-500 px-3 py-2 font-bold disabled:opacity-50">{copy.saveStartingXi}</button>}</>
               : <p className="text-gray-300">{copy.noPlayers}</p>}
           </div>
           <div className="mt-3 border-t border-navy-600 pt-3 text-sm">

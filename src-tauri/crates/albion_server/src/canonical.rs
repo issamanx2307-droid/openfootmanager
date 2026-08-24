@@ -127,6 +127,7 @@ impl CanonicalCareer {
                 "intensity": format!("{:?}", team.training_intensity),
             },
             "nextFixture": next_fixture,
+            "startingXiPlayerIds": team.starting_xi_ids,
             "squad": squad,
             "inbox": inbox,
             "incomingTransferOffers": incoming_transfer_offers,
@@ -299,7 +300,12 @@ impl CanonicalCareer {
             .ok_or(ErrorCode::AuthInvalid)?;
         team.formation = body.formation.clone();
         team.starting_xi_ids = selected_ids;
-        Ok(json!({ "teamId": team.id, "fixtureId": body.fixture_id, "startingXiSet": true }))
+        Ok(json!({
+            "teamId": team.id,
+            "fixtureId": body.fixture_id,
+            "playerIds": team.starting_xi_ids,
+            "startingXiSet": true,
+        }))
     }
 
     fn set_training_plan(
@@ -572,6 +578,7 @@ mod tests {
         assert!(view["training"]["intensity"].is_string());
         assert_eq!(view["nextFixture"]["date"], "2026-07-08");
         assert_eq!(view["nextFixture"]["competition"], "Test League");
+        assert!(view["startingXiPlayerIds"].is_array());
         assert!(view.get("players").is_none());
         assert!(view.get("managers").is_none());
     }
