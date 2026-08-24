@@ -380,3 +380,9 @@ command dispatcher (accept, reject and counter), locating the offer only on
 the acting manager's club before calling the existing transfer rules. Focused
 coverage creates a real incoming offer and verifies a canonical rejection is
 persisted in the player offer state.
+
+Phase 8 update: a full human-v-human live coordinator regression now proves
+the disconnect policy: after both managers open a canonical live fixture, a
+disconnected manager prevents ticks/events; reconnecting that manager allows
+the same match to advance again. This covers the live pause behavior rather
+than only the Ready-barrier side of disconnect handling.

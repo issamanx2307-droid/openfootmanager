@@ -971,6 +971,29 @@ mod tests {
     }
 
     #[test]
+    fn human_live_match_pauses_until_the_disconnected_manager_returns() {
+        let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
+        let mut session = CareerSession::new(
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+        );
+        session.join(join_request(manager_a, club_a)).unwrap();
+        session.join(join_request(manager_b, club_b)).unwrap();
+        session.manager_connected(manager_a);
+        session.manager_connected(manager_b);
+        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
+        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        assert_eq!(session.live_matches.len(), 1);
+
+        session.manager_disconnected(manager_b);
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        assert!(session.tick_live_matches().is_empty());
+
+        session.manager_connected(manager_b);
+        session.last_live_tick = Instant::now() - Duration::from_millis(501);
+        assert!(session.tick_live_matches().iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+    }
+
+    #[test]
     fn restart_restores_claim_and_reconnect_token_from_sqlite() {
         let directory = tempdir().unwrap();
         let path = directory.path().join("albion.db");
