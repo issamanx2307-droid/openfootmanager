@@ -447,6 +447,12 @@ its tactic formation, approach and training form controls from the canonical
 dashboard snapshot rather than client defaults. Subsequent commands still use
 the stable protocol values derived from those server values.
 
+Phase 9 update: pending incoming transfer offers for the manager's own players
+now appear in the canonical lobby view with accept/reject actions. Those actions
+send `RespondTransferOffer` over the authenticated WebSocket, and the offer is
+removed only after the server's resulting state delta. The canonical regression
+covers offer projection and the existing mutation regression covers rejection.
+
 Phase 10 update: live event batches now receive a fact-only English/Thai
 formatter (minute, engine event type, side), replacing raw JSON in the match
 centre. Focused service tests cover both languages, including mixed Thai/Latin

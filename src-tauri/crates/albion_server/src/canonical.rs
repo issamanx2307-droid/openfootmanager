@@ -96,6 +96,23 @@ impl CanonicalCareer {
                 "priority": format!("{:?}", message.priority),
             }))
             .collect::<Vec<_>>();
+        let incoming_transfer_offers = self.game.players.iter()
+            .filter(|player| player.team_id.as_deref() == Some(team_id.as_str()))
+            .flat_map(|player| player.transfer_offers.iter().filter_map(|offer| {
+                (offer.status == domain::player::TransferOfferStatus::Pending).then(|| {
+                    let buyer_name = self.game.teams.iter()
+                        .find(|candidate| candidate.id == offer.from_team_id)
+                        .map(|candidate| candidate.name.clone())
+                        .unwrap_or_else(|| offer.from_team_id.clone());
+                    json!({
+                        "offerId": offer.id,
+                        "playerName": player.match_name,
+                        "fromClub": buyer_name,
+                        "fee": offer.fee,
+                    })
+                })
+            }))
+            .collect::<Vec<_>>();
         Ok(json!({
             "currentDate": self.game.clock.current_date.format("%Y-%m-%d").to_string(),
             "club": {
@@ -112,6 +129,7 @@ impl CanonicalCareer {
             "nextFixture": next_fixture,
             "squad": squad,
             "inbox": inbox,
+            "incomingTransferOffers": incoming_transfer_offers,
         }))
     }
 
@@ -610,6 +628,9 @@ mod tests {
             status: TransferOfferStatus::Pending, date: "2026-07-01".into(), registration_date: None,
         });
         career.game.players.push(player);
+        let offers = career.manager_dashboard(manager_id).unwrap()["incomingTransferOffers"].as_array().unwrap().clone();
+        assert_eq!(offers.len(), 1);
+        assert_eq!(offers[0]["playerName"], "Player");
 
         career.apply(manager_id, &Command::RespondTransferOffer(RespondTransferOfferBody {
             offer_id, response: TransferOfferResponse::Reject, counter_upfront_minor: None,

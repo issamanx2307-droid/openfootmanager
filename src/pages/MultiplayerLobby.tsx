@@ -20,6 +20,7 @@ type ManagerDashboard = {
   nextFixture?: { date: string; competition: string; homeTeam: string; awayTeam: string };
   squad: Array<{ id: string; name: string; position: string; condition: number; injured: boolean }>;
   inbox: Array<{ id: string; subject: string; sender: string; date: string; read: boolean; priority: string }>;
+  incomingTransferOffers: Array<{ offerId: string; playerName: string; fromClub: string; fee: number }>;
 };
 
 function readManagerDashboard(value: unknown): ManagerDashboard | null {
@@ -59,7 +60,14 @@ function readManagerDashboard(value: unknown): ManagerDashboard | null {
       ? [{ id: message.id, subject: message.subject, sender: message.sender, date: message.date, read: message.read, priority: message.priority }]
       : [];
   }) : [];
-  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad, inbox };
+  const incomingTransferOffers = Array.isArray(record.incomingTransferOffers) ? record.incomingTransferOffers.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const offer = item as Record<string, unknown>;
+    return typeof offer.offerId === "string" && typeof offer.playerName === "string" && typeof offer.fromClub === "string" && typeof offer.fee === "number"
+      ? [{ offerId: offer.offerId, playerName: offer.playerName, fromClub: offer.fromClub, fee: offer.fee }]
+      : [];
+  }) : [];
+  return { currentDate: record.currentDate, club: { id: clubRecord.id, name: clubRecord.name, formation: clubRecord.formation, playStyle: clubRecord.playStyle }, training, nextFixture, squad, inbox, incomingTransferOffers };
 }
 
 function applyDashboardDelta(value: unknown, changes: unknown): unknown {
@@ -72,6 +80,9 @@ function applyDashboardDelta(value: unknown, changes: unknown): unknown {
   if (typeof delta.mentality === "string") next.club.playStyle = delta.mentality;
   if (typeof delta.teamFocus === "string") next.training = { focus: delta.teamFocus, intensity: next.training?.intensity ?? "" };
   if (typeof delta.weeklyIntensity === "number") next.training = { focus: next.training?.focus ?? "", intensity: String(delta.weeklyIntensity) };
+  if (typeof delta.offerId === "string") {
+    next.incomingTransferOffers = next.incomingTransferOffers.filter((offer) => offer.offerId !== delta.offerId);
+  }
   return next;
 }
 
@@ -114,6 +125,7 @@ export default function MultiplayerLobby() {
     nextFixture: "นัดถัดไป", noFixture: "ยังไม่มีนัดที่กำหนด",
     squad: "ทีมของฉัน", noPlayers: "ยังไม่มีข้อมูลนักเตะ",
     inbox: "กล่องข้อความ", noMessages: "ยังไม่มีข้อความ",
+    transferOffers: "ข้อเสนอซื้อ", accept: "รับข้อเสนอ", reject: "ปฏิเสธ", transferResponseSent: "ส่งคำตอบข้อเสนอแล้ว",
     hostHint: "โฮสต์: แทนที่ 127.0.0.1 ด้วย IP LAN หรือ Tailscale ของคุณก่อนส่ง URL ให้เพื่อน",
   } : {
     initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
@@ -132,6 +144,7 @@ export default function MultiplayerLobby() {
     nextFixture: "Next fixture", noFixture: "No scheduled fixture",
     squad: "My squad", noPlayers: "No player data available",
     inbox: "Inbox", noMessages: "No messages",
+    transferOffers: "Transfer offers", accept: "Accept offer", reject: "Reject", transferResponseSent: "Transfer response sent.",
     hostHint: "Host: replace 127.0.0.1 with your LAN or Tailscale IP before sharing the URL.",
   };
   const game = useGameStore((state) => state.gameState);
@@ -327,6 +340,16 @@ export default function MultiplayerLobby() {
     }
   };
 
+  const respondToTransferOffer = (offerId: string, response: "accept" | "reject") => {
+    if (!session) return;
+    try {
+      client.current.sendCommand(session, { RespondTransferOffer: { offer_id: offerId, response } });
+      setMessage(copy.transferResponseSent);
+    } catch {
+      setMessage(copy.disconnected);
+    }
+  };
+
   return <main className="min-h-screen bg-navy-900 text-white p-6 sm:p-10">
     <div className="mx-auto max-w-xl space-y-5 rounded-2xl bg-navy-800 p-6 shadow-xl">
       <button type="button" onClick={() => navigate("/dashboard")} className="text-accent-300 hover:text-accent-100">{copy.back}</button>
@@ -391,6 +414,10 @@ export default function MultiplayerLobby() {
               ? <ul className="mt-1 divide-y divide-navy-600">{dashboardView.inbox.map((message) => <li key={message.id} className="py-1"><span className={message.read ? "" : "font-semibold"}>{message.subject}</span><span className="ml-2 text-xs text-gray-300">{message.sender} · {message.date}</span></li>)}</ul>
               : <p className="text-gray-300">{copy.noMessages}</p>}
           </div>
+          {dashboardView.incomingTransferOffers.length > 0 && <div className="mt-3 border-t border-navy-600 pt-3 text-sm">
+            <p className="font-semibold">{copy.transferOffers}</p>
+            <ul className="mt-1 divide-y divide-navy-600">{dashboardView.incomingTransferOffers.map((offer) => <li key={offer.offerId} className="py-2"><p>{offer.playerName} · {offer.fromClub} · {offer.fee.toLocaleString()}</p><div className="mt-1 flex gap-2"><button type="button" onClick={() => respondToTransferOffer(offer.offerId, "accept")} className="rounded bg-primary-500 px-2 py-1 text-xs">{copy.accept}</button><button type="button" onClick={() => respondToTransferOffer(offer.offerId, "reject")} className="rounded bg-navy-600 px-2 py-1 text-xs">{copy.reject}</button></div></li>)}</ul>
+          </div>}
         </section>}
       </section>}
     </div>
