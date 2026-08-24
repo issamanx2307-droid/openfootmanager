@@ -90,7 +90,7 @@ its working tree untouched.
 | 5 | Core management systems | DONE |
 | 6 | Albion match engine v1 | DONE |
 | 7 | AI managers | DONE |
-| 8 | Authoritative server | IN PROGRESS |
+| 8 | Authoritative server | DONE |
 | 9 | Desktop client migration | IN PROGRESS |
 | 10 | Thai + accessibility | IN PROGRESS |
 | 11 | Production snapshot | BLOCKED (external data pending) |
@@ -400,6 +400,12 @@ live `MatchState` without an AI-side connection or Ready acknowledgement.
 Phase 8 update: the real two-WebSocket canonical-career integration now joins
 both managers, drives both Ready commands and proves each client receives the
 same `MatchOpened` identifier and first streamed `MatchState` clock/score.
+
+Phase 8 completion evidence: `cargo test -p albion_server --quiet` passes 23
+tests. Together they cover HTTP/WebSocket admission and distinct-club claims,
+revision conflict/idempotent retry, Ready barriers, human-v-human and
+human-v-AI live coordination, disconnect pause, reconnect, SQLite restart and
+shared canonical live state observed by two real WebSocket clients.
 
 Phase 9 update: the live match centre now consumes `MatchEventBatch` in
 addition to score/time state, retaining a short canonical event feed with
