@@ -152,6 +152,16 @@
     "collapseSidebar": "ย่อแถบด้านข้าง",
     "expandSidebar": "ขยายแถบด้านข้าง"
   },
+  "match": {
+    "twoD": {
+      "title": "มุมมองแมตช์ 2D", "key": "สำคัญ", "extended": "ขยาย", "full": "ทั้งหมด",
+      "showNames": "แสดงชื่อนักเตะ", "hideNames": "ซ่อนชื่อนักเตะ",
+      "replayLatest": "ดูเหตุการณ์สำคัญล่าสุด", "stopReplay": "กลับสู่ถ่ายทอดสด",
+      "highlights": "ไฮไลต์การแข่งขัน", "fullPitch": "เต็มสนาม", "followBall": "ตามบอล", "zoom": "ซูม",
+      "unavailable": "ไม่สามารถเปิดมุมมอง 2D ได้ ใช้คำบรรยายและสถิติการแข่งขันต่อได้ตามปกติ",
+      "pitch": "สนามการแข่งขันสดแบบ 2D"
+    }
+  },
   "settings": {
     "title": "การตั้งค่า",
     "fplData": "FPL Core Insights",

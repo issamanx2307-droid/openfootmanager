@@ -1891,6 +1891,14 @@
     "fast": "Fast",
     "max": "Max",
     "step1Min": "Step 1 Minute",
+    "twoD": {
+      "title": "2D Match View", "key": "Key", "extended": "Extended", "full": "Full",
+      "showNames": "Show player names", "hideNames": "Hide player names",
+      "replayLatest": "Replay latest highlight", "stopReplay": "Return to live view",
+      "highlights": "Match highlights", "fullPitch": "Full pitch", "followBall": "Follow ball", "zoom": "Zoom",
+      "unavailable": "The 2D view is unavailable. Commentary and match statistics remain available.",
+      "pitch": "2D live match pitch"
+    },
     "teamControls": "Team Controls",
     "subs": "Subs",
     "formation": "Formation",
