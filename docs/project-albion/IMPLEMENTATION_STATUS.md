@@ -270,3 +270,8 @@ the canonical career. On a save-backed server, manager slots, club claims,
 reconnect tokens and the current revision are restored before admission resumes.
 Focused restart coverage creates a real career database, joins a manager, opens
 the same save again and reconnects through the original token.
+
+Phase 8 update: WebSocket connection state now implements the default disconnect
+policy: a disconnected manager loses Ready status, advancement waits for both
+managers to reconnect and re-ready, and any live fixture controlled by a
+disconnected human pauses rather than silently assigning AI takeover.

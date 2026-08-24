@@ -178,6 +178,19 @@ async fn websocket(
 }
 
 async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid) {
+    {
+        let mut session = state.0.lock().expect("career session lock poisoned");
+        session.manager_connected(manager_id);
+    }
+    websocket_session(&mut socket, &state, manager_id).await;
+    state
+        .0
+        .lock()
+        .expect("career session lock poisoned")
+        .manager_disconnected(manager_id);
+}
+
+async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id: Uuid) {
     let hello = {
         let session = state.0.lock().expect("career session lock poisoned");
         ServerEvent::Hello(HelloBody {
@@ -186,7 +199,7 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
             current_revision: session.revision,
         })
     };
-    if send_event(&mut socket, hello).await.is_err() {
+    if send_event(socket, hello).await.is_err() {
         return;
     }
     let manager_view = {
@@ -194,7 +207,7 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
         session.manager_dashboard_event(manager_id)
     };
     if let Some(view) = manager_view
-        && send_event(&mut socket, view).await.is_err()
+        && send_event(socket, view).await.is_err()
     {
         return;
     }
@@ -218,13 +231,13 @@ async fn websocket_loop(mut socket: WebSocket, state: AppState, manager_id: Uuid
                     })],
                 };
                 for event in events {
-                    if send_event(&mut socket, event).await.is_err() { return; }
+                    if send_event(socket, event).await.is_err() { return; }
                 }
             }
             _ = live_tick.tick() => {
                 let events = state.0.lock().expect("career session lock poisoned").tick_live_matches();
                 for event in events {
-                    if send_event(&mut socket, event).await.is_err() { return; }
+                    if send_event(socket, event).await.is_err() { return; }
                 }
             }
         }
@@ -242,6 +255,7 @@ struct CareerSession {
     slots: HashMap<Uuid, ManagerSlot>,
     claimed_clubs: HashMap<Uuid, Uuid>,
     reconnect_tokens: HashMap<String, Uuid>,
+    connected_managers: HashSet<Uuid>,
     completed_commands: HashMap<Uuid, Vec<ServerEvent>>,
     ready_managers: HashSet<Uuid>,
     career: Option<CanonicalCareer>,
@@ -279,6 +293,7 @@ impl CareerSession {
             slots: restored_claims.as_ref().map_or_else(HashMap::new, |claims| claims.slots.clone()),
             claimed_clubs: restored_claims.map_or_else(HashMap::new, |claims| claims.claimed_clubs),
             reconnect_tokens,
+            connected_managers: HashSet::new(),
             completed_commands: HashMap::new(),
             ready_managers: HashSet::new(),
             career,
@@ -360,6 +375,15 @@ impl CareerSession {
             .ok_or_else(|| ApiError::protocol(ErrorCode::AuthInvalid))
     }
 
+    fn manager_connected(&mut self, manager_id: Uuid) {
+        self.connected_managers.insert(manager_id);
+    }
+
+    fn manager_disconnected(&mut self, manager_id: Uuid) {
+        self.connected_managers.remove(&manager_id);
+        self.ready_managers.remove(&manager_id);
+    }
+
     fn persist_session_state(&self) -> Result<(), String> {
         let Some(store) = &self.store else { return Ok(()); };
         let claims = PersistedClaims {
@@ -427,7 +451,9 @@ impl CareerSession {
                     command_id,
                     applied_revision: self.revision,
                 }), self.ready_state_event(manager_id)];
-                if self.ready_managers.len() == self.slots.len() {
+                if self.ready_managers.len() == self.slots.len()
+                    && self.slots.keys().all(|manager_id| self.connected_managers.contains(manager_id))
+                {
                     events.extend(self.advance_ready_barrier());
                 }
                 events
@@ -629,6 +655,10 @@ impl CareerSession {
         let mut events = Vec::new();
         for match_id in match_ids {
             let Some(mut active) = self.live_matches.remove(&match_id) else { continue; };
+            if self.has_disconnected_human_for_match(&active.session) {
+                self.live_matches.insert(match_id, active);
+                continue;
+            }
             let minute = active.session.step();
             let snapshot = active.session.snapshot();
             let event_count = minute.events.len() as u64;
@@ -675,6 +705,14 @@ impl CareerSession {
             }
         }
         events
+    }
+
+    fn has_disconnected_human_for_match(&self, live_match: &LiveMatchSession) -> bool {
+        [live_match.home_team_id.as_str(), live_match.away_team_id.as_str()]
+            .into_iter()
+            .filter_map(|club_id| Uuid::parse_str(club_id).ok())
+            .filter_map(|club_id| self.claimed_clubs.get(&club_id))
+            .any(|manager_id| !self.connected_managers.contains(manager_id))
     }
 }
 
@@ -819,6 +857,21 @@ mod tests {
         assert_eq!(second.applied_revision, 1);
         assert!(matches!(session.apply_command(manager, ready_envelope(&session, manager, command_id))[1], ServerEvent::ReadyStateChanged(_)));
         assert_eq!(session.revision, 1);
+    }
+
+    #[test]
+    fn disconnect_clears_ready_and_blocks_the_ready_barrier() {
+        let mut session = session();
+        let manager = Uuid::new_v4();
+        session.join(join_request(manager, Uuid::new_v4())).unwrap();
+        session.join(join_request(Uuid::new_v4(), Uuid::new_v4())).unwrap();
+        session.manager_connected(manager);
+        session.apply_command(manager, ready_envelope(&session, manager, Uuid::new_v4()));
+        assert!(session.ready_managers.contains(&manager));
+
+        session.manager_disconnected(manager);
+        assert!(!session.ready_managers.contains(&manager));
+        assert!(!session.connected_managers.contains(&manager));
     }
 
     #[test]
