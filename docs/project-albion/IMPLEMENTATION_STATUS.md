@@ -746,3 +746,11 @@ event-derived trajectory. No physics or game state is added to the client.
 actor marker throughout the clip, instead of looking like a separate zone-only
 object. The same deterministic event interpolation remains the source of the
 movement; focused coverage constrains the rendered ball-to-actor distance.
+
+Acceptance verification update: on the current branch, the `albion_server`
+suite passes all 29 tests, including the two-human full-match and reconnect
+snapshot regressions. A local browser startup check at `127.0.0.1:1420` also
+reached the Main Menu without console warnings or errors. The remaining final
+acceptance evidence is visual QA of an actual native host and guest client in
+a shared live fixture; browser demo mode intentionally has no native career
+data and cannot substitute for that scenario.
