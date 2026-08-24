@@ -337,3 +337,8 @@ the routed content target, while Thai-capable system font fallbacks prevent
 Latin-oriented heading fonts from degrading Thai glyphs. Reduced-motion and
 high-contrast handling already present in the shared stylesheet remain in
 effect for the new lobby and routes.
+
+Phase 10 update: the multiplayer core flow now has an English/Thai copy layer
+for all visible lobby actions, session outcomes and ready-barrier feedback.
+This prevents the initial Thai-only lobby from blocking the English acceptance
+flow while the rest of the large legacy locale is translated incrementally.

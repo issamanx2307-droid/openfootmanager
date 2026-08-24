@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { startAlbionHost, stopAlbionHost } from "../services/albionHostService";
 import {
@@ -13,6 +14,24 @@ import { useGameStore } from "../store/gameStore";
 
 export default function MultiplayerLobby() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+  const copy = i18n.language.startsWith("th") ? {
+    initial: "เลือกเป็นโฮสต์หรือเข้าร่วมเกมส่วนตัว", noCareer: "ต้องเปิด career และเลือกสโมสรก่อนเริ่มเล่นร่วมกัน",
+    rejected: "คำสั่งถูกปฏิเสธ: กรุณารีเฟรชข้อมูลแล้วลองใหม่", readyState: "อัปเดตสถานะพร้อมแล้ว รอผู้จัดการอีกฝ่าย",
+    matchOpened: "ถึงวันแข่งขันแล้ว กำลังเปิดศูนย์การแข่งขัน", connected: (slot: string) => `เชื่อมต่อแล้วในฐานะ ${slot === "host" ? "โฮสต์" : "ผู้ร่วมเล่น"}`,
+    hostFailed: "ไม่สามารถเปิดเซิร์ฟเวอร์ได้ ตรวจสอบ save และรหัสเข้าร่วม", joinFailed: "ไม่สามารถเข้าร่วมได้ ตรวจสอบ URL รหัส และเวอร์ชันของเกม",
+    restored: "เชื่อมต่อ session เดิมสำเร็จ", stale: "session เดิมหมดอายุหรือเซิร์ฟเวอร์ไม่พร้อม กรุณาเข้าร่วมใหม่", readySent: "ส่งสถานะพร้อมแล้ว",
+    disconnected: "การเชื่อมต่อขาดหาย กรุณาเชื่อมต่อใหม่", back: "← กลับสู่สโมสร", title: "เล่นร่วมกัน", secret: "รหัสเข้าร่วม",
+    hostUrl: "URL ของโฮสต์", host: "เป็นโฮสต์", join: "เข้าร่วม", reconnect: "เชื่อมต่อเดิม", connectedAt: "เชื่อมต่อสำเร็จ · revision", ready: "พร้อมดำเนินเกม",
+  } : {
+    initial: "Choose to host or join a private game", noCareer: "Open a career and choose a club before playing together",
+    rejected: "Command rejected: refresh the view and try again", readyState: "Ready state updated; waiting for the other manager",
+    matchOpened: "Match day is here. Opening the match centre.", connected: (slot: string) => `Connected as ${slot === "host" ? "host" : "guest"}`,
+    hostFailed: "Could not start the server. Check the save and join code.", joinFailed: "Could not join. Check the URL, code, and game version.",
+    restored: "Previous session restored", stale: "The previous session expired or the server is unavailable. Please join again.", readySent: "Ready status sent.",
+    disconnected: "Connection lost. Please reconnect.", back: "← Back to club", title: "Play Together", secret: "Join code",
+    hostUrl: "Host URL", host: "Host game", join: "Join game", reconnect: "Reconnect", connectedAt: "Connected · revision", ready: "Ready to continue",
+  };
   const game = useGameStore((state) => state.gameState);
   const client = useRef(new AlbionServerClient());
   const hostedHere = useRef(false);
@@ -20,7 +39,7 @@ export default function MultiplayerLobby() {
   const [joinSecret, setJoinSecret] = useState("");
   const [session, setSession] = useState<AlbionSession | null>(null);
   const [dashboard, setDashboard] = useState<unknown>(null);
-  const [message, setMessage] = useState("เลือกเป็นโฮสต์หรือเข้าร่วมเกมส่วนตัว");
+  const [message, setMessage] = useState(copy.initial);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => () => {
@@ -35,7 +54,7 @@ export default function MultiplayerLobby() {
 
   const managerClubId = game?.manager.team_id;
   if (!game || !managerClubId) {
-    return <main className="min-h-screen p-8 bg-navy-900 text-white">ต้องเปิด career และเลือกสโมสรก่อนเริ่มเล่นร่วมกัน</main>;
+    return <main className="min-h-screen p-8 bg-navy-900 text-white">{copy.noCareer}</main>;
   }
 
   const connect = async (url: string) => {
@@ -48,13 +67,13 @@ export default function MultiplayerLobby() {
     });
     client.current.connect(url, joined, (event, cache) => {
       if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
-      if (event.type === "CommandRejected") setMessage("คำสั่งถูกปฏิเสธ: กรุณารีเฟรชข้อมูลแล้วลองใหม่");
-      if (event.type === "ReadyStateChanged") setMessage("อัปเดตสถานะพร้อมแล้ว รอผู้จัดการอีกฝ่าย");
-      if (event.type === "MatchOpened") setMessage("ถึงวันแข่งขันแล้ว กำลังเปิดศูนย์การแข่งขัน");
+      if (event.type === "CommandRejected") setMessage(copy.rejected);
+      if (event.type === "ReadyStateChanged") setMessage(copy.readyState);
+      if (event.type === "MatchOpened") setMessage(copy.matchOpened);
     });
     saveAlbionSession({ ...joined, server_url: url });
     setSession(joined);
-    setMessage(`เชื่อมต่อแล้วในฐานะ ${joined.slot === "host" ? "โฮสต์" : "ผู้ร่วมเล่น"}`);
+    setMessage(copy.connected(joined.slot));
   };
 
   const host = async () => {
@@ -65,7 +84,7 @@ export default function MultiplayerLobby() {
       setServerUrl(info.server_url);
       await connect(info.server_url);
     } catch {
-      setMessage("ไม่สามารถเปิดเซิร์ฟเวอร์ได้ ตรวจสอบ save และรหัสเข้าร่วม");
+      setMessage(copy.hostFailed);
     } finally {
       setBusy(false);
     }
@@ -76,7 +95,7 @@ export default function MultiplayerLobby() {
     try {
       await connect(serverUrl);
     } catch {
-      setMessage("ไม่สามารถเข้าร่วมได้ ตรวจสอบ URL รหัส และเวอร์ชันของเกม");
+      setMessage(copy.joinFailed);
     } finally {
       setBusy(false);
     }
@@ -91,13 +110,13 @@ export default function MultiplayerLobby() {
       const restored = await client.current.reconnect(stored.server_url, stored.reconnect_token, versions);
       client.current.connect(stored.server_url, restored, (event, cache) => {
         if (event.type === "ViewSnapshot") setDashboard(cache.views.get("dashboard") ?? null);
-        if (event.type === "MatchOpened") setMessage("ถึงวันแข่งขันแล้ว กำลังเปิดศูนย์การแข่งขัน");
+        if (event.type === "MatchOpened") setMessage(copy.matchOpened);
       });
       setSession(restored);
-      setMessage("เชื่อมต่อ session เดิมสำเร็จ");
+      setMessage(copy.restored);
     } catch {
       clearAlbionSession();
-      setMessage("session เดิมหมดอายุหรือเซิร์ฟเวอร์ไม่พร้อม กรุณาเข้าร่วมใหม่");
+      setMessage(copy.stale);
     } finally {
       setBusy(false);
     }
@@ -107,31 +126,31 @@ export default function MultiplayerLobby() {
     if (!session) return;
     try {
       client.current.sendCommand(session, { MarkReady: {} });
-      setMessage("ส่งสถานะพร้อมแล้ว");
+      setMessage(copy.readySent);
     } catch {
-      setMessage("การเชื่อมต่อขาดหาย กรุณาเชื่อมต่อใหม่");
+      setMessage(copy.disconnected);
     }
   };
 
   return <main className="min-h-screen bg-navy-900 text-white p-6 sm:p-10">
     <div className="mx-auto max-w-xl space-y-5 rounded-2xl bg-navy-800 p-6 shadow-xl">
-      <button type="button" onClick={() => navigate("/dashboard")} className="text-accent-300 hover:text-accent-100">← กลับสู่สโมสร</button>
-      <h1 className="font-heading text-3xl font-bold">เล่นร่วมกัน</h1>
+      <button type="button" onClick={() => navigate("/dashboard")} className="text-accent-300 hover:text-accent-100">{copy.back}</button>
+      <h1 className="font-heading text-3xl font-bold">{copy.title}</h1>
       <p className="text-gray-300">{message}</p>
-      <label className="block">รหัสเข้าร่วม
+      <label className="block">{copy.secret}
         <input value={joinSecret} onChange={(event) => setJoinSecret(event.target.value)} className="mt-1 w-full rounded bg-navy-700 p-3" type="password" />
       </label>
-      <label className="block">URL ของโฮสต์
+      <label className="block">{copy.hostUrl}
         <input value={serverUrl} onChange={(event) => setServerUrl(event.target.value)} placeholder="http://192.168.1.10:38421" className="mt-1 w-full rounded bg-navy-700 p-3" />
       </label>
       <div className="flex gap-3">
-        <button type="button" disabled={busy || !joinSecret} onClick={() => void host()} className="rounded bg-primary-500 px-4 py-3 font-bold disabled:opacity-50">เป็นโฮสต์</button>
-        <button type="button" disabled={busy || !joinSecret || !serverUrl} onClick={() => void join()} className="rounded bg-accent-500 px-4 py-3 font-bold disabled:opacity-50">เข้าร่วม</button>
-        {loadAlbionSession() && <button type="button" disabled={busy} onClick={() => void reconnect()} className="rounded bg-navy-600 px-4 py-3 font-bold disabled:opacity-50">เชื่อมต่อเดิม</button>}
+        <button type="button" disabled={busy || !joinSecret} onClick={() => void host()} className="rounded bg-primary-500 px-4 py-3 font-bold disabled:opacity-50">{copy.host}</button>
+        <button type="button" disabled={busy || !joinSecret || !serverUrl} onClick={() => void join()} className="rounded bg-accent-500 px-4 py-3 font-bold disabled:opacity-50">{copy.join}</button>
+        {loadAlbionSession() && <button type="button" disabled={busy} onClick={() => void reconnect()} className="rounded bg-navy-600 px-4 py-3 font-bold disabled:opacity-50">{copy.reconnect}</button>}
       </div>
       {session && <section className="rounded bg-navy-700 p-4" aria-live="polite">
-        <p>เชื่อมต่อสำเร็จ · revision {session.current_revision}</p>
-        <button type="button" onClick={markReady} className="mt-3 rounded bg-primary-500 px-4 py-2 font-bold">พร้อมดำเนินเกม</button>
+        <p>{copy.connectedAt} {session.current_revision}</p>
+        <button type="button" onClick={markReady} className="mt-3 rounded bg-primary-500 px-4 py-2 font-bold">{copy.ready}</button>
         {dashboard !== null && <pre className="mt-3 overflow-auto text-xs text-gray-200">{String(JSON.stringify(dashboard, null, 2))}</pre>}
       </section>}
     </div>
