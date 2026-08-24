@@ -65,6 +65,15 @@ describe("2D match presentation", () => {
     expect(secondHalf[0].point).toEqual({ x: 1 - firstHalf[0].point.x, y: 1 - firstHalf[0].point.y });
   });
 
+  it("makes authoritative play styles visibly change the formation shape", () => {
+    const players = [player("gk", "Goalkeeper"), ...Array.from({ length: 10 }, (_, index) => player(`p${index}`, "Midfielder"))];
+    const balanced = resolveTeamPositions("Home", "4-3-3", players, [], false, "Balanced");
+    const attacking = resolveTeamPositions("Home", "4-3-3", players, [], false, "Attacking");
+    const possession = resolveTeamPositions("Home", "4-3-3", players, [], false, "Possession");
+    expect(attacking[4].point.x).toBeGreaterThan(balanced[4].point.x);
+    expect(Math.abs(possession[1].point.y - 0.5)).toBeGreaterThan(Math.abs(balanced[1].point.y - 0.5));
+  });
+
   it("orders source events deterministically and filters highlights without re-simulation", () => {
     const clips = compilePresentationTimeline([
       event(12, "Pass", "Home"),

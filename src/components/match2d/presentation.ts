@@ -35,6 +35,22 @@ function mirror(point: PitchPoint): PitchPoint {
   return { x: 1 - point.x, y: 1 - point.y };
 }
 
+/**
+ * A deliberately small visual-only interpretation of the authoritative team
+ * approach. Coordinates are adjusted before side/half mirroring so home and
+ * away keep symmetric shapes; outcomes remain entirely engine-owned.
+ */
+function applyPlayStyleShape(point: PitchPoint, playStyle: string): PitchPoint {
+  const attackingOffset = playStyle === "Attacking" || playStyle === "HighPress"
+    ? 0.08
+    : playStyle === "Defensive" ? -0.08 : 0;
+  const widthFactor = playStyle === "Possession" ? 1.16 : playStyle === "HighPress" ? 0.9 : 1;
+  return {
+    x: clamp(point.x + attackingOffset),
+    y: clamp(0.5 + (point.y - 0.5) * widthFactor),
+  };
+}
+
 function eventImportance(event: MatchEvent): PresentationClip["importance"] {
   if (["Goal", "PenaltyGoal", "PenaltyMiss", "ShootoutGoal", "ShootoutMiss", "RedCard", "SecondYellow", "ShotOnTarget", "ShotSaved"].includes(event.event_type)) return "key";
   if (["ShotOffTarget", "ShotBlocked", "Corner", "FreeKick", "Substitution", "YellowCard", "Injury", "Cross"].includes(event.event_type)) return "extended";
@@ -69,11 +85,13 @@ export function resolveTeamPositions(
   players: EnginePlayerData[],
   sentOff: string[],
   secondHalf: boolean,
+  playStyle = "Balanced",
 ): PresentationPlayer[] {
   const slots = buildFormationSlots(formation, players, sentOff);
   return slots.map(({ player, x, y }) => {
     const homePoint = { x: clamp(1 - y / 100), y: clamp(x / 100) };
-    const sidePoint = side === "Home" ? homePoint : mirror(homePoint);
+    const shapedHomePoint = applyPlayStyleShape(homePoint, playStyle);
+    const sidePoint = side === "Home" ? shapedHomePoint : mirror(shapedHomePoint);
     const point = secondHalf ? mirror(sidePoint) : sidePoint;
     return {
       id: player.id,
@@ -123,8 +141,8 @@ export function presentationFrame(
 ): MatchPresentationFrame {
   const secondHalf = input.current_minute > 45;
   const players = [
-    ...resolveTeamPositions("Home", input.home_team.formation, input.home_team.players, input.sent_off, secondHalf),
-    ...resolveTeamPositions("Away", input.away_team.formation, input.away_team.players, input.sent_off, secondHalf),
+    ...resolveTeamPositions("Home", input.home_team.formation, input.home_team.players, input.sent_off, secondHalf, input.home_team.play_style),
+    ...resolveTeamPositions("Away", input.away_team.formation, input.away_team.players, input.sent_off, secondHalf, input.away_team.play_style),
   ];
   const clips = filterPresentationTimeline(compilePresentationTimeline(input.events), mode);
   const totalDuration = clips.reduce((total, clip) => total + clip.durationMs, 0);
