@@ -369,3 +369,8 @@ all interfaces, enabling the documented private LAN/Tailscale use case rather
 than only a second client on the same machine. The lobby keeps a loopback URL
 for the host and explains how to substitute the host's LAN/Tailscale address
 when inviting a guest.
+
+Phase 8/9 documentation: `PRIVATE_LAN_PLAY.md` now gives the executable
+host/join/reconnect flow for the bundled lobby, including the LAN/Tailscale URL
+substitution, firewall expectation, version mismatch behavior and live-match
+disconnect policy.
