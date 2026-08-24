@@ -19,8 +19,10 @@ pub enum Command {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SetStartingXiBody {
-    pub fixture_id: Uuid,
-    pub player_ids: Vec<Uuid>,
+    /// Stable domain ids are not necessarily UUIDs: imported FPL records use
+    /// identifiers such as `fpl-<source id>`.
+    pub fixture_id: String,
+    pub player_ids: Vec<String>,
     pub formation: String,
 }
 
@@ -35,7 +37,7 @@ pub struct SetTacticsBody {
 /// minor units or exact decimal, never float.").
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmitTransferBidBody {
-    pub player_id: Uuid,
+    pub player_id: String,
     pub upfront_minor: i64,
     #[serde(default)]
     pub installments_minor: Vec<i64>,
@@ -51,7 +53,7 @@ pub enum TransferOfferResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RespondTransferOfferBody {
-    pub offer_id: Uuid,
+    pub offer_id: String,
     pub response: TransferOfferResponse,
     #[serde(default)]
     pub counter_upfront_minor: Option<i64>,
@@ -59,7 +61,7 @@ pub struct RespondTransferOfferBody {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubmitContractOfferBody {
-    pub player_id: Uuid,
+    pub player_id: String,
     pub weekly_wage_minor: i64,
     pub contract_end_year: u16,
     pub contract_end_month: u8,
@@ -80,9 +82,9 @@ pub struct MarkReadyBody {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "body")]
 pub enum LiveMatchCommandKind {
-    Substitute { player_out_id: Uuid, player_in_id: Uuid },
+    Substitute { player_out_id: String, player_in_id: String },
     ChangeFormation { formation: String },
-    ChangeRoleDuty { player_id: Uuid, role: String, duty: String },
+    ChangeRoleDuty { player_id: String, role: String, duty: String },
     SetTeamInstruction { key: String, value: String },
 }
 

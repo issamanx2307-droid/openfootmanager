@@ -631,8 +631,8 @@ impl CareerSession {
             albion_protocol::command::LiveMatchCommandKind::Substitute { player_out_id, player_in_id } => {
                 engine::MatchCommand::Substitute {
                     side,
-                    player_off_id: player_out_id.to_string(),
-                    player_on_id: player_in_id.to_string(),
+                    player_off_id: player_out_id.clone(),
+                    player_on_id: player_in_id.clone(),
                 }
             }
             albion_protocol::command::LiveMatchCommandKind::ChangeFormation { formation } => {

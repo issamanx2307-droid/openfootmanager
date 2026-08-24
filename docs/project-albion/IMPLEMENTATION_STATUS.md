@@ -474,3 +474,9 @@ keys from each wizard step rather than accepting English fallback text.
 Phase 10 update: the private-play lobby now localizes visible tactic and
 training option labels plus the corresponding canonical dashboard values,
 while retaining stable English protocol values in every command payload.
+
+Phase 9 update: commands that identify football domain records now use stable
+string IDs end-to-end, rather than requiring UUID-shaped IDs. This preserves
+the bundled FPL importer's `fpl-<source id>` player identities for line-ups,
+transfers, contracts and live substitutions; protocol round-trips and the
+canonical incoming-offer regression exercise non-UUID FPL-style IDs.

@@ -282,7 +282,7 @@ impl CanonicalCareer {
             return Err(ErrorCode::InvalidLineup);
         }
         let team_id = self.controlled_team_id(manager_id)?;
-        let selected_ids: Vec<String> = body.player_ids.iter().map(Uuid::to_string).collect();
+        let selected_ids = body.player_ids.clone();
         let all_owned_and_healthy = selected_ids.iter().all(|player_id| {
             self.game.players.iter().any(|player| {
                 player.id == *player_id && player.team_id.as_deref() == Some(team_id.as_str()) && player.injury.is_none()
@@ -331,7 +331,7 @@ impl CanonicalCareer {
         }
         let fee = whole_currency(body.upfront_minor)?;
         let outcome = self.with_manager_context(manager_id, |game| {
-            ofm_core::transfers::make_transfer_bid(game, &body.player_id.to_string(), fee)
+            ofm_core::transfers::make_transfer_bid(game, &body.player_id, fee)
         })?;
         Ok(json!({
             "playerId": body.player_id,
@@ -357,7 +357,7 @@ impl CanonicalCareer {
         let outcome = self.with_manager_context(manager_id, |game| {
             ofm_core::contracts::offer_free_agent_contract(
                 game,
-                &body.player_id.to_string(),
+                &body.player_id,
                 ofm_core::contracts::RenewalOffer { weekly_wage: wage, contract_years: years as u32 },
             )
         })?;
@@ -382,21 +382,21 @@ impl CanonicalCareer {
             .iter()
             .find(|player| {
                 player.team_id.as_deref() == Some(team_id.as_str())
-                    && player.transfer_offers.iter().any(|offer| offer.id == body.offer_id.to_string())
+                    && player.transfer_offers.iter().any(|offer| offer.id == body.offer_id)
             })
             .map(|player| player.id.clone())
             .ok_or(ErrorCode::AuthInvalid)?;
         match body.response {
             TransferOfferResponse::Accept => self.with_manager_context(manager_id, |game| {
-                ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id.to_string(), true)
+                ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id, true)
             })?,
             TransferOfferResponse::Reject => self.with_manager_context(manager_id, |game| {
-                ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id.to_string(), false)
+                ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id, false)
             })?,
             TransferOfferResponse::Counter => {
                 let fee = whole_currency(body.counter_upfront_minor.ok_or(ErrorCode::InsufficientTransferBudget)?)?;
                 self.with_manager_context(manager_id, |game| {
-                    ofm_core::transfers::counter_offer(game, &player_id, &body.offer_id.to_string(), fee)
+                    ofm_core::transfers::counter_offer(game, &player_id, &body.offer_id, fee)
                 })?;
             }
         }
@@ -600,7 +600,7 @@ mod tests {
         let (mut career, manager_id) = career();
         let before = career.game().teams[0].finance;
         let result = career.apply(manager_id, &Command::SubmitTransferBid(SubmitTransferBidBody {
-            player_id: Uuid::new_v4(),
+            player_id: "fpl-unknown".into(),
             upfront_minor: 101,
             installments_minor: vec![],
         }));
@@ -615,15 +615,15 @@ mod tests {
         career.game.teams.push(Team::new(
             buyer_id.to_string(), "Buyer".into(), "BUY".into(), "England".into(), "Buyer".into(), "Ground".into(), 20_000,
         ));
-        let offer_id = Uuid::new_v4();
+        let offer_id = "fpl-offer-1";
         let team_id = career.game.teams[0].id.clone();
         let mut player = Player::new(
-            Uuid::new_v4().to_string(), "Player".into(), "Test Player".into(), "1995-01-01".into(), "ENG".into(), Position::Midfielder,
+            "fpl-99".into(), "Player".into(), "Test Player".into(), "1995-01-01".into(), "ENG".into(), Position::Midfielder,
             PlayerAttributes { pace: 60, stamina: 60, strength: 60, agility: 60, passing: 60, shooting: 60, tackling: 60, dribbling: 60, defending: 60, positioning: 60, vision: 60, decisions: 60, composure: 60, aggression: 60, teamwork: 60, leadership: 60, handling: 20, reflexes: 20, aerial: 60 },
         );
         player.team_id = Some(team_id);
         player.transfer_offers.push(TransferOffer {
-            id: offer_id.to_string(), from_team_id: buyer_id.to_string(), fee: 1_000_000, wage_offered: 0,
+            id: offer_id.into(), from_team_id: buyer_id.to_string(), fee: 1_000_000, wage_offered: 0,
             last_manager_fee: None, negotiation_round: 0, suggested_counter_fee: None,
             status: TransferOfferStatus::Pending, date: "2026-07-01".into(), registration_date: None,
         });
@@ -633,7 +633,7 @@ mod tests {
         assert_eq!(offers[0]["playerName"], "Player");
 
         career.apply(manager_id, &Command::RespondTransferOffer(RespondTransferOfferBody {
-            offer_id, response: TransferOfferResponse::Reject, counter_upfront_minor: None,
+            offer_id: offer_id.into(), response: TransferOfferResponse::Reject, counter_upfront_minor: None,
         })).unwrap();
         assert_eq!(career.game.players[0].transfer_offers[0].status, TransferOfferStatus::Rejected);
     }

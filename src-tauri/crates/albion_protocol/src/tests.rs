@@ -21,8 +21,8 @@ fn roundtrip_event(event: ServerEvent) {
 #[test]
 fn every_command_variant_round_trips() {
     roundtrip_command(Command::SetStartingXi(SetStartingXiBody {
-        fixture_id: Uuid::new_v4(),
-        player_ids: vec![Uuid::new_v4(); 11],
+        fixture_id: "fpl-fixture-2026-08-01-ars-che".into(),
+        player_ids: (1..=11).map(|id| format!("fpl-{id}")).collect(),
         formation: "4-4-2".into(),
     }));
     roundtrip_command(Command::SetTactics(SetTacticsBody {
@@ -30,17 +30,17 @@ fn every_command_variant_round_trips() {
         mentality: "balanced".into(),
     }));
     roundtrip_command(Command::SubmitTransferBid(SubmitTransferBidBody {
-        player_id: Uuid::new_v4(),
+        player_id: "fpl-99".into(),
         upfront_minor: 2_500_000_00,
         installments_minor: vec![500_000_00, 500_000_00],
     }));
     roundtrip_command(Command::RespondTransferOffer(RespondTransferOfferBody {
-        offer_id: Uuid::new_v4(),
+        offer_id: "fpl-offer-99".into(),
         response: TransferOfferResponse::Counter,
         counter_upfront_minor: Some(3_000_000_00),
     }));
     roundtrip_command(Command::SubmitContractOffer(SubmitContractOfferBody {
-        player_id: Uuid::new_v4(),
+        player_id: "fpl-99".into(),
         weekly_wage_minor: 125_000_00,
         contract_end_year: 2030,
         contract_end_month: 6,
@@ -53,8 +53,8 @@ fn every_command_variant_round_trips() {
     roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
         match_id: Uuid::new_v4(),
         command: LiveMatchCommandKind::Substitute {
-            player_out_id: Uuid::new_v4(),
-            player_in_id: Uuid::new_v4(),
+            player_out_id: "fpl-10".into(),
+            player_in_id: "fpl-11".into(),
         },
     }));
 }
