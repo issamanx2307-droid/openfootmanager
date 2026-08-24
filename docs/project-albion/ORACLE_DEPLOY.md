@@ -13,6 +13,7 @@ truth for deployment artifacts:
 - `openfootballmanager-albion.service` — systemd unit;
 - `Caddyfile` — TLS and WebSocket reverse proxy;
 - `backup-career.sh` — timestamped SQLite backup;
+- `preflight.sh` — rejects placeholder configuration and missing VM tools;
 - `smoke-check.sh` — public HTTP probe;
 - `build-on-oracle.sh` — builds for the VM's actual CPU architecture.
 
@@ -80,6 +81,9 @@ proxied by the TLS reverse proxy with upgrade headers preserved. Caddy's
 
 Schedule `deploy/oracle/backup-career.sh` with systemd timer or cron, then run
 it once and confirm a new timestamped database appears in `ALBION_BACKUP_DIR`.
+Before enabling the service for the first time, run `preflight.sh` with the
+same environment file to catch placeholder values and missing Caddy/SQLite
+tools.
 
 ## First Oracle smoke test
 
