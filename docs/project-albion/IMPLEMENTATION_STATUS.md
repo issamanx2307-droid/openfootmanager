@@ -224,6 +224,19 @@ at 1,792 games per second. These checks qualify the existing single-player
 experience for the next multiplayer-planning phase; they do not remove the
 separate external-production-snapshot dependency recorded for Phase 11.
 
+### Single-player QA foundation (2026-08-26)
+
+The pre-multiplayer acceptance baseline now has a repeatable command surface:
+`npm run check:release:quick` runs linting, asset validation, production build,
+Rust format/clippy and the deterministic career scenarios. `npm run
+check:release` adds the full frontend suite in four deterministic shards and
+the Rust workspace suite, avoiding an exhausted frontend worker hiding a later
+test result. `docs/QA_SINGLE_PLAYER_ACCEPTANCE.md` defines the manual
+new-career, match, save/load and responsive visual acceptance flow; the existing
+2D renderer check remains its Match Centre companion. `npm run audit:assets`
+guards the tracked app identity and feature-reference assets, while
+`AssetImage.test.tsx` protects fallback and recovery when an image URL fails.
+
 Phase 6 completion evidence: the `engine` crate provides the possession/zone
 event chain, attribute and tactical/role effects, set pieces, cards, goalkeeper,
 fitness, substitutions, live commands and report invariants. `AlbionV1Simulator`

@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "audit:i18n": "node scripts/audit-i18n.mjs",
+    "audit:assets": "node scripts/audit-assets.mjs",
+    "test:career-scenarios": "cargo test --manifest-path src-tauri/Cargo.toml -p ofm_core --test scenario_tests",
+    "check:release:quick": "node scripts/release-check.mjs --quick",
+    "check:release": "node scripts/release-check.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
