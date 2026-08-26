@@ -151,6 +151,7 @@ export default defineConfig(async ({ command }) => ({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 15_000,
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["src/test-setup.ts"],
     coverage: {

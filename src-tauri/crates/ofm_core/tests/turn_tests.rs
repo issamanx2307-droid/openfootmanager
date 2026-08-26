@@ -441,8 +441,15 @@ fn process_day_fires_ai_manager_after_heavy_losing_run() {
     // club must never be left without a manager), so the same `process_day`
     // that fires mgr2 also immediately appoints a replacement for team2
     // rather than leaving it vacant.
-    let fired_manager = game.managers.iter().find(|manager| manager.id == "mgr2").unwrap();
-    assert!(fired_manager.team_id.is_none(), "mgr2 should no longer be attached to any club");
+    let fired_manager = game
+        .managers
+        .iter()
+        .find(|manager| manager.id == "mgr2")
+        .unwrap();
+    assert!(
+        fired_manager.team_id.is_none(),
+        "mgr2 should no longer be attached to any club"
+    );
 
     let rival_team = game.teams.iter().find(|team| team.id == "team2").unwrap();
     let replacement_manager_id = rival_team

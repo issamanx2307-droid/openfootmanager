@@ -147,8 +147,8 @@ export function useTransferBidFlow({
             if (response.suggested_fee !== null) {
                 setBidAmount((response.suggested_fee / 1_000_000).toFixed(2));
             }
-        } catch (error: any) {
-            setBidResult(error?.toString() || "error");
+        } catch {
+            setBidResult("error");
             setBidFeedback(null);
         } finally {
             setBidLoading(false);

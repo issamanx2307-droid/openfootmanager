@@ -91,7 +91,9 @@ fn update_fpl_data_source_sync(app: &AppHandle) -> Result<FplDataSourceStatus, S
             .map_err(|_| DATA_SOURCE_ERROR.to_string())?
             .error_for_status()
             .map_err(|_| DATA_SOURCE_ERROR.to_string())?;
-        let bytes = response.bytes().map_err(|_| DATA_SOURCE_ERROR.to_string())?;
+        let bytes = response
+            .bytes()
+            .map_err(|_| DATA_SOURCE_ERROR.to_string())?;
         if bytes.is_empty() || bytes.len() > 50 * 1024 * 1024 {
             return Err(DATA_SOURCE_ERROR.to_string());
         }
@@ -173,9 +175,13 @@ fn overlay_fpl_roster(
         .filter(|(_, team)| team.country == "ENG")
         .map(|(index, team)| (index, team.id.clone(), team.reputation))
         .collect::<Vec<_>>();
-    english_teams.sort_by(|(_, left_id, left_reputation), (_, right_id, right_reputation)| {
-        right_reputation.cmp(left_reputation).then_with(|| left_id.cmp(right_id))
-    });
+    english_teams.sort_by(
+        |(_, left_id, left_reputation), (_, right_id, right_reputation)| {
+            right_reputation
+                .cmp(left_reputation)
+                .then_with(|| left_id.cmp(right_id))
+        },
+    );
     if english_teams.len() < fpl_teams.len() {
         return Err(DATA_SOURCE_ERROR.to_string());
     }
@@ -240,11 +246,18 @@ fn overlay_fpl_roster(
         world.players.push(player);
     }
 
-    if world.players.iter().filter(|player| {
-        player.team_id
-            .as_ref()
-            .is_some_and(|team_id| target_team_ids.contains(team_id))
-    }).count() == 0 {
+    if world
+        .players
+        .iter()
+        .filter(|player| {
+            player
+                .team_id
+                .as_ref()
+                .is_some_and(|team_id| target_team_ids.contains(team_id))
+        })
+        .count()
+        == 0
+    {
         return Err(DATA_SOURCE_ERROR.to_string());
     }
     Ok(())
@@ -256,11 +269,20 @@ mod tests {
 
     #[test]
     fn maps_fpl_positions_to_playable_position_groups() {
-        assert_eq!(fpl_position("Goalkeeper"), domain::player::Position::Goalkeeper);
+        assert_eq!(
+            fpl_position("Goalkeeper"),
+            domain::player::Position::Goalkeeper
+        );
         assert_eq!(fpl_position("Defender"), domain::player::Position::Defender);
-        assert_eq!(fpl_position("Midfielder"), domain::player::Position::Midfielder);
+        assert_eq!(
+            fpl_position("Midfielder"),
+            domain::player::Position::Midfielder
+        );
         assert_eq!(fpl_position("Forward"), domain::player::Position::Forward);
-        assert_eq!(fpl_position("unexpected"), domain::player::Position::Midfielder);
+        assert_eq!(
+            fpl_position("unexpected"),
+            domain::player::Position::Midfielder
+        );
     }
 
     #[test]

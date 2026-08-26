@@ -70,8 +70,8 @@ describe("SavesList", () => {
     expect(screen.getByText("My 1997 run")).toBeInTheDocument();
   });
 
-  // `menu.deleteConfirm` carries its own <strong> markup, so it is rendered
-  // through dangerouslySetInnerHTML. The save name inside it is player text.
+  // `menu.deleteConfirm` supplies its own <strong> markup through `Trans`.
+  // The save name remains a text value, never parsed as HTML.
   it("escapes markup in a save name instead of rendering it", () => {
     const { container } = render(
       <SavesList

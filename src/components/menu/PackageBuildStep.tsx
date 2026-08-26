@@ -63,15 +63,21 @@ interface PackageCardProps {
 function PackageCard({ pkg, isActive, onToggle, onUninstall }: PackageCardProps) {
   const { t } = useTranslation();
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`flex items-start gap-3 w-full p-3 rounded-xl border transition-all duration-200 text-left ${
+    <div
+      className={`relative flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all duration-200 ${
         isActive
           ? "bg-accent-50 dark:bg-accent-500/10 border-accent-400 dark:border-accent-500 ring-1 ring-accent-400/30"
           : "bg-white dark:bg-navy-700 border-gray-200 dark:border-navy-600 hover:border-gray-300 dark:hover:border-navy-500"
       }`}
     >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={pkg.name || pkg.id}
+        aria-pressed={isActive}
+        className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+      />
+      <div className="pointer-events-none flex min-w-0 flex-1 items-start gap-3">
       {/* Toggle indicator */}
       <span
         className={`w-5 h-5 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-colors pointer-events-none ${
@@ -139,20 +145,19 @@ function PackageCard({ pkg, isActive, onToggle, onUninstall }: PackageCardProps)
           )}
         </div>
       </div>
+      </div>
 
       {/* Uninstall */}
-      <span
-        role="button"
-        tabIndex={0}
-        onClick={(e) => { e.stopPropagation(); onUninstall(); }}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); onUninstall(); } }}
-        className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0 mt-0.5 p-0.5 rounded"
+      <button
+        type="button"
+        onClick={onUninstall}
+        className="relative z-10 mt-0.5 shrink-0 rounded p-0.5 text-gray-400 transition-colors hover:text-red-500"
         title={t("worldSelect.removePackage")}
         aria-label={t("worldSelect.removePackage")}
       >
         <Trash2 className="w-4 h-4" />
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -213,7 +218,7 @@ export default function PackageBuildStep({
       {/* Header */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             onClick={onBack}
             className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-navy-600"
           >
@@ -244,7 +249,7 @@ export default function PackageBuildStep({
               <Package className="w-4 h-4" />
               {t("packageBuild.databases")}
             </p>
-            <button
+            <button type="button"
               onClick={onInstallPackage}
               disabled={isInstallingPackage}
               className="flex items-center gap-1 text-xs font-heading font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 disabled:opacity-50 transition-colors"
@@ -322,8 +327,8 @@ export default function PackageBuildStep({
               {t("worldSelect.stackConflictWarnings", { count: stackConflictWarnings.length })}
             </p>
             <ul className="list-disc pl-4 space-y-0.5 text-amber-700 dark:text-amber-300">
-              {stackConflictWarnings.map((c, i) => (
-                <li key={i}>{t(c.code, { entityKind: c.entityKind, entityId: c.entityId, packages: c.packages.join(", ") })}</li>
+              {stackConflictWarnings.map((c) => (
+                <li key={`${c.code}-${c.entityKind}-${c.entityId}-${c.packages.join("-")}`}>{t(c.code, { entityKind: c.entityKind, entityId: c.entityId, packages: c.packages.join(", ") })}</li>
               ))}
             </ul>
           </div>
@@ -337,14 +342,14 @@ export default function PackageBuildStep({
               {t("worldSelect.packageStackErrors")}
             </p>
             <ul className="list-disc pl-4 space-y-0.5 text-red-600 dark:text-red-300">
-              {packageStackErrors?.map((issue, i) => (
-                <li key={`issue-${i}`}>
+              {packageStackErrors?.map((issue) => (
+                <li key={`issue-${issue.code}-${issue.file ?? ""}-${JSON.stringify(issue.params)}`}>
                   {issue.file ? `[${issue.file}] ` : ""}
                   {t(issue.code, issue.params)}
                 </li>
               ))}
-              {stackConflictErrors.map((c, i) => (
-                <li key={`conflict-${i}`}>{t(c.code, { entityKind: c.entityKind, entityId: c.entityId, packages: c.packages.join(", ") })}</li>
+              {stackConflictErrors.map((c) => (
+                <li key={`conflict-${c.code}-${c.entityKind}-${c.entityId}-${c.packages.join("-")}`}>{t(c.code, { entityKind: c.entityKind, entityId: c.entityId, packages: c.packages.join(", ") })}</li>
               ))}
             </ul>
           </div>

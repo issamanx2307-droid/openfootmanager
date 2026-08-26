@@ -100,8 +100,8 @@ pub fn is_season_complete(game: &Game) -> bool {
             .filter(|c| {
                 c.rules.format == CompetitionFormat::LeagueTable
                     && c.participant_ids.iter().any(|id| id == user_id)
-        })
-        .collect();
+            })
+            .collect();
         if !user_leagues.is_empty() {
             return user_leagues.into_iter().all(|league| {
                 is_league_complete(league) && league_playoffs_are_settled(game, league)
@@ -760,12 +760,16 @@ fn league_playoff_ids(competitions: &[League]) -> std::collections::HashSet<Stri
         .iter()
         .filter(|competition| competition.rules.format == CompetitionFormat::LeagueTable)
         .flat_map(|competition| {
-            let mut ids: Vec<String> = competition.berths.iter().filter_map(move |berth| match &berth.rule {
-                BerthRule::PlayoffWinner { from, to } => {
-                    Some(format!("{}-playoff-{from}-{to}", competition.id))
-                }
-                _ => None,
-            }).collect();
+            let mut ids: Vec<String> = competition
+                .berths
+                .iter()
+                .filter_map(move |berth| match &berth.rule {
+                    BerthRule::PlayoffWinner { from, to } => {
+                        Some(format!("{}-playoff-{from}-{to}", competition.id))
+                    }
+                    _ => None,
+                })
+                .collect();
             if competition.rules.promotion_playoff_slots >= 2 {
                 let from = u32::from(competition.rules.promotion_automatic_slots) + 1;
                 let to = from + u32::from(competition.rules.promotion_playoff_slots) - 1;
@@ -819,7 +823,10 @@ pub fn stage_pending_league_playoffs(game: &mut Game) -> usize {
                 .collect();
             if competition.rules.promotion_playoff_slots >= 2 {
                 let from = u32::from(competition.rules.promotion_automatic_slots) + 1;
-                ranges.push((from, from + u32::from(competition.rules.promotion_playoff_slots) - 1));
+                ranges.push((
+                    from,
+                    from + u32::from(competition.rules.promotion_playoff_slots) - 1,
+                ));
             }
             ranges
                 .into_iter()
@@ -833,7 +840,9 @@ pub fn stage_pending_league_playoffs(game: &mut Game) -> usize {
         if existing_ids.contains(&playoff_id) || !staged_ids.insert(playoff_id) {
             continue;
         }
-        if let Some(mut playoff) = crate::schedule::generate_league_playoff(&league, from, to, start_date) {
+        if let Some(mut playoff) =
+            crate::schedule::generate_league_playoff(&league, from, to, start_date)
+        {
             playoff.priority = league.priority;
             playoffs.push((league.id, playoff));
         }
@@ -865,15 +874,17 @@ fn english_community_shield_entrants(game: &Game) -> Option<Vec<String>> {
         .iter()
         .find(|competition| competition.id == "eng-fa-cup")
         .and_then(crate::world_cup::world_cup_champion);
-    let opponent = cup_winner.filter(|winner| winner != &champion).or_else(|| {
-        game.competitions
-            .iter()
-            .find(|competition| competition.id == "eng-d1")?
-            .sorted_standings()
-            .into_iter()
-            .map(|entry| entry.team_id)
-            .find(|team_id| team_id != &champion)
-    })?;
+    let opponent = cup_winner
+        .filter(|winner| winner != &champion)
+        .or_else(|| {
+            game.competitions
+                .iter()
+                .find(|competition| competition.id == "eng-d1")?
+                .sorted_standings()
+                .into_iter()
+                .map(|entry| entry.team_id)
+                .find(|team_id| team_id != &champion)
+        })?;
     Some(vec![champion, opponent])
 }
 
@@ -882,7 +893,10 @@ mod community_shield_tests {
     use super::*;
     use crate::clock::GameClock;
     use chrono::{TimeZone, Utc};
-    use domain::league::{Berth, Fixture, FixtureCompetition, FixtureStatus, KnockoutRoundState, MatchResult, StandingEntry};
+    use domain::league::{
+        Berth, Fixture, FixtureCompetition, FixtureStatus, KnockoutRoundState, MatchResult,
+        StandingEntry,
+    };
     use domain::manager::Manager;
 
     fn standings(team_ids: &[&str]) -> Vec<StandingEntry> {
@@ -899,30 +913,61 @@ mod community_shield_tests {
 
     fn game_with_winners(cup_winner: &str) -> Game {
         let clock = GameClock::new(Utc.with_ymd_and_hms(2026, 5, 20, 12, 0, 0).unwrap());
-        let manager = Manager::new("mgr".to_string(), "A".to_string(), "B".to_string(), "1980-01-01".to_string(), "ENG".to_string());
+        let manager = Manager::new(
+            "mgr".to_string(),
+            "A".to_string(),
+            "B".to_string(),
+            "1980-01-01".to_string(),
+            "ENG".to_string(),
+        );
         let mut game = Game::new(clock, manager, vec![], vec![], vec![], vec![]);
         let mut league = League::new("eng-d1".to_string(), "England".to_string(), 2026, &[]);
         league.standings = standings(&["champion", "runner-up", "third"]);
         let mut cup = League::new("eng-fa-cup".to_string(), "FA Cup".to_string(), 2026, &[]);
         cup.fixtures = vec![Fixture {
-            id: "final".to_string(), competition_id: "eng-fa-cup".to_string(), matchday: 1,
-            date: "2026-05-18".to_string(), home_team_id: cup_winner.to_string(), away_team_id: "cup-runner-up".to_string(),
-            competition: FixtureCompetition::Cup, status: FixtureStatus::Completed,
-            result: Some(MatchResult { home_goals: 2, away_goals: 0, home_scorers: vec![], away_scorers: vec![], report: None, home_penalties: None, away_penalties: None }),
+            id: "final".to_string(),
+            competition_id: "eng-fa-cup".to_string(),
+            matchday: 1,
+            date: "2026-05-18".to_string(),
+            home_team_id: cup_winner.to_string(),
+            away_team_id: "cup-runner-up".to_string(),
+            competition: FixtureCompetition::Cup,
+            status: FixtureStatus::Completed,
+            result: Some(MatchResult {
+                home_goals: 2,
+                away_goals: 0,
+                home_scorers: vec![],
+                away_scorers: vec![],
+                report: None,
+                home_penalties: None,
+                away_penalties: None,
+            }),
         }];
-        cup.knockout_rounds = vec![KnockoutRoundState { id: "final-round".to_string(), name: "Final".to_string(), fixture_ids: vec!["final".to_string()], bye_team_ids: vec![], completed: true }];
+        cup.knockout_rounds = vec![KnockoutRoundState {
+            id: "final-round".to_string(),
+            name: "Final".to_string(),
+            fixture_ids: vec!["final".to_string()],
+            bye_team_ids: vec![],
+            completed: true,
+        }];
         game.competitions = vec![league, cup];
         game
     }
 
     #[test]
     fn community_shield_uses_league_champion_and_fa_cup_winner() {
-        assert_eq!(english_community_shield_entrants(&game_with_winners("cup-winner")), Some(vec!["champion".to_string(), "cup-winner".to_string()]));
+        assert_eq!(
+            english_community_shield_entrants(&game_with_winners("cup-winner")),
+            Some(vec!["champion".to_string(), "cup-winner".to_string()])
+        );
     }
 
     #[test]
     fn community_shield_uses_runner_up_when_one_team_wins_the_double() {
-        assert_eq!(english_community_shield_entrants(&game_with_winners("champion")), Some(vec!["champion".to_string(), "runner-up".to_string()]));
+        assert_eq!(
+            english_community_shield_entrants(&game_with_winners("champion")),
+            Some(vec!["champion".to_string(), "runner-up".to_string()])
+        );
     }
 
     #[test]
@@ -936,15 +981,38 @@ mod community_shield_tests {
             &[],
         );
         playoff.fixtures = vec![Fixture {
-            id: "playoff-final".to_string(), competition_id: playoff.id.clone(), matchday: 1,
-            date: "2026-05-25".to_string(), home_team_id: "playoff-winner".to_string(), away_team_id: "playoff-runner-up".to_string(),
-            competition: FixtureCompetition::Cup, status: FixtureStatus::Completed,
-            result: Some(MatchResult { home_goals: 1, away_goals: 0, home_scorers: vec![], away_scorers: vec![], report: None, home_penalties: None, away_penalties: None }),
+            id: "playoff-final".to_string(),
+            competition_id: playoff.id.clone(),
+            matchday: 1,
+            date: "2026-05-25".to_string(),
+            home_team_id: "playoff-winner".to_string(),
+            away_team_id: "playoff-runner-up".to_string(),
+            competition: FixtureCompetition::Cup,
+            status: FixtureStatus::Completed,
+            result: Some(MatchResult {
+                home_goals: 1,
+                away_goals: 0,
+                home_scorers: vec![],
+                away_scorers: vec![],
+                report: None,
+                home_penalties: None,
+                away_penalties: None,
+            }),
         }];
-        playoff.knockout_rounds = vec![KnockoutRoundState { id: "playoff-final-round".to_string(), name: "Final".to_string(), fixture_ids: vec!["playoff-final".to_string()], bye_team_ids: vec![], completed: true }];
+        playoff.knockout_rounds = vec![KnockoutRoundState {
+            id: "playoff-final-round".to_string(),
+            name: "Final".to_string(),
+            fixture_ids: vec!["playoff-final".to_string()],
+            bye_team_ids: vec![],
+            completed: true,
+        }];
         game.competitions.push(playoff);
 
-        let source = game.competitions.iter().find(|competition| competition.id == "eng-d2").unwrap();
+        let source = game
+            .competitions
+            .iter()
+            .find(|competition| competition.id == "eng-d2")
+            .unwrap();
         assert_eq!(
             evaluate_berth_rule(&game, source, &BerthRule::PlayoffWinner { from: 3, to: 6 }),
             vec!["playoff-winner".to_string()]
@@ -954,7 +1022,12 @@ mod community_shield_tests {
     #[test]
     fn completed_league_stages_its_berth_playoff_once() {
         let mut game = game_with_winners("cup-winner");
-        let teams = vec!["one".to_string(), "two".to_string(), "three".to_string(), "four".to_string()];
+        let teams = vec![
+            "one".to_string(),
+            "two".to_string(),
+            "three".to_string(),
+            "four".to_string(),
+        ];
         game.manager.team_id = Some("one".to_string());
         let kickoff = Utc.with_ymd_and_hms(2026, 5, 20, 12, 0, 0).unwrap();
         let mut league = crate::schedule::generate_league("Playoff League", 2026, &teams, kickoff);
@@ -977,18 +1050,41 @@ mod community_shield_tests {
         game.competitions[1].fixtures[0].status = FixtureStatus::Scheduled;
         game.competitions[1].fixtures[0].home_team_id = "three".to_string();
 
-        assert!(!is_season_complete(&game), "an unstaged playoff blocks rollover");
+        assert!(
+            !is_season_complete(&game),
+            "an unstaged playoff blocks rollover"
+        );
         assert!(league_playoff_ids(&game.competitions).contains("playoff-league-playoff-3-4"));
         assert_eq!(stage_pending_league_playoffs(&mut game), 1);
         crate::schedule::deconflict_fixture_dates(&mut game.competitions);
-        let playoff = game.competitions.iter().find(|competition| competition.id == "playoff-league-playoff-3-4").unwrap();
+        let playoff = game
+            .competitions
+            .iter()
+            .find(|competition| competition.id == "playoff-league-playoff-3-4")
+            .unwrap();
         assert_eq!(playoff.participant_ids, teams[2..].to_vec());
-        assert_ne!(playoff.fixtures[0].date, "2026-05-21", "the playoff cannot overlap the cup fixture");
-        assert!(!is_season_complete(&game), "a pending playoff blocks rollover");
+        assert_ne!(
+            playoff.fixtures[0].date, "2026-05-21",
+            "the playoff cannot overlap the cup fixture"
+        );
+        assert!(
+            !is_season_complete(&game),
+            "a pending playoff blocks rollover"
+        );
         assert_eq!(stage_pending_league_playoffs(&mut game), 0);
         retire_league_playoffs(&mut game);
-        assert!(!game.competitions.iter().any(|competition| competition.id == "playoff-league-playoff-3-4"));
-        assert!(!game.active_competition_ids.iter().any(|id| id == "playoff-league-playoff-3-4"));
+        assert!(
+            !game
+                .competitions
+                .iter()
+                .any(|competition| competition.id == "playoff-league-playoff-3-4")
+        );
+        assert!(
+            !game
+                .active_competition_ids
+                .iter()
+                .any(|id| id == "playoff-league-playoff-3-4")
+        );
     }
 }
 
@@ -1056,10 +1152,7 @@ fn manage_international_calendar(
         &mut game.competitions,
         &reserved_dates,
     );
-    crate::schedule::append_other_preseason_friendlies(
-        &mut game.competitions,
-        &reserved_dates,
-    );
+    crate::schedule::append_other_preseason_friendlies(&mut game.competitions, &reserved_dates);
 
     if leads_into_world_cup {
         // The windows host the qualifying campaign instead of friendlies: the

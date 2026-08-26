@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { GameStateData, PlayerSelectionOptions } from "../../store/gameStore";
+import type { GameStateData, PlayerSelectionOptions } from "../../store/gameStore";
 import {
   getErrorMessage,
   resolveTranslatedErrorMessage,
@@ -107,6 +107,7 @@ export default function PlayersListTab({
   );
 
   useEffect(() => {
+    void refetchKey;
     let cancelled = false;
     fetchPlayersPage(query)
       .then((result) => {
@@ -234,7 +235,7 @@ export default function PlayersListTab({
         </div>
 
         <div className="flex gap-1.5">
-          <button
+          <button type="button"
             onClick={() => patchQuery({ position: null })}
             className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold uppercase tracking-wider transition-all ${
               !query.position
@@ -245,7 +246,7 @@ export default function PlayersListTab({
             {t("players.allPos")}
           </button>
           {positions.map((pos) => (
-            <button
+            <button type="button"
               key={pos}
               onClick={() =>
                 patchQuery({ position: query.position === pos ? null : pos })
@@ -262,19 +263,19 @@ export default function PlayersListTab({
         </div>
 
         <div className="flex gap-1.5">
-          <button
+          <button type="button"
             onClick={() => patchQuery({ status: "all" })}
             className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold uppercase tracking-wider transition-all ${query.status === "all" ? "bg-primary-500 text-white shadow-sm" : "bg-white dark:bg-navy-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-navy-600"}`}
           >
             {t("common.all")}
           </button>
-          <button
+          <button type="button"
             onClick={() => patchQuery({ status: "transfer" })}
             className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold uppercase tracking-wider transition-all ${query.status === "transfer" ? "bg-accent-500 text-white shadow-sm" : "bg-white dark:bg-navy-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-navy-600"}`}
           >
             {t("transfers.transfer")}
           </button>
-          <button
+          <button type="button"
             onClick={() => patchQuery({ status: "loan" })}
             className={`px-3 py-1.5 rounded-lg text-xs font-heading font-bold uppercase tracking-wider transition-all ${query.status === "loan" ? "bg-blue-500 text-white shadow-sm" : "bg-white dark:bg-navy-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-navy-600"}`}
           >
@@ -394,7 +395,7 @@ export default function PlayersListTab({
                     ...(summary.team_id
                       ? [
                           buildViewTeamMenuItem(t, () => {
-                            onSelectTeam(summary.team_id!);
+                            if (summary.team_id) onSelectTeam(summary.team_id);
                           }),
                         ]
                       : []),
@@ -503,10 +504,10 @@ export default function PlayersListTab({
                       </td>
                       <td className="py-2.5 px-4">
                         {summary.team_id ? (
-                          <button
+                          <button type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onSelectTeam(summary.team_id!);
+                              if (summary.team_id) onSelectTeam(summary.team_id);
                             }}
                             className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-500 hover:underline transition-colors"
                           >
@@ -578,14 +579,14 @@ export default function PlayersListTab({
                 })}
               </p>
               <div className="flex items-center gap-1">
-                <button
+                <button type="button"
                   onClick={() => patchQuery({ page: 1 })}
                   disabled={page === 1}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-navy-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 >
                   <ChevronsLeft className="w-4 h-4" />
                 </button>
-                <button
+                <button type="button"
                   onClick={() => patchQuery({ page: Math.max(1, page - 1) })}
                   disabled={page === 1}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-navy-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"
@@ -595,7 +596,7 @@ export default function PlayersListTab({
                 <span className="px-3 py-1 text-xs font-heading font-bold text-gray-600 dark:text-gray-300">
                   {page} / {totalPages}
                 </span>
-                <button
+                <button type="button"
                   onClick={() =>
                     patchQuery({ page: Math.min(totalPages, page + 1) })
                   }
@@ -604,7 +605,7 @@ export default function PlayersListTab({
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <button
+                <button type="button"
                   onClick={() => patchQuery({ page: totalPages })}
                   disabled={page === totalPages}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-navy-700 disabled:opacity-30 disabled:pointer-events-none transition-colors"

@@ -99,7 +99,7 @@ export function WorldEditorSidebar({
               {group.label}
             </p>
             {group.items.map((item) => (
-              <button
+              <button type="button"
                 key={item.key}
                 onClick={() => onSelectSection(item.key)}
                 className={itemClass(selectedSection === item.key && !showingIssues)}
@@ -125,7 +125,7 @@ export function WorldEditorSidebar({
 
       {/* Issues badge at bottom */}
       <div className="flex-shrink-0 px-2 pt-2 border-t border-gray-200 dark:border-navy-700">
-        <button
+        <button type="button"
           onClick={onShowIssues}
           className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
             showingIssues

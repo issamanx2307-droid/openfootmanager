@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { FixtureData, GameStateData } from "../../store/gameStore";
+import type { FixtureData, GameStateData } from "../../store/gameStore";
 import { getFixtureDisplayLabel } from "../../lib/helpers";
-import { MatchSnapshot, EnginePlayerData, FORMATIONS, PLAY_STYLES } from "./types";
+import { type MatchSnapshot, type EnginePlayerData, FORMATIONS, PLAY_STYLES } from "./types";
 import PreMatchLineup, { parseFormationNeeds, POSITION_KEY_STATS, statColor, starterOvrColor, getStatVal } from "./PreMatchLineup";
 import { condColor } from "../../lib/playerConditionDisplay";
 import { getSetPieceStats } from "./SetPieceSelector";
@@ -167,32 +167,27 @@ export default function PreMatchSetup({
             number: sp?.jersey_number,
           }}
         >
-          <div
-            draggable={false}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            className="w-full"
+          <Select
+            selectSize="sm"
+            variant="ghost"
+            fullWidth
+            value={playerRoles[player.id] ?? "Standard"}
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+            onChange={(e) => {
+              handlePlayerRoleChange(player.id, e.target.value as PlayerRole);
+            }}
           >
-            <Select
-              selectSize="sm"
-              variant="ghost"
-              fullWidth
-              value={playerRoles[player.id] ?? "Standard"}
-              onChange={(e) => {
-                handlePlayerRoleChange(player.id, e.target.value as PlayerRole);
-              }}
-            >
-              {getRoleOptions(
-                displayPosition,
-                playerRoles[player.id] ?? "Standard",
-              ).map((role) => (
-                <option key={role} value={role}>
-                  {t(`tactics.playerRoles.${role}`, role)}
-                </option>
-              ))}
-            </Select>
-          </div>
+            {getRoleOptions(
+              displayPosition,
+              playerRoles[player.id] ?? "Standard",
+            ).map((role) => (
+              <option key={role} value={role}>
+                {t(`tactics.playerRoles.${role}`, role)}
+              </option>
+            ))}
+          </Select>
         </PitchToken>
       </div>
     );
@@ -391,7 +386,7 @@ export default function PreMatchSetup({
         <p className="text-[10px] font-heading font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
           {t("match.setPiecesCaptain")}
         </p>
-        <button
+        <button type="button"
           onClick={handleAutoSelectSetPieces}
           className="flex items-center gap-1.5 rounded-lg border border-accent-200 dark:border-accent-500/20 bg-accent-50 hover:bg-accent-100 dark:bg-accent-500/10 dark:hover:bg-accent-500/20 px-3 py-1.5 font-heading font-bold text-[10px] uppercase tracking-wider text-accent-700 dark:text-accent-400 transition-colors"
         >
@@ -402,10 +397,10 @@ export default function PreMatchSetup({
       <div className="grid grid-cols-2 gap-3">
         {setPieceItems.map(({ role, label, Icon, current }) => (
           <div key={role}>
-            <label className="mb-1.5 flex items-center gap-1 text-[10px] font-heading uppercase tracking-widest text-gray-500 dark:text-gray-400">
+            <p className="mb-1.5 flex items-center gap-1 text-[10px] font-heading uppercase tracking-widest text-gray-500 dark:text-gray-400">
               <Icon className="h-3 w-3" />
               {label}
-            </label>
+            </p>
             <Select
               value={current ?? ""}
               onChange={(e) => handleSetPieceTaker(role, e.target.value)}
@@ -645,7 +640,7 @@ export default function PreMatchSetup({
               className="h-14 w-14 shrink-0 rounded-xl flex items-center justify-center font-heading font-bold text-lg overflow-hidden"
               imageClassName="h-11 w-11 object-contain drop-shadow"
               style={{
-                backgroundColor: homeTeamColor + "30",
+                backgroundColor: `${homeTeamColor}30`,
                 borderColor: homeTeamColor,
                 borderWidth: 2,
               }}
@@ -671,7 +666,7 @@ export default function PreMatchSetup({
                 VS
               </p>
             </div>
-            <button
+            <button type="button"
               onClick={onStart}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 px-8 py-3 font-heading font-bold uppercase tracking-wider text-sm text-white shadow-lg shadow-primary-500/20 transition-all hover:from-primary-600 hover:to-primary-700 hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -687,7 +682,7 @@ export default function PreMatchSetup({
               className="h-14 w-14 shrink-0 rounded-xl flex items-center justify-center font-heading font-bold text-lg overflow-hidden"
               imageClassName="h-11 w-11 object-contain drop-shadow"
               style={{
-                backgroundColor: awayTeamColor + "30",
+                backgroundColor: `${awayTeamColor}30`,
                 borderColor: awayTeamColor,
                 borderWidth: 2,
               }}

@@ -10,9 +10,12 @@ pub fn fixture_seed(fixture: &Fixture) -> u64 {
         "albion-engine-v1|{}|{}|{}|{}",
         fixture.id, fixture.date, fixture.home_team_id, fixture.away_team_id
     );
-    source.as_bytes().iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
-        (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
-    })
+    source
+        .as_bytes()
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        })
 }
 
 #[cfg(test)]

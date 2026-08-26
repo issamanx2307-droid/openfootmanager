@@ -66,12 +66,18 @@ export default function TransferCounterOfferModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      onClick={onClose}
+      className="fixed inset-0 flex items-center justify-center z-50"
     >
+      <button
+        type="button"
+        aria-label={`${t("transfers.close")} backdrop`}
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
       <div
-        className="bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-sm"
-        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        className="relative bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-sm"
       >
         <h3 className="text-sm font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
           {t("transfers.counterOffer")}
@@ -160,7 +166,7 @@ export default function TransferCounterOfferModal({
           </div>
         ) : null}
         <div className="flex gap-2">
-          <button
+          <button type="button"
             onClick={onSubmit}
             disabled={
               submitDisabled || counterLoading || counterResult === "accepted"
@@ -171,7 +177,7 @@ export default function TransferCounterOfferModal({
               ? t("transfers.submitting")
               : t("transfers.submitCounter")}
           </button>
-          <button
+          <button type="button"
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 dark:bg-navy-700 text-gray-600 dark:text-gray-300 rounded-lg font-heading font-bold text-sm uppercase tracking-wider hover:bg-gray-300 dark:hover:bg-navy-600 transition-colors"
           >

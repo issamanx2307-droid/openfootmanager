@@ -51,7 +51,7 @@ export default function HomeOnboardingChecklistCard({
         </div>
         <div className="flex flex-col gap-2">
           {steps.map((step) => (
-            <button
+            <button type="button"
               key={step.id}
               onClick={() => onNavigate?.(step.tab)}
               className={`flex items-center gap-3 p-3 rounded-lg text-left transition-all ${

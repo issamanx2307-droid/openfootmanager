@@ -32,6 +32,7 @@ export function useInitialModalIntent({
   const [hasConsumed, setHasConsumed] = useState(false);
 
   useEffect(() => {
+    void resetKey;
     setHasConsumed(false);
   }, [resetKey]);
 
@@ -44,5 +45,5 @@ export function useInitialModalIntent({
     open();
     // `open` is a fresh closure each render and is deliberately not a dep:
     // including it would re-run this on every render.
-  }, [allowed, hasConsumed, isOpen, requested]);
+  }, [allowed, hasConsumed, isOpen, requested, open]);
 }

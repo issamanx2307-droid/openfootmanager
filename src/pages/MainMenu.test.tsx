@@ -75,7 +75,7 @@ vi.mock("../components/ui", () => ({
   }: ComponentPropsWithoutRef<"button"> & {
     iconRight?: unknown;
     iconLeft?: unknown;
-  }) => <button {...props}>{children}</button>,
+  }) => <button type="button" {...props}>{children}</button>,
   ThemeToggle: () => <div data-testid="theme-toggle" />,
   DatePicker: ({
     value,

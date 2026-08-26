@@ -81,7 +81,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
     setFinMax(editingTeam.financeRange?.[1]?.toString() ?? "");
     // Sync only when the selected entity changes, not on every field edit
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingTeamIndex]);
+  }, [editingTeam.financeRange?.[1]?.toString, editingTeam.reputationRange?.[1]?.toString]);
 
   function handleNameChange(v: string) {
     updateField("name", v);
@@ -92,7 +92,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
     <div className="flex gap-6 items-start">
       <div className="flex-1 min-w-0 flex flex-col gap-4">
         <div className="flex items-center gap-2 mb-2">
-          <button
+          <button type="button"
             onClick={onBack}
             className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-navy-600"
           >
@@ -129,7 +129,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
 
           {projectDir && (
             <div className="flex flex-col gap-1">
-              <label className={labelClass}>{t("worldEditor.teamLogo")}</label>
+              <p className={labelClass}>{t("worldEditor.teamLogo")}</p>
               <div className="flex items-center gap-3">
                 {logoDataUrl ? (
                   <img src={logoDataUrl} alt="" className="w-12 h-12 rounded-lg object-contain border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 flex-shrink-0" />
@@ -200,7 +200,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
 
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+              <label htmlFor="package-team-primary-color" className="text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
                 {t("worldEditor.teamPrimaryColor")}
               </label>
               <div className="flex items-center gap-2">
@@ -213,6 +213,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
                   className="w-9 h-9 rounded-lg border border-gray-200 dark:border-navy-600 cursor-pointer p-0.5 bg-white dark:bg-navy-700 flex-shrink-0"
                 />
                 <input
+                  id="package-team-primary-color"
                   type="text"
                   value={editingTeam.colors.primary}
                   onChange={(e) =>
@@ -224,7 +225,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
               </div>
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <label className="text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+              <label htmlFor="package-team-secondary-color" className="text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
                 {t("worldEditor.teamSecondaryColor")}
               </label>
               <div className="flex items-center gap-2">
@@ -237,6 +238,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
                   className="w-9 h-9 rounded-lg border border-gray-200 dark:border-navy-600 cursor-pointer p-0.5 bg-white dark:bg-navy-700 flex-shrink-0"
                 />
                 <input
+                  id="package-team-secondary-color"
                   type="text"
                   value={editingTeam.colors.secondary}
                   onChange={(e) =>
@@ -251,7 +253,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
 
           {/* Kit pattern selector */}
           <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>{t("worldEditor.teamKitPattern")}</label>
+            <p className={labelClass}>{t("worldEditor.teamKitPattern")}</p>
             <div className="flex gap-2 flex-wrap">
               {KIT_PATTERNS.map((pattern) => {
                 const isSelected = (editingTeam.kitPattern ?? "Solid") === pattern;
@@ -338,7 +340,7 @@ export function TeamForm({ editingTeam, editingTeamIndex, isBusy, projectDir, on
           </div>
         </div>
 
-        <button
+        <button type="button"
           onClick={onSave}
           disabled={isBusy || !editingTeam.id || !editingTeam.name || !editingTeam.city || !editingTeam.country}
           className="w-full py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-heading font-bold uppercase tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"

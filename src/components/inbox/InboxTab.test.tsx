@@ -18,8 +18,7 @@ import type {
 import { useSettingsStore } from "../../store/settingsStore";
 import InboxTab from "./InboxTab";
 
-const mockTranslationState = vi.hoisted(function () {
-  return {
+const mockTranslationState = vi.hoisted(() => ({
     language: "en",
     translations: {
       en: {
@@ -61,8 +60,7 @@ const mockTranslationState = vi.hoisted(function () {
         "inbox.effectOutcomeLabel": "Desfecho",
       },
     } as Record<string, Record<string, string>>,
-  };
-});
+  }));
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
@@ -337,8 +335,8 @@ async function renderInboxTab(options: {
   });
 }
 
-describe("InboxTab", function (): void {
-  it("renders each message exactly once in the list", async function (): Promise<void> {
+describe("InboxTab", (): void => {
+  it("renders each message exactly once in the list", async (): Promise<void> => {
     const gameState = createGameState([
       createMessage({ id: "m1", subject: "Test Message 1" }),
       createMessage({ id: "m2", subject: "Test Message 2" }),
@@ -350,7 +348,7 @@ describe("InboxTab", function (): void {
     expect(screen.getAllByText(/Test Message \d/)).toHaveLength(3);
   });
 
-  it("marks an unread message as read when selected", async function (): Promise<void> {
+  it("marks an unread message as read when selected", async (): Promise<void> => {
     const updatedMessages = [createMessage({ id: "m1", read: true })];
     const onGameUpdate = vi.fn();
 
@@ -363,7 +361,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByText("Test Message"));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("mark_message_read", {
         messageId: "m1",
       });
@@ -373,7 +371,7 @@ describe("InboxTab", function (): void {
     expect(onGameUpdate).not.toHaveBeenCalled();
   });
 
-  it("sorts messages by date when the sort order changes", async function (): Promise<void> {
+  it("sorts messages by date when the sort order changes", async (): Promise<void> => {
     await renderInboxTab({
       gameState: createGameState([
         createMessage({
@@ -413,7 +411,7 @@ describe("InboxTab", function (): void {
     expect(within(rows[2]).getByText("Newest Message")).toBeInTheDocument();
   });
 
-  it("confirms before deleting a single message", async function (): Promise<void> {
+  it("confirms before deleting a single message", async (): Promise<void> => {
     const onGameUpdate = vi.fn();
     const updatedMessages: ReturnType<typeof createMessage>[] = [];
 
@@ -434,7 +432,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByTestId("inbox-confirm-delete"));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("delete_message", {
         messageId: "m1",
       });
@@ -444,7 +442,7 @@ describe("InboxTab", function (): void {
     expect(onGameUpdate).not.toHaveBeenCalled();
   });
 
-  it("opens the context menu on a message row and requests deletion", async function (): Promise<void> {
+  it("opens the context menu on a message row and requests deletion", async (): Promise<void> => {
     await renderInboxTab({
       gameState: createGameState([createMessage({ id: "m1", read: true })]),
     });
@@ -457,7 +455,7 @@ describe("InboxTab", function (): void {
     ).toBeInTheDocument();
   });
 
-  it("confirms before deleting selected messages in bulk", async function (): Promise<void> {
+  it("confirms before deleting selected messages in bulk", async (): Promise<void> => {
     const onGameUpdate = vi.fn();
     const updatedMessages = [
       createMessage({ id: "m3", subject: "Keep Me", read: true }),
@@ -486,7 +484,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByTestId("inbox-confirm-delete"));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("delete_messages", {
         messageIds: ["m1", "m2"],
       });
@@ -496,7 +494,7 @@ describe("InboxTab", function (): void {
     expect(onGameUpdate).not.toHaveBeenCalled();
   });
 
-  it("navigates to a team route without resolving the message action", async function (): Promise<void> {
+  it("navigates to a team route without resolving the message action", async (): Promise<void> => {
     const onNavigate = vi.fn();
     const action: MessageAction = {
       id: "action-1",
@@ -515,7 +513,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Team" }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(onNavigate).toHaveBeenCalledWith("__selectTeam", {
         messageId: "team-99",
       });
@@ -524,7 +522,7 @@ describe("InboxTab", function (): void {
     expect(mockedInvoke).not.toHaveBeenCalledWith("resolve_message_action", expect.anything());
   });
 
-  it("navigates to a player route without resolving the message action", async function (): Promise<void> {
+  it("navigates to a player route without resolving the message action", async (): Promise<void> => {
     const onNavigate = vi.fn();
     const action: MessageAction = {
       id: "action-1",
@@ -543,7 +541,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Player" }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(onNavigate).toHaveBeenCalledWith("__selectPlayer", {
         messageId: "player-99",
       });
@@ -552,7 +550,7 @@ describe("InboxTab", function (): void {
     expect(mockedInvoke).not.toHaveBeenCalledWith("resolve_message_action", expect.anything());
   });
 
-  it("navigates to a dashboard tab and still resolves the action", async function (): Promise<void> {
+  it("navigates to a dashboard tab and still resolves the action", async (): Promise<void> => {
     const onGameUpdate = vi.fn();
     const onNavigate = vi.fn();
     const resolvedGameState = createGameState([
@@ -578,7 +576,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Squad" }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(onNavigate).toHaveBeenCalledWith("Squad", undefined);
       expect(mockedInvoke).toHaveBeenCalledWith("resolve_message_action", {
         messageId: "m1",
@@ -590,7 +588,7 @@ describe("InboxTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(resolvedGameState);
   });
 
-  it("renders localized effect feedback when the backend returns an effect key", async function (): Promise<void> {
+  it("renders localized effect feedback when the backend returns an effect key", async (): Promise<void> => {
     const onGameUpdate = vi.fn();
     const action: MessageAction = {
       id: "respond",
@@ -629,7 +627,7 @@ describe("InboxTab", function (): void {
 
     fireEvent.click(screen.getByText("Return the praise"));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(
         screen.getByText("Outcome: Resolved morale +3"),
       ).toBeInTheDocument();
@@ -638,7 +636,7 @@ describe("InboxTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(resolvedGameState);
   });
 
-  it("renders the outcome label from the active locale", async function (): Promise<void> {
+  it("renders the outcome label from the active locale", async (): Promise<void> => {
     const previousLanguage = mockTranslationState.language;
     const onGameUpdate = vi.fn();
     const action: MessageAction = {
@@ -685,7 +683,7 @@ describe("InboxTab", function (): void {
 
       fireEvent.click(screen.getByText("Return the praise"));
 
-      await waitFor(function (): void {
+      await waitFor((): void => {
         expect(
           screen.getByText("Desfecho: Resolved morale +3"),
         ).toBeInTheDocument();
@@ -695,7 +693,7 @@ describe("InboxTab", function (): void {
     }
   });
 
-  it("renders delegated renewal report details with settings-aware money formatting", async function (): Promise<void> {
+  it("renders delegated renewal report details with settings-aware money formatting", async (): Promise<void> => {
     useSettingsStore.setState({
       settings: {
         ...useSettingsStore.getState().settings,
@@ -777,7 +775,7 @@ describe("InboxTab", function (): void {
     ).toBeInTheDocument();
   });
 
-  it("opens the linked player profile from a message context button", async function (): Promise<void> {
+  it("opens the linked player profile from a message context button", async (): Promise<void> => {
     const onNavigate = vi.fn();
     const gameState = createGameState([
       createMessage({
@@ -806,7 +804,7 @@ describe("InboxTab", function (): void {
     });
   });
 
-  it("opens the referenced player profile from delegated renewal reports", async function (): Promise<void> {
+  it("opens the referenced player profile from delegated renewal reports", async (): Promise<void> => {
     const onNavigate = vi.fn();
 
     await renderInboxTab({
@@ -888,7 +886,7 @@ describe("InboxTab", function (): void {
     return state;
   }
 
-  it("shows the switch-club confirm dialog when an employed manager accepts a job offer", async function (): Promise<void> {
+  it("shows the switch-club confirm dialog when an employed manager accepts a job offer", async (): Promise<void> => {
     const action = jobOfferAcceptDeclineAction("team2");
     const message = createMessage({
       id: "job_offer_team2_2025-01-01",
@@ -917,7 +915,7 @@ describe("InboxTab", function (): void {
     );
   });
 
-  it("does not invoke the action when the switch-club dialog is cancelled", async function (): Promise<void> {
+  it("does not invoke the action when the switch-club dialog is cancelled", async (): Promise<void> => {
     const action = jobOfferAcceptDeclineAction("team2");
     const message = createMessage({
       id: "job_offer_team2_2025-01-01",
@@ -949,7 +947,7 @@ describe("InboxTab", function (): void {
     );
   });
 
-  it("invokes the action with optionId=accept when the switch-club dialog is confirmed", async function (): Promise<void> {
+  it("invokes the action with optionId=accept when the switch-club dialog is confirmed", async (): Promise<void> => {
     const action = jobOfferAcceptDeclineAction("team2");
     const message = createMessage({
       id: "job_offer_team2_2025-01-01",
@@ -978,7 +976,7 @@ describe("InboxTab", function (): void {
     fireEvent.click(screen.getByText("Accept the position"));
     fireEvent.click(screen.getByTestId("switch-club-confirm"));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("resolve_message_action", {
         messageId: "job_offer_team2_2025-01-01",
         actionId: "respond_team2",
@@ -987,7 +985,7 @@ describe("InboxTab", function (): void {
     });
   });
 
-  it("does not show the switch-club dialog when an employed manager declines a job offer", async function (): Promise<void> {
+  it("does not show the switch-club dialog when an employed manager declines a job offer", async (): Promise<void> => {
     const action = jobOfferAcceptDeclineAction("team2");
     const message = createMessage({
       id: "job_offer_team2_2025-01-01",
@@ -1018,7 +1016,7 @@ describe("InboxTab", function (): void {
     expect(
       screen.queryByTestId("switch-club-confirm-modal"),
     ).not.toBeInTheDocument();
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("resolve_message_action", {
         messageId: "job_offer_team2_2025-01-01",
         actionId: "respond_team2",
@@ -1027,7 +1025,7 @@ describe("InboxTab", function (): void {
     });
   });
 
-  it("does not show the switch-club dialog when an unemployed manager accepts a job offer", async function (): Promise<void> {
+  it("does not show the switch-club dialog when an unemployed manager accepts a job offer", async (): Promise<void> => {
     const action = jobOfferAcceptDeclineAction("team2");
     const message = createMessage({
       id: "job_offer_team2_2025-01-01",
@@ -1058,7 +1056,7 @@ describe("InboxTab", function (): void {
     expect(
       screen.queryByTestId("switch-club-confirm-modal"),
     ).not.toBeInTheDocument();
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("resolve_message_action", {
         messageId: "job_offer_team2_2025-01-01",
         actionId: "respond_team2",
@@ -1067,7 +1065,7 @@ describe("InboxTab", function (): void {
     });
   });
 
-  it("formats delegated renewal money values only once in dot-separated locales", async function (): Promise<void> {
+  it("formats delegated renewal money values only once in dot-separated locales", async (): Promise<void> => {
     const previousLanguage = i18n.language;
     const previousSettings = useSettingsStore.getState().settings;
 
@@ -1134,7 +1132,7 @@ describe("InboxTab", function (): void {
     }
   });
 
-  it("tells the user that player-event response outcomes vary", async function (): Promise<void> {
+  it("tells the user that player-event response outcomes vary", async (): Promise<void> => {
     const action: MessageAction = {
       id: "respond",
       label: "Respond",
@@ -1169,7 +1167,7 @@ describe("InboxTab", function (): void {
     ).toBeInTheDocument();
   });
 
-  it("shows the selected youth scouting target on youth recruitment reports", async function (): Promise<void> {
+  it("shows the selected youth scouting target on youth recruitment reports", async (): Promise<void> => {
     await renderInboxTab({
       gameState: createGameState([
         createMessage({
@@ -1194,7 +1192,7 @@ describe("InboxTab", function (): void {
     expect(screen.getByText("Defender")).toBeInTheDocument();
   });
 
-  it("renders without crashing when gameState is null", async function (): Promise<void> {
+  it("renders without crashing when gameState is null", async (): Promise<void> => {
     mockedInvoke.mockResolvedValueOnce([]);
 
     await act(async () => {
@@ -1210,7 +1208,7 @@ describe("InboxTab", function (): void {
     expect(screen.queryByTestId(/inbox-row-/)).not.toBeInTheDocument();
   });
 
-  it("renders translated youth recruitment reports with contract details and signed prospects still visible", async function (): Promise<void> {
+  it("renders translated youth recruitment reports with contract details and signed prospects still visible", async (): Promise<void> => {
     await renderInboxTab({
       gameState: createGameState([
         createMessage({

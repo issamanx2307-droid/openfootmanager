@@ -52,7 +52,9 @@ impl MatchInput {
 fn fnv1a64(bytes: &[u8]) -> u64 {
     const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0000_0100_0000_01b3;
-    bytes.iter().fold(OFFSET, |hash, byte| (hash ^ u64::from(*byte)).wrapping_mul(PRIME))
+    bytes.iter().fold(OFFSET, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(PRIME)
+    })
 }
 
 /// Stable one-shot simulator contract.
@@ -273,13 +275,19 @@ mod tests {
             MatchSimulator::engine_version(&simulator),
             MATCH_ENGINE_VERSION
         );
-        assert_eq!(report_fingerprint(&first).unwrap(), report_fingerprint(&replay).unwrap());
+        assert_eq!(
+            report_fingerprint(&first).unwrap(),
+            report_fingerprint(&replay).unwrap()
+        );
         assert_eq!(
             report_fingerprint(&first).unwrap(),
             report_fingerprint(&replay).unwrap(),
             "same input, seed and engine version must produce an exact report"
         );
-        assert_eq!(match_input.fingerprint().unwrap(), input().fingerprint().unwrap());
+        assert_eq!(
+            match_input.fingerprint().unwrap(),
+            input().fingerprint().unwrap()
+        );
     }
 
     #[test]
@@ -295,7 +303,10 @@ mod tests {
 
         let first = run(simulator);
         let replay = run(simulator);
-        assert_eq!(report_fingerprint(&first).unwrap(), report_fingerprint(&replay).unwrap());
+        assert_eq!(
+            report_fingerprint(&first).unwrap(),
+            report_fingerprint(&replay).unwrap()
+        );
     }
 
     #[test]
@@ -321,6 +332,9 @@ mod tests {
         let mut changed = baseline.clone();
         changed.home.tactics.pressing_intensity = crate::types::PressingIntensity::Aggressive;
 
-        assert_ne!(baseline.fingerprint().unwrap(), changed.fingerprint().unwrap());
+        assert_ne!(
+            baseline.fingerprint().unwrap(),
+            changed.fingerprint().unwrap()
+        );
     }
 }

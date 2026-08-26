@@ -1,5 +1,5 @@
 import { getContractRiskLevel, getPlayerOvr } from "../../lib/helpers";
-import { PlayerData, GameStateData } from "../../store/gameStore";
+import type { PlayerData, GameStateData } from "../../store/gameStore";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Select } from "../ui";
@@ -220,7 +220,7 @@ export default function PlayerProfile({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <button
+        <button type="button"
           onClick={onClose}
           className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
         >

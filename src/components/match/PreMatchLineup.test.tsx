@@ -253,7 +253,10 @@ describe("PreMatchLineup component", () => {
     render(<PreMatchLineup {...defaultProps} onAutoSelect={onAutoSelect} />);
     const autoBtn = screen.getByText("match.autoSelectXI");
     expect(autoBtn).toBeInTheDocument();
-    fireEvent.click(autoBtn.closest("button")!);
+    const autoSelectButton = autoBtn.closest("button");
+    expect(autoSelectButton).not.toBeNull();
+    if (!autoSelectButton) throw new Error("Auto-select control must be a button");
+    fireEvent.click(autoSelectButton);
     expect(onAutoSelect).toHaveBeenCalledOnce();
   });
 

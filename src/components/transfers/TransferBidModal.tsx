@@ -251,19 +251,23 @@ export function TransferBidForm({
 
 export default function TransferBidModal(props: TransferBidModalProps) {
   const titleId = `transfer-bid-modal-title-${props.bidTarget.id}`;
+  const { t } = useTranslation();
 
   return (
     <div
-      role="presentation"
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      onClick={props.onClose}
+      className="fixed inset-0 flex items-center justify-center z-50"
     >
+      <button
+        type="button"
+        aria-label={`${t("transfers.close")} backdrop`}
+        className="absolute inset-0 bg-black/50"
+        onClick={props.onClose}
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-sm"
-        onClick={(event) => event.stopPropagation()}
+        className="relative bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-sm"
       >
         <TransferBidForm {...props} />
       </div>

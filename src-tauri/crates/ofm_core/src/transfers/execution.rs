@@ -208,10 +208,12 @@ pub(super) fn transfer_buyer_can_register(game: &Game, buyer_team_id: &str, fee:
                 < limit as usize
         });
 
-    fits_registration && game.teams
-        .iter()
-        .find(|team| team.id == buyer_team_id)
-        .is_some_and(|team| team.finance >= fee_i64 && team.transfer_budget >= fee_i64)
+    fits_registration
+        && game
+            .teams
+            .iter()
+            .find(|team| team.id == buyer_team_id)
+            .is_some_and(|team| team.finance >= fee_i64 && team.transfer_budget >= fee_i64)
 }
 
 /// Transfer a player between teams, adjusting finances.

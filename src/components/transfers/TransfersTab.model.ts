@@ -145,7 +145,6 @@ export function getCurrentTransferList(
       return getMyListedPlayers(collections);
     case "players":
       return collections.availablePlayers;
-    case "offers":
     default:
       return collections.playersWithOffers;
   }

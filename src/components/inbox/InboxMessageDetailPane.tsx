@@ -67,7 +67,7 @@ export default function InboxMessageDetailPane({
   // captured against a now-unrelated message.
   useEffect(() => {
     setPendingSwitch(null);
-  }, [selectedMessage?.id]);
+  }, []);
 
   const currentClubName = currentTeamName ?? "";
   const hasYouthProspects = Boolean(
@@ -115,7 +115,7 @@ export default function InboxMessageDetailPane({
   return (
     <>
       <div className="shrink-0 border-b border-gray-100 p-5 dark:border-navy-600">
-        <button
+        <button type="button"
           onClick={onCloseSelectedMessage}
           className="md:hidden flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-3"
         >
@@ -471,7 +471,7 @@ export default function InboxMessageDetailPane({
                           : t("inbox.chooseResponse")}
                       </p>
                       {options.map((option) => (
-                        <button
+                        <button type="button"
                           key={option.id}
                           onClick={() =>
                             handleOptionClick(
@@ -495,7 +495,7 @@ export default function InboxMessageDetailPane({
                 }
 
                 return (
-                  <button
+                  <button type="button"
                     key={action.id}
                     disabled={action.resolved}
                     onClick={() => onAction(selectedMessage.id, action.id)}

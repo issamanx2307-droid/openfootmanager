@@ -150,7 +150,7 @@ export function useTacticsLibrary({
         ? activeTactic.name
         : t(`tactics.presetNames.${activeTactic.id.replace("preset:", "")}`);
     setDraftTacticName(nextName);
-  }, [activeTactic?.id, activeTactic?.name, activeTactic?.type, t]);
+  }, [activeTactic?.id, activeTactic?.name, activeTactic?.type, t, activeTactic]);
 
   function createCustomTacticEntry(
     overrides: Partial<TacticsLibraryEntry> = {},

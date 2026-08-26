@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, Check, ChevronDown } from "lucide-react";
 import type { CountryFlag } from "../ui/CountryFlag";
@@ -63,6 +63,20 @@ export default function CreateManagerNationalityField({
     const [resources, setResources] = useState<CountryResources | null>(null);
     const [isLoadingResources, setIsLoadingResources] = useState(false);
 
+    const ensureCountryResources = useCallback(async () => {
+        if (resources || isLoadingResources) {
+            return;
+        }
+
+        setIsLoadingResources(true);
+
+        try {
+            setResources(await loadCountryResources());
+        } finally {
+            setIsLoadingResources(false);
+        }
+    }, [isLoadingResources, resources]);
+
     useEffect(() => {
         if (!isOpen || !nationalityRef.current) {
             return;
@@ -91,21 +105,7 @@ export default function CreateManagerNationalityField({
         if (!resources && (isOpen || nationality)) {
             void ensureCountryResources();
         }
-    }, [isOpen, nationality, resources]);
-
-    const ensureCountryResources = async () => {
-        if (resources || isLoadingResources) {
-            return;
-        }
-
-        setIsLoadingResources(true);
-
-        try {
-            setResources(await loadCountryResources());
-        } finally {
-            setIsLoadingResources(false);
-        }
-    };
+    }, [isOpen, nationality, resources, ensureCountryResources]);
 
     const normalisedSearchValue = normaliseSearchText(searchValue);
     const nationalities = useMemo(
@@ -152,9 +152,9 @@ export default function CreateManagerNationalityField({
             ref={nationalityRef}
             className={isOpen ? "relative z-50" : undefined}
         >
-            <label className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <p className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 {t("createManager.countryOfOrigin")}
-            </label>
+            </p>
             <div className="relative">
                 <button
                     type="button"
@@ -204,7 +204,6 @@ export default function CreateManagerNationalityField({
                                 <div className="border-b border-gray-100 p-2 dark:border-navy-600">
                                     <input
                                         type="text"
-                                        autoFocus
                                         placeholder={t("createManager.searchNationalities")}
                                         value={searchValue}
                                         onChange={(event) => setSearchValue(event.target.value)}

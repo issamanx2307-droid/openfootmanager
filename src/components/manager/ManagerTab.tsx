@@ -1,4 +1,4 @@
-import { GameStateData } from "../../store/gameStore";
+import type { GameStateData } from "../../store/gameStore";
 import { Card, CardHeader, CardBody, ProgressBar, CountryFlag } from "../ui";
 import { ManagerCareerChart } from "./ManagerCareerChart";
 import { formatDate } from "../../lib/helpers";
@@ -36,7 +36,7 @@ export default function ManagerTab({ gameState, onSelectTeam }: ManagerTabProps)
               <ContextMenu
                 items={[buildViewTeamMenuItem(t, () => onSelectTeam(myTeam.id))]}
               >
-                <button
+                <button type="button"
                   data-testid="manager-current-team"
                   onClick={() => onSelectTeam(myTeam.id)}
                   className="text-primary-400 text-sm font-semibold mt-0.5 hover:text-primary-300 transition-colors"
@@ -133,13 +133,14 @@ export default function ManagerTab({ gameState, onSelectTeam }: ManagerTabProps)
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
-                {mgr.career_history.map((entry, i) => {
+                {mgr.career_history.map((entry) => {
+                  const historyKey = `${entry.team_id}-${entry.start_date}`;
                   const canSelectTeam =
                     !!onSelectTeam &&
                     gameState.teams.some((team) => team.id === entry.team_id);
                   const historyRow = (
                     <tr
-                      key={i}
+                      key={historyKey}
                       data-testid={`manager-history-${entry.team_id}`}
                       onClick={canSelectTeam ? () => onSelectTeam(entry.team_id) : undefined}
                       onKeyDown={canSelectTeam ? (event) => {
@@ -168,7 +169,7 @@ export default function ManagerTab({ gameState, onSelectTeam }: ManagerTabProps)
                   return (
                     <ContextMenu
                       items={[buildViewTeamMenuItem(t, () => onSelectTeam(entry.team_id))]}
-                      key={i}
+                      key={historyKey}
                     >
                       {historyRow}
                     </ContextMenu>

@@ -5,6 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FixtureData, GameStateData, PlayerData, TeamData } from "../../store/gameStore";
 import TournamentsTab from "./TournamentsTab";
 
+function required<T>(value: T | null | undefined, message: string): T {
+  if (value == null) throw new Error(message);
+  return value;
+}
+
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
@@ -301,7 +306,7 @@ describe("TournamentsTab", () => {
   it("renders a knockout bracket with byes when a cup is selected", () => {
     const state = createGameState(true);
     state.competitions = [
-      state.league!,
+      required(state.league, "Expected test league"),
       {
         id: "cup-1",
         name: "FA Cup",
@@ -344,7 +349,7 @@ describe("TournamentsTab", () => {
   it("renders group tables for a group-and-knockout competition", () => {
     const state = createGameState(true);
     state.competitions = [
-      state.league!,
+      required(state.league, "Expected test league"),
       {
         id: "cl-1",
         name: "Continental Champions Cup",
@@ -420,7 +425,7 @@ describe("TournamentsTab", () => {
       },
     ];
     state.competitions = [
-      state.league!,
+      required(state.league, "Expected test league"),
       {
         id: "wc-2026",
         name: "World Cup 2026",
@@ -487,7 +492,7 @@ describe("TournamentsTab", () => {
       world_cup_champions: [{ year: 2026, nation_code: "BR", nation_name: "Brazil" }],
     };
     state.competitions = [
-      state.league!,
+      required(state.league, "Expected test league"),
       {
         id: "wc-2026",
         name: "World Cup 2026",
@@ -514,7 +519,7 @@ describe("TournamentsTab", () => {
     const state = createGameState(true);
     state.world_history = { world_cup_champions: [] };
     state.competitions = [
-      state.league!,
+      required(state.league, "Expected test league"),
       {
         id: "wc-2026",
         name: "World Cup 2026",

@@ -447,6 +447,7 @@ export default function TacticsPitch({
                   className="absolute"
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                 >
+                  {/* biome-ignore lint/a11y/noStaticElementInteractions: HTML has no semantic drop-target element; this is the dedicated native drag-and-drop target. */}
                   <div
                     data-testid={`pitch-slot-${slot.index}`}
                     className={getSlotTargetClassName(isHovered, !!player)}
@@ -483,6 +484,7 @@ export default function TacticsPitch({
                             t,
                           })}
                         >
+                          {/* biome-ignore lint/a11y/useSemanticElements: The token can contain the interactive role selector, which must not be nested in a native button. */}
                           <div
                             role="button"
                             tabIndex={0}
@@ -534,36 +536,31 @@ export default function TacticsPitch({
                             >
                               {/* Role combobox */}
                               {onRoleChange && (
-                                <div
-                                  draggable={false}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => e.stopPropagation()}
-                                  className="w-full"
+                                <Select
+                                  selectSize="sm"
+                                  variant="ghost"
+                                  fullWidth
+                                  value={playerRoles?.[player.id] ?? "Standard"}
+                                  onMouseDown={(event) => event.stopPropagation()}
+                                  onKeyDown={(event) => event.stopPropagation()}
+                                  onChange={(e) => {
+                                    onRoleChange(player.id, e.target.value as PlayerRole);
+                                  }}
                                 >
-                                  <Select
-                                    selectSize="sm"
-                                    variant="ghost"
-                                    fullWidth
-                                    value={playerRoles?.[player.id] ?? "Standard"}
-                                    onChange={(e) => {
-                                      onRoleChange(player.id, e.target.value as PlayerRole);
-                                    }}
-                                  >
-                                    {getRoleOptions(
-                                      // Roles follow the deployed slot, which is
-                                      // what the backend validates against —
-                                      // natural-position roles for an
-                                      // out-of-position player would be
-                                      // rejected and silently revert (#272).
-                                      slot.position,
-                                      playerRoles?.[player.id] ?? "Standard",
-                                    ).map((role) => (
-                                      <option key={role} value={role}>
-                                        {t(`tactics.playerRoles.${role}`, role)}
-                                      </option>
-                                    ))}
-                                  </Select>
-                                </div>
+                                  {getRoleOptions(
+                                    // Roles follow the deployed slot, which is
+                                    // what the backend validates against —
+                                    // natural-position roles for an
+                                    // out-of-position player would be
+                                    // rejected and silently revert (#272).
+                                    slot.position,
+                                    playerRoles?.[player.id] ?? "Standard",
+                                  ).map((role) => (
+                                    <option key={role} value={role}>
+                                      {t(`tactics.playerRoles.${role}`, role)}
+                                    </option>
+                                  ))}
+                                </Select>
                               )}
                             </PitchToken>
                           </div>

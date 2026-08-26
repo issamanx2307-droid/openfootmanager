@@ -1,14 +1,17 @@
 //! Canonical game mutations performed by the authoritative command lane.
 
-use albion_protocol::command::{Command, RespondTransferOfferBody, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody, SubmitContractOfferBody, SubmitTransferBidBody, TransferOfferResponse};
 use albion_protocol::ErrorCode;
+use albion_protocol::command::{
+    Command, RespondTransferOfferBody, SetStartingXiBody, SetTacticsBody, SetTrainingPlanBody,
+    SubmitContractOfferBody, SubmitTransferBidBody, TransferOfferResponse,
+};
 use chrono::Datelike;
-use domain::team::{PlayStyle, TrainingFocus, TrainingIntensity};
 use domain::league::FixtureStatus;
+use domain::team::{PlayStyle, TrainingFocus, TrainingIntensity};
 use ofm_core::game::Game;
+use ofm_core::live_match_manager::{LiveMatchSession, MatchMode, create_live_match};
 use ofm_core::player_rating::formation_slots;
-use ofm_core::live_match_manager::{create_live_match, LiveMatchSession, MatchMode};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashSet;
 use uuid::Uuid;
 
@@ -19,8 +22,14 @@ pub struct CanonicalCareer {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Advancement {
-    AdvancedThrough { date: String },
-    HumanFixture { fixture_id: Uuid, home_club_id: Uuid, away_club_id: Uuid },
+    AdvancedThrough {
+        date: String,
+    },
+    HumanFixture {
+        fixture_id: Uuid,
+        home_club_id: Uuid,
+        away_club_id: Uuid,
+    },
 }
 
 impl CanonicalCareer {
@@ -40,8 +49,7 @@ impl CanonicalCareer {
 
     pub fn controlled_club(&self, manager_id: Uuid) -> Result<Uuid, ErrorCode> {
         let team_id = self.controlled_team_id(manager_id)?;
-        Uuid::parse_str(&team_id)
-            .map_err(|_| ErrorCode::AuthInvalid)
+        Uuid::parse_str(&team_id).map_err(|_| ErrorCode::AuthInvalid)
     }
 
     /// A deliberately narrow resync view. It contains only the reconnecting
@@ -55,16 +63,30 @@ impl CanonicalCareer {
             .iter()
             .find(|team| team.id == team_id)
             .ok_or(ErrorCode::AuthInvalid)?;
-        let next_fixture = self.game.competitions.iter()
-            .flat_map(|competition| competition.fixtures.iter().map(move |fixture| (competition, fixture)))
-            .filter(|(_, fixture)| fixture.status == FixtureStatus::Scheduled
-                && (fixture.home_team_id == team_id || fixture.away_team_id == team_id))
+        let next_fixture = self
+            .game
+            .competitions
+            .iter()
+            .flat_map(|competition| {
+                competition
+                    .fixtures
+                    .iter()
+                    .map(move |fixture| (competition, fixture))
+            })
+            .filter(|(_, fixture)| {
+                fixture.status == FixtureStatus::Scheduled
+                    && (fixture.home_team_id == team_id || fixture.away_team_id == team_id)
+            })
             .min_by(|(_, left), (_, right)| left.date.cmp(&right.date))
             .map(|(competition, fixture)| {
-                let team_name = |id: &str| self.game.teams.iter()
-                    .find(|candidate| candidate.id == id)
-                    .map(|candidate| candidate.name.clone())
-                    .unwrap_or_else(|| id.to_owned());
+                let team_name = |id: &str| {
+                    self.game
+                        .teams
+                        .iter()
+                        .find(|candidate| candidate.id == id)
+                        .map(|candidate| candidate.name.clone())
+                        .unwrap_or_else(|| id.to_owned())
+                };
                 json!({
                     "id": fixture.id,
                     "date": fixture.date,
@@ -73,55 +95,90 @@ impl CanonicalCareer {
                     "awayTeam": team_name(&fixture.away_team_id),
                 })
             });
-        let squad = self.game.players.iter()
+        let squad = self
+            .game
+            .players
+            .iter()
             .filter(|player| player.team_id.as_deref() == Some(team_id.as_str()))
-            .map(|player| json!({
-                "id": player.id,
-                "name": player.match_name,
-                "position": format!("{:?}", player.position),
-                "condition": player.condition,
-                "injured": player.injury.is_some(),
-            }))
+            .map(|player| {
+                json!({
+                    "id": player.id,
+                    "name": player.match_name,
+                    "position": format!("{:?}", player.position),
+                    "condition": player.condition,
+                    "injured": player.injury.is_some(),
+                })
+            })
             .collect::<Vec<_>>();
-        let inbox = self.game.messages.iter()
-            .filter(|message| message.context.team_id.as_deref().is_none_or(|id| id == team_id))
+        let inbox = self
+            .game
+            .messages
+            .iter()
+            .filter(|message| {
+                message
+                    .context
+                    .team_id
+                    .as_deref()
+                    .is_none_or(|id| id == team_id)
+            })
             .rev()
             .take(5)
-            .map(|message| json!({
-                "id": message.id,
-                "subject": message.subject,
-                "sender": message.sender,
-                "date": message.date,
-                "read": message.read,
-                "priority": format!("{:?}", message.priority),
-            }))
+            .map(|message| {
+                json!({
+                    "id": message.id,
+                    "subject": message.subject,
+                    "sender": message.sender,
+                    "date": message.date,
+                    "read": message.read,
+                    "priority": format!("{:?}", message.priority),
+                })
+            })
             .collect::<Vec<_>>();
-        let incoming_transfer_offers = self.game.players.iter()
+        let incoming_transfer_offers = self
+            .game
+            .players
+            .iter()
             .filter(|player| player.team_id.as_deref() == Some(team_id.as_str()))
-            .flat_map(|player| player.transfer_offers.iter()
-                .filter(|offer| offer.status == domain::player::TransferOfferStatus::Pending)
-                .map(|offer| {
-                    let buyer_name = self.game.teams.iter()
-                        .find(|candidate| candidate.id == offer.from_team_id)
-                        .map(|candidate| candidate.name.clone())
-                        .unwrap_or_else(|| offer.from_team_id.clone());
-                    json!({
-                        "offerId": offer.id,
-                        "playerName": player.match_name,
-                        "fromClub": buyer_name,
-                        "fee": offer.fee,
+            .flat_map(|player| {
+                player
+                    .transfer_offers
+                    .iter()
+                    .filter(|offer| offer.status == domain::player::TransferOfferStatus::Pending)
+                    .map(|offer| {
+                        let buyer_name = self
+                            .game
+                            .teams
+                            .iter()
+                            .find(|candidate| candidate.id == offer.from_team_id)
+                            .map(|candidate| candidate.name.clone())
+                            .unwrap_or_else(|| offer.from_team_id.clone());
+                        json!({
+                            "offerId": offer.id,
+                            "playerName": player.match_name,
+                            "fromClub": buyer_name,
+                            "fee": offer.fee,
+                        })
                     })
-                }))
+            })
             .collect::<Vec<_>>();
-        let transfer_targets = self.game.players.iter()
-            .filter(|player| player.transfer_listed && player.team_id.as_deref() != Some(team_id.as_str()) && !player.retired)
+        let transfer_targets = self
+            .game
+            .players
+            .iter()
+            .filter(|player| {
+                player.transfer_listed
+                    && player.team_id.as_deref() != Some(team_id.as_str())
+                    && !player.retired
+            })
             .take(12)
-            .map(|player| json!({
-                "id": player.id,
-                "name": player.match_name,
-                "position": format!("{:?}", player.position),
-                "marketValue": player.market_value,
-            }))
+            .map(|player| {
+                json!({
+                    "id": player.id,
+                    "name": player.match_name,
+                    "position": format!("{:?}", player.position),
+                    "marketValue": player.market_value,
+                })
+            })
             .collect::<Vec<_>>();
         let free_agents = self.game.players.iter()
             .filter(|player| player.team_id.is_none() && !player.retired)
@@ -157,16 +214,32 @@ impl CanonicalCareer {
     pub fn advance_until_human_blocker(&mut self, controlled_clubs: &HashSet<Uuid>) -> Advancement {
         for _ in 0..366 {
             let today = self.game.clock.current_date.format("%Y-%m-%d").to_string();
-            if let Some(fixture) = self.game.competitions.iter().flat_map(|competition| competition.fixtures.iter()).find(|fixture| {
-                fixture.status == FixtureStatus::Scheduled
-                    && fixture.date == today
-                    && (Uuid::parse_str(&fixture.home_team_id).ok().is_some_and(|id| controlled_clubs.contains(&id))
-                        || Uuid::parse_str(&fixture.away_team_id).ok().is_some_and(|id| controlled_clubs.contains(&id)))
-            }) {
+            if let Some(fixture) = self
+                .game
+                .competitions
+                .iter()
+                .flat_map(|competition| competition.fixtures.iter())
+                .find(|fixture| {
+                    fixture.status == FixtureStatus::Scheduled
+                        && fixture.date == today
+                        && (Uuid::parse_str(&fixture.home_team_id)
+                            .ok()
+                            .is_some_and(|id| controlled_clubs.contains(&id))
+                            || Uuid::parse_str(&fixture.away_team_id)
+                                .ok()
+                                .is_some_and(|id| controlled_clubs.contains(&id)))
+                })
+            {
                 return Advancement::HumanFixture {
-                    fixture_id: Uuid::parse_str(&fixture.id).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.id.as_bytes())),
-                    home_club_id: Uuid::parse_str(&fixture.home_team_id).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.home_team_id.as_bytes())),
-                    away_club_id: Uuid::parse_str(&fixture.away_team_id).unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.away_team_id.as_bytes())),
+                    fixture_id: Uuid::parse_str(&fixture.id).unwrap_or_else(|_| {
+                        Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.id.as_bytes())
+                    }),
+                    home_club_id: Uuid::parse_str(&fixture.home_team_id).unwrap_or_else(|_| {
+                        Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.home_team_id.as_bytes())
+                    }),
+                    away_club_id: Uuid::parse_str(&fixture.away_team_id).unwrap_or_else(|_| {
+                        Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.away_team_id.as_bytes())
+                    }),
                 };
             }
             ofm_core::turn::process_day(&mut self.game);
@@ -187,18 +260,25 @@ impl CanonicalCareer {
             .iter()
             .enumerate()
             .find_map(|(competition_index, competition)| {
-                competition.fixtures.iter().enumerate().find_map(|(fixture_index, fixture)| {
-                    let candidate = Uuid::parse_str(&fixture.id)
-                        .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.id.as_bytes()));
-                    (candidate == fixture_id).then_some((competition_index, fixture_index))
-                })
+                competition
+                    .fixtures
+                    .iter()
+                    .enumerate()
+                    .find_map(|(fixture_index, fixture)| {
+                        let candidate = Uuid::parse_str(&fixture.id).unwrap_or_else(|_| {
+                            Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.id.as_bytes())
+                        });
+                        (candidate == fixture_id).then_some((competition_index, fixture_index))
+                    })
             })
             .ok_or_else(|| "be.error.liveMatch.fixtureNotFound".to_string())?;
         let fixture = &self.game.competitions[competition_index].fixtures[fixture_index];
-        let home_club_id = Uuid::parse_str(&fixture.home_team_id)
-            .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.home_team_id.as_bytes()));
-        let away_club_id = Uuid::parse_str(&fixture.away_team_id)
-            .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.away_team_id.as_bytes()));
+        let home_club_id = Uuid::parse_str(&fixture.home_team_id).unwrap_or_else(|_| {
+            Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.home_team_id.as_bytes())
+        });
+        let away_club_id = Uuid::parse_str(&fixture.away_team_id).unwrap_or_else(|_| {
+            Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture.away_team_id.as_bytes())
+        });
         let mut match_game = self.game.clone();
         match_game.league = Some(self.game.competitions[competition_index].clone());
         let mut session = create_live_match(&match_game, fixture_index, MatchMode::Live, false)?;
@@ -213,7 +293,10 @@ impl CanonicalCareer {
         Ok(session)
     }
 
-    pub fn finish_live_match(&mut self, mut session: LiveMatchSession) -> Result<serde_json::Value, String> {
+    pub fn finish_live_match(
+        &mut self,
+        mut session: LiveMatchSession,
+    ) -> Result<serde_json::Value, String> {
         if !session.is_finished() {
             session.run_to_completion();
         }
@@ -275,7 +358,8 @@ impl CanonicalCareer {
         if formation_slots(&body.formation).len() != 11 {
             return Err(ErrorCode::InvalidLineup);
         }
-        let play_style = parse_play_style(&body.mentality).ok_or(ErrorCode::MatchCommandNotAllowed)?;
+        let play_style =
+            parse_play_style(&body.mentality).ok_or(ErrorCode::MatchCommandNotAllowed)?;
         let team_id = self.controlled_team_id(manager_id)?;
         let team = self
             .game
@@ -303,7 +387,9 @@ impl CanonicalCareer {
         let selected_ids = body.player_ids.clone();
         let all_owned_and_healthy = selected_ids.iter().all(|player_id| {
             self.game.players.iter().any(|player| {
-                player.id == *player_id && player.team_id.as_deref() == Some(team_id.as_str()) && player.injury.is_none()
+                player.id == *player_id
+                    && player.team_id.as_deref() == Some(team_id.as_str())
+                    && player.injury.is_none()
             })
         });
         if !all_owned_and_healthy {
@@ -330,8 +416,10 @@ impl CanonicalCareer {
         manager_id: Uuid,
         body: &SetTrainingPlanBody,
     ) -> Result<Value, ErrorCode> {
-        let intensity = parse_training_intensity(body.weekly_intensity).ok_or(ErrorCode::MatchCommandNotAllowed)?;
-        let focus = parse_training_focus(&body.team_focus).ok_or(ErrorCode::MatchCommandNotAllowed)?;
+        let intensity = parse_training_intensity(body.weekly_intensity)
+            .ok_or(ErrorCode::MatchCommandNotAllowed)?;
+        let focus =
+            parse_training_focus(&body.team_focus).ok_or(ErrorCode::MatchCommandNotAllowed)?;
         let team_id = self.controlled_team_id(manager_id)?;
         let team = self
             .game
@@ -341,7 +429,9 @@ impl CanonicalCareer {
             .ok_or(ErrorCode::AuthInvalid)?;
         team.training_intensity = intensity;
         team.training_focus = focus;
-        Ok(json!({ "teamId": team.id, "weeklyIntensity": body.weekly_intensity, "teamFocus": body.team_focus }))
+        Ok(
+            json!({ "teamId": team.id, "weeklyIntensity": body.weekly_intensity, "teamFocus": body.team_focus }),
+        )
     }
 
     fn submit_transfer_bid(
@@ -381,7 +471,10 @@ impl CanonicalCareer {
             ofm_core::contracts::offer_free_agent_contract(
                 game,
                 &body.player_id,
-                ofm_core::contracts::RenewalOffer { weekly_wage: wage, contract_years: years as u32 },
+                ofm_core::contracts::RenewalOffer {
+                    weekly_wage: wage,
+                    contract_years: years as u32,
+                },
             )
         })?;
         Ok(json!({
@@ -405,7 +498,10 @@ impl CanonicalCareer {
             .iter()
             .find(|player| {
                 player.team_id.as_deref() == Some(team_id.as_str())
-                    && player.transfer_offers.iter().any(|offer| offer.id == body.offer_id)
+                    && player
+                        .transfer_offers
+                        .iter()
+                        .any(|offer| offer.id == body.offer_id)
             })
             .map(|player| player.id.clone())
             .ok_or(ErrorCode::AuthInvalid)?;
@@ -417,13 +513,18 @@ impl CanonicalCareer {
                 ofm_core::transfers::respond_to_offer(game, &player_id, &body.offer_id, false)
             })?,
             TransferOfferResponse::Counter => {
-                let fee = whole_currency(body.counter_upfront_minor.ok_or(ErrorCode::InsufficientTransferBudget)?)?;
+                let fee = whole_currency(
+                    body.counter_upfront_minor
+                        .ok_or(ErrorCode::InsufficientTransferBudget)?,
+                )?;
                 self.with_manager_context(manager_id, |game| {
                     ofm_core::transfers::counter_offer(game, &player_id, &body.offer_id, fee)
                 })?;
             }
         }
-        Ok(json!({ "playerId": player_id, "offerId": body.offer_id, "response": format!("{:?}", body.response) }))
+        Ok(
+            json!({ "playerId": player_id, "offerId": body.offer_id, "response": format!("{:?}", body.response) }),
+        )
     }
 
     fn with_manager_context<T>(
@@ -519,11 +620,21 @@ mod tests {
         let manager_id = Uuid::new_v4();
         let team_id = Uuid::new_v4();
         let mut manager = Manager::new(
-            manager_id.to_string(), "Alex".into(), "Manager".into(), "1980-01-01".into(), "ENG".into(),
+            manager_id.to_string(),
+            "Alex".into(),
+            "Manager".into(),
+            "1980-01-01".into(),
+            "ENG".into(),
         );
         manager.hire(team_id.to_string());
         let mut team = Team::new(
-            team_id.to_string(), "Albion".into(), "ALB".into(), "England".into(), "Albion".into(), "Ground".into(), 20_000,
+            team_id.to_string(),
+            "Albion".into(),
+            "ALB".into(),
+            "England".into(),
+            "Albion".into(),
+            "Ground".into(),
+            20_000,
         );
         team.manager_id = Some(manager_id.to_string());
         let game = Game::new(
@@ -540,12 +651,24 @@ mod tests {
     #[test]
     fn manager_can_mutate_only_its_canonical_team_tactics_and_training() {
         let (mut career, manager_id) = career();
-        career.apply(manager_id, &Command::SetTactics(SetTacticsBody {
-            formation: "4-3-3".into(), mentality: "high_press".into(),
-        })).unwrap();
-        career.apply(manager_id, &Command::SetTrainingPlan(SetTrainingPlanBody {
-            weekly_intensity: 80, team_focus: "attacking".into(),
-        })).unwrap();
+        career
+            .apply(
+                manager_id,
+                &Command::SetTactics(SetTacticsBody {
+                    formation: "4-3-3".into(),
+                    mentality: "high_press".into(),
+                }),
+            )
+            .unwrap();
+        career
+            .apply(
+                manager_id,
+                &Command::SetTrainingPlan(SetTrainingPlanBody {
+                    weekly_intensity: 80,
+                    team_focus: "attacking".into(),
+                }),
+            )
+            .unwrap();
         let team = &career.game().teams[0];
         assert_eq!(team.formation, "4-3-3");
         assert_eq!(team.play_style, PlayStyle::HighPress);
@@ -564,7 +687,12 @@ mod tests {
             id: fixture_id.to_string(),
             competition_id: "league".into(),
             matchday: 1,
-            date: career.game().clock.current_date.format("%Y-%m-%d").to_string(),
+            date: career
+                .game()
+                .clock
+                .current_date
+                .format("%Y-%m-%d")
+                .to_string(),
             home_team_id: team_id,
             away_team_id: Uuid::new_v4().to_string(),
             competition: FixtureCompetition::League,
@@ -574,18 +702,29 @@ mod tests {
         career.game.competitions.push(competition);
 
         let outcome = career.advance_until_human_blocker(&HashSet::from([club_id]));
-        assert!(matches!(outcome, Advancement::HumanFixture { fixture_id: actual, .. } if actual == fixture_id));
+        assert!(
+            matches!(outcome, Advancement::HumanFixture { fixture_id: actual, .. } if actual == fixture_id)
+        );
     }
 
     #[test]
     fn manager_dashboard_is_a_narrow_club_view() {
         let (mut career, manager_id) = career();
         let team_id = career.game.teams[0].id.clone();
-        let mut competition = League { name: "Test League".into(), ..Default::default() };
+        let mut competition = League {
+            name: "Test League".into(),
+            ..Default::default()
+        };
         competition.fixtures.push(Fixture {
-            id: Uuid::new_v4().to_string(), competition_id: "league".into(), matchday: 1,
-            date: "2026-07-08".into(), home_team_id: team_id, away_team_id: Uuid::new_v4().to_string(),
-            competition: FixtureCompetition::League, status: FixtureStatus::Scheduled, result: None,
+            id: Uuid::new_v4().to_string(),
+            competition_id: "league".into(),
+            matchday: 1,
+            date: "2026-07-08".into(),
+            home_team_id: team_id,
+            away_team_id: Uuid::new_v4().to_string(),
+            competition: FixtureCompetition::League,
+            status: FixtureStatus::Scheduled,
+            result: None,
         });
         career.game.competitions.push(competition);
         let view = career.manager_dashboard(manager_id).unwrap();
@@ -604,16 +743,39 @@ mod tests {
         let (mut career, manager_id) = career();
         let own_team_id = career.game.teams[0].id.clone();
         let message = |id: &str, subject: &str, team_id: String| InboxMessage {
-            id: id.into(), subject: subject.into(), body: "body".into(), sender: "Board".into(),
-            sender_role: "Board".into(), date: "2026-07-01".into(), read: false,
-            category: MessageCategory::System, priority: MessagePriority::Normal, actions: vec![],
-            context: MessageContext { team_id: Some(team_id), ..Default::default() },
-            subject_key: None, body_key: None, sender_key: None, sender_role_key: None,
+            id: id.into(),
+            subject: subject.into(),
+            body: "body".into(),
+            sender: "Board".into(),
+            sender_role: "Board".into(),
+            date: "2026-07-01".into(),
+            read: false,
+            category: MessageCategory::System,
+            priority: MessagePriority::Normal,
+            actions: vec![],
+            context: MessageContext {
+                team_id: Some(team_id),
+                ..Default::default()
+            },
+            subject_key: None,
+            body_key: None,
+            sender_key: None,
+            sender_role_key: None,
             i18n_params: Default::default(),
         };
-        career.game.messages.push(message("own", "Own message", own_team_id));
-        career.game.messages.push(message("other", "Other message", Uuid::new_v4().to_string()));
-        let inbox = career.manager_dashboard(manager_id).unwrap()["inbox"].as_array().unwrap().clone();
+        career
+            .game
+            .messages
+            .push(message("own", "Own message", own_team_id));
+        career.game.messages.push(message(
+            "other",
+            "Other message",
+            Uuid::new_v4().to_string(),
+        ));
+        let inbox = career.manager_dashboard(manager_id).unwrap()["inbox"]
+            .as_array()
+            .unwrap()
+            .clone();
         assert_eq!(inbox.len(), 1);
         assert_eq!(inbox[0]["subject"], "Own message");
     }
@@ -622,8 +784,33 @@ mod tests {
     fn manager_dashboard_exposes_only_public_transfer_target_fields() {
         let (mut career, manager_id) = career();
         let mut player = Player::new(
-            "fpl-listed-1".into(), "Listed Player".into(), "Listed Player".into(), "1998-01-01".into(), "ENG".into(), Position::Forward,
-            PlayerAttributes { pace: 60, stamina: 60, strength: 60, agility: 60, passing: 60, shooting: 60, tackling: 60, dribbling: 60, defending: 60, positioning: 60, vision: 60, decisions: 60, composure: 60, aggression: 60, teamwork: 60, leadership: 60, handling: 20, reflexes: 20, aerial: 60 },
+            "fpl-listed-1".into(),
+            "Listed Player".into(),
+            "Listed Player".into(),
+            "1998-01-01".into(),
+            "ENG".into(),
+            Position::Forward,
+            PlayerAttributes {
+                pace: 60,
+                stamina: 60,
+                strength: 60,
+                agility: 60,
+                passing: 60,
+                shooting: 60,
+                tackling: 60,
+                dribbling: 60,
+                defending: 60,
+                positioning: 60,
+                vision: 60,
+                decisions: 60,
+                composure: 60,
+                aggression: 60,
+                teamwork: 60,
+                leadership: 60,
+                handling: 20,
+                reflexes: 20,
+                aerial: 60,
+            },
         );
         player.transfer_listed = true;
         player.market_value = 1_500_000;
@@ -639,11 +826,14 @@ mod tests {
     fn transfer_bids_reject_non_integral_minor_currency_before_mutating() {
         let (mut career, manager_id) = career();
         let before = career.game().teams[0].finance;
-        let result = career.apply(manager_id, &Command::SubmitTransferBid(SubmitTransferBidBody {
-            player_id: "fpl-unknown".into(),
-            upfront_minor: 101,
-            installments_minor: vec![],
-        }));
+        let result = career.apply(
+            manager_id,
+            &Command::SubmitTransferBid(SubmitTransferBidBody {
+                player_id: "fpl-unknown".into(),
+                upfront_minor: 101,
+                installments_minor: vec![],
+            }),
+        );
         assert_eq!(result.unwrap_err(), ErrorCode::InsufficientTransferBudget);
         assert_eq!(career.game().teams[0].finance, before);
     }
@@ -653,28 +843,79 @@ mod tests {
         let (mut career, manager_id) = career();
         let buyer_id = Uuid::new_v4();
         career.game.teams.push(Team::new(
-            buyer_id.to_string(), "Buyer".into(), "BUY".into(), "England".into(), "Buyer".into(), "Ground".into(), 20_000,
+            buyer_id.to_string(),
+            "Buyer".into(),
+            "BUY".into(),
+            "England".into(),
+            "Buyer".into(),
+            "Ground".into(),
+            20_000,
         ));
         let offer_id = "fpl-offer-1";
         let team_id = career.game.teams[0].id.clone();
         let mut player = Player::new(
-            "fpl-99".into(), "Player".into(), "Test Player".into(), "1995-01-01".into(), "ENG".into(), Position::Midfielder,
-            PlayerAttributes { pace: 60, stamina: 60, strength: 60, agility: 60, passing: 60, shooting: 60, tackling: 60, dribbling: 60, defending: 60, positioning: 60, vision: 60, decisions: 60, composure: 60, aggression: 60, teamwork: 60, leadership: 60, handling: 20, reflexes: 20, aerial: 60 },
+            "fpl-99".into(),
+            "Player".into(),
+            "Test Player".into(),
+            "1995-01-01".into(),
+            "ENG".into(),
+            Position::Midfielder,
+            PlayerAttributes {
+                pace: 60,
+                stamina: 60,
+                strength: 60,
+                agility: 60,
+                passing: 60,
+                shooting: 60,
+                tackling: 60,
+                dribbling: 60,
+                defending: 60,
+                positioning: 60,
+                vision: 60,
+                decisions: 60,
+                composure: 60,
+                aggression: 60,
+                teamwork: 60,
+                leadership: 60,
+                handling: 20,
+                reflexes: 20,
+                aerial: 60,
+            },
         );
         player.team_id = Some(team_id);
         player.transfer_offers.push(TransferOffer {
-            id: offer_id.into(), from_team_id: buyer_id.to_string(), fee: 1_000_000, wage_offered: 0,
-            last_manager_fee: None, negotiation_round: 0, suggested_counter_fee: None,
-            status: TransferOfferStatus::Pending, date: "2026-07-01".into(), registration_date: None,
+            id: offer_id.into(),
+            from_team_id: buyer_id.to_string(),
+            fee: 1_000_000,
+            wage_offered: 0,
+            last_manager_fee: None,
+            negotiation_round: 0,
+            suggested_counter_fee: None,
+            status: TransferOfferStatus::Pending,
+            date: "2026-07-01".into(),
+            registration_date: None,
         });
         career.game.players.push(player);
-        let offers = career.manager_dashboard(manager_id).unwrap()["incomingTransferOffers"].as_array().unwrap().clone();
+        let offers = career.manager_dashboard(manager_id).unwrap()["incomingTransferOffers"]
+            .as_array()
+            .unwrap()
+            .clone();
         assert_eq!(offers.len(), 1);
         assert_eq!(offers[0]["playerName"], "Player");
 
-        career.apply(manager_id, &Command::RespondTransferOffer(RespondTransferOfferBody {
-            offer_id: offer_id.into(), response: TransferOfferResponse::Reject, counter_upfront_minor: None,
-        })).unwrap();
-        assert_eq!(career.game.players[0].transfer_offers[0].status, TransferOfferStatus::Rejected);
+        career
+            .apply(
+                manager_id,
+                &Command::RespondTransferOffer(RespondTransferOfferBody {
+                    offer_id: offer_id.into(),
+                    response: TransferOfferResponse::Reject,
+                    counter_upfront_minor: None,
+                }),
+            )
+            .unwrap();
+        assert_eq!(
+            career.game.players[0].transfer_offers[0].status,
+            TransferOfferStatus::Rejected
+        );
     }
 }

@@ -21,7 +21,7 @@ export default function HomeNextOpponentCard({
     <Card>
       <CardHeader
         action={
-          <button
+          <button type="button"
             onClick={() => onNavigate?.("Schedule")}
             className="text-primary-500 dark:text-primary-400 text-xs font-heading font-bold uppercase tracking-wider hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
           >
@@ -89,9 +89,16 @@ export default function HomeNextOpponentCard({
 
             {nextOpponent.recentForm.length > 0 && (
               <div className="flex gap-1.5">
-                {nextOpponent.recentForm.map((result, index) => (
+                {(() => {
+                  const occurrences = new Map<string, number>();
+                  return nextOpponent.recentForm.map((result) => {
+                    const occurrence = (occurrences.get(result) ?? 0) + 1;
+                    occurrences.set(result, occurrence);
+                    return { result, key: `${nextOpponent.opponent.id}-${result}-${occurrence}` };
+                  });
+                })().map(({ result, key }) => (
                   <span
-                    key={`${nextOpponent.opponent.id}-${index}`}
+                    key={key}
                     className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-heading font-bold text-white ${
                       result === "W"
                         ? "bg-green-500"

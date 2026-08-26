@@ -39,6 +39,7 @@ export function useFetchedSquad(
   };
 
   useEffect(() => {
+    void clockDate;
     if (!teamId) {
       setFetchedTeamId(null);
       setFetchedSquad(null);

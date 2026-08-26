@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
+import type {
   GameStateData,
   LoanOfferData,
   PlayerData,
@@ -40,7 +40,7 @@ import {
 } from "../squad/SquadTab.helpers";
 import { resolveSeasonContext } from "../../lib/seasonContext";
 import { formatDate } from "../../lib/dateFormatting";
-import { type NegotiationFeedbackPanelData } from "../NegotiationFeedbackPanel";
+import type { NegotiationFeedbackPanelData } from "../NegotiationFeedbackPanel";
 import TransferBidModal, { TransferBidForm } from "./TransferBidModal";
 import TransferCounterOfferModal from "./TransferCounterOfferModal";
 import LoanOfferModal, { LoanOfferForm } from "./LoanOfferModal";
@@ -479,7 +479,7 @@ export default function TransfersTab({
         }
       }
       if (onGameUpdate) onGameUpdate(response.game);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setLoanResult("error");
       setLoanError(resolveTranslatedErrorMessage(getErrorMessage(err), t));
     } finally {
@@ -538,7 +538,7 @@ export default function TransfersTab({
         }
       }
       if (onGameUpdate) onGameUpdate(response.game);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setLoanCounterResult("error");
       setLoanCounterError(
         resolveTranslatedErrorMessage(getErrorMessage(err), t),
@@ -582,9 +582,9 @@ export default function TransfersTab({
       if (response.suggested_fee !== null) {
         setCounterAmount(formatTransferFeeInput(response.suggested_fee));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setCounterError(
-        mapTransferNegotiationError(t, err?.toString() || "error"),
+        mapTransferNegotiationError(t, getErrorMessage(err)),
       );
     } finally {
       setCounterLoading(false);
@@ -1413,7 +1413,7 @@ export default function TransfersTab({
                       ...(player.team_id
                         ? [
                             buildViewTeamMenuItem(t, () => {
-                              onSelectTeam(player.team_id!);
+                              if (player.team_id) onSelectTeam(player.team_id);
                             }),
                           ]
                         : []),
@@ -1506,7 +1506,7 @@ export default function TransfersTab({
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onSelectTeam(player.team_id!);
+                                if (player.team_id) onSelectTeam(player.team_id);
                               }}
                               className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-500 hover:underline transition-colors"
                             >

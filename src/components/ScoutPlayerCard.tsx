@@ -41,13 +41,9 @@ export default function ScoutPlayerCard({ report, onPlayerClick }: ScoutPlayerCa
   ];
 
   const discoveredCount = attrs.filter(a => a.value !== null).length;
-
-  return (
-    <div
-      onClick={() => onPlayerClick?.(report.player_id)}
-      className={`mt-4 rounded-xl border border-gray-200 dark:border-navy-600 bg-gradient-to-br from-gray-50 to-white dark:from-navy-700 dark:to-navy-800 overflow-hidden ${onPlayerClick ? "cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all" : ""
-        }`}
-    >
+  const cardClassName = `mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white dark:border-navy-600 dark:from-navy-700 dark:to-navy-800 ${onPlayerClick ? "cursor-pointer transition-all hover:border-primary-400 hover:shadow-md dark:hover:border-primary-500" : ""}`;
+  const cardContent = (
+    <>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-navy-700 dark:bg-navy-900">
         <div className="w-10 h-10 rounded-full bg-navy-600 flex items-center justify-center flex-shrink-0">
@@ -150,6 +146,20 @@ export default function ScoutPlayerCard({ report, onPlayerClick }: ScoutPlayerCa
           </span>
         </div>
       </div>
-    </div>
+    </>
   );
+
+  if (onPlayerClick) {
+    return (
+      <button
+        type="button"
+        onClick={() => onPlayerClick(report.player_id)}
+        className={`${cardClassName} w-full text-left`}
+      >
+        {cardContent}
+      </button>
+    );
+  }
+
+  return <div className={cardClassName}>{cardContent}</div>;
 }

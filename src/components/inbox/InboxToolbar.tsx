@@ -51,14 +51,14 @@ export default function InboxToolbar({
 
   return (
     <div className="flex gap-2 mb-4 flex-wrap shrink-0">
-      <button
+      <button type="button"
         onClick={onShowAll}
         className={getFilterButtonClassName(!categoryFilter)}
       >
         {t("common.all")} ({allMessagesCount})
       </button>
       {unreadCount > 0 ? (
-        <button
+        <button type="button"
           onClick={onShowUnread}
           className={getFilterButtonClassName(categoryFilter === UNREAD_FILTER)}
         >
@@ -70,7 +70,7 @@ export default function InboxToolbar({
         const count = categoryCounts.get(category) ?? 0;
 
         return (
-          <button
+          <button type="button"
             key={category}
             onClick={() => onToggleCategory(category)}
             className={getFilterButtonClassName(
@@ -137,7 +137,7 @@ export default function InboxToolbar({
           </>
         ) : null}
         {unreadCount > 0 ? (
-          <button
+          <button type="button"
             onClick={onMarkAllRead}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-bold uppercase tracking-wider bg-white dark:bg-navy-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-navy-600 hover:text-primary-500 hover:border-primary-300 transition-all"
           >
@@ -145,7 +145,7 @@ export default function InboxToolbar({
             {t("inbox.markAllRead")}
           </button>
         ) : null}
-        <button
+        <button type="button"
           onClick={onClearOld}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-bold uppercase tracking-wider bg-white dark:bg-navy-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-navy-600 hover:text-red-500 hover:border-red-300 transition-all"
         >

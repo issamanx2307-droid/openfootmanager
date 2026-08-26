@@ -206,6 +206,24 @@ test -p ofm_core --test scenario_tests full_season_holds_invariants` (1 passed).
 The scenario test drives a human-controlled club through 365 daily turns and
 asserts gameplay invariants throughout the full season without database edits.
 
+### Single-player release verification (2026-08-26)
+
+The current single-player release candidate was rechecked after the finance
+selection-loop repair and Thai core-loop localization pass. `npm run lint`, the
+frontend Vitest suite (190 files; 1,468 passed and 19 intentionally skipped),
+and `npm run build` pass. The Rust quality gate `cargo clippy --workspace
+--all-targets -- -D warnings` also passes. Focused finance, training, squad and
+locale coverage tests pass (28 tests), and the desktop debug executable starts
+successfully in a smoke test.
+
+Persistence and simulation resilience were revalidated with `cargo test -p db`
+(221 passed), `cargo test -p ofm_core --test scenario_tests` (5 passed), and
+`cargo test -p openfootmanager snapshot_data --lib` (4 passed). A reproducible
+20,000-game simulation benchmark with seed 42 completed without engine errors
+at 1,792 games per second. These checks qualify the existing single-player
+experience for the next multiplayer-planning phase; they do not remove the
+separate external-production-snapshot dependency recorded for Phase 11.
+
 Phase 6 completion evidence: the `engine` crate provides the possession/zone
 event chain, attribute and tactical/role effects, set pieces, cards, goalkeeper,
 fitness, substitutions, live commands and report invariants. `AlbionV1Simulator`
@@ -766,3 +784,13 @@ Native smoke update: the freshly built debug executable was launched in a
 local smoke check, remained running for five seconds, and was then cleanly
 stopped. This verifies basic desktop process startup in addition to build
 linking; live host/guest visual QA remains a separate acceptance requirement.
+
+Single-player priority update: further two-player acceptance work is deferred
+until the local career loop is complete. Focused verification now covers
+manager/save entry, team selection, dashboard time advancement, live-match
+completion, tactics, squad, training and transfers. The training test double
+now supports the shared translated-content component, and profile/transfer
+test doubles match the current Tauri invoke argument contract, restoring a
+successful production frontend build. The focused frontend career-loop suite
+passes 145 tests, and the desktop Tauri command suite passes 227 tests (one
+intentional performance harness ignored).

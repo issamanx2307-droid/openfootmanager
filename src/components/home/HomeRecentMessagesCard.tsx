@@ -26,7 +26,7 @@ export default function HomeRecentMessagesCard({
     <Card>
       <CardHeader
         action={
-          <button
+          <button type="button"
             onClick={() => onNavigate?.("Inbox")}
             className="text-primary-500 dark:text-primary-400 text-xs font-heading font-bold uppercase tracking-wider hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
           >
@@ -56,9 +56,10 @@ export default function HomeRecentMessagesCard({
 
               return (
                 <ContextMenu items={contextItems} key={message.id}>
-                  <div
+                  <button
+                    type="button"
                     onClick={() => onNavigate?.("Inbox", { messageId: message.id })}
-                    className={`flex gap-4 px-6 py-3.5 hover:bg-gray-50 dark:hover:bg-navy-600/50 cursor-pointer transition-colors ${!message.read ? "border-l-4 border-l-primary-500" : "border-l-4 border-l-transparent"
+                    className={`flex w-full gap-4 px-6 py-3.5 text-left hover:bg-gray-50 dark:hover:bg-navy-600/50 transition-colors ${!message.read ? "border-l-4 border-l-primary-500" : "border-l-4 border-l-transparent"
                       }`}
                   >
                     <div
@@ -86,7 +87,7 @@ export default function HomeRecentMessagesCard({
                     <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1">
                       {formatDateShort(message.date, lang)}
                     </span>
-                  </div>
+                  </button>
                 </ContextMenu>
               );
             })

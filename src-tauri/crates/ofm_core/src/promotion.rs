@@ -54,7 +54,10 @@ pub fn apply_promotion_relegation_with_playoff_winners(
         } else if configured_promotions > 0 {
             configured_promotions
         } else {
-            relegation_count(upper_division.participant_ids.len(), lower_division.participant_ids.len())
+            relegation_count(
+                upper_division.participant_ids.len(),
+                lower_division.participant_ids.len(),
+            )
         };
         relegated_at[i] = upper_standings
             .iter()
@@ -67,7 +70,11 @@ pub fn apply_promotion_relegation_with_playoff_winners(
         } else {
             count
         };
-        promoted_at[i] = lower_standings.iter().take(automatic).map(|entry| entry.team_id.clone()).collect();
+        promoted_at[i] = lower_standings
+            .iter()
+            .take(automatic)
+            .map(|entry| entry.team_id.clone())
+            .collect();
         if lower_division.rules.promotion_playoff_slots >= 2 {
             let from = automatic as u32 + 1;
             let to = from + u32::from(lower_division.rules.promotion_playoff_slots) - 1;
@@ -226,21 +233,33 @@ mod tests {
         let mut top = division(
             "top",
             0,
-            &[("t1", 60), ("t2", 50), ("t3", 40), ("t4", 30), ("t5", 20), ("t6", 10)],
+            &[
+                ("t1", 60),
+                ("t2", 50),
+                ("t3", 40),
+                ("t4", 30),
+                ("t5", 20),
+                ("t6", 10),
+            ],
         );
         top.rules.relegation_automatic_slots = 2;
         let mut second = division(
             "second",
             1,
-            &[("s1", 60), ("s2", 50), ("s3", 40), ("s4", 30), ("s5", 20), ("s6", 10)],
+            &[
+                ("s1", 60),
+                ("s2", 50),
+                ("s3", 40),
+                ("s4", 30),
+                ("s5", 20),
+                ("s6", 10),
+            ],
         );
         second.rules.promotion_automatic_slots = 1;
         second.rules.promotion_playoff_slots = 4;
         let mut divisions = vec![top, second];
-        let winners = std::collections::HashMap::from([(
-            "second-playoff-2-5".to_string(),
-            "s4".to_string(),
-        )]);
+        let winners =
+            std::collections::HashMap::from([("second-playoff-2-5".to_string(), "s4".to_string())]);
 
         apply_promotion_relegation_with_playoff_winners(&mut divisions, &winners);
 

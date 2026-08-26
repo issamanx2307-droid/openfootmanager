@@ -68,10 +68,9 @@ export function summarizeCompetitionProgress(
     totalMatchdays,
     seasonComplete: totalMatchdays > 0 && completedMatchdays >= totalMatchdays,
     totalGoals: competitiveFixtures
-      .filter((fixture) => fixture.result)
+      .flatMap((fixture) => (fixture.result ? [fixture.result] : []))
       .reduce(
-        (sum, fixture) =>
-          sum + (fixture.result!.home_goals + fixture.result!.away_goals),
+        (sum, result) => sum + result.home_goals + result.away_goals,
         0,
       ),
     completedMatches: competitiveFixtures.filter(

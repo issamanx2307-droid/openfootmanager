@@ -26,10 +26,15 @@ pub async fn start_albion_host(
     if join_secret.trim().is_empty() {
         return Err("be.error.authInvalid".into());
     }
-    let game = state.get_game(|game| game.clone()).ok_or("be.error.noActiveGameSession")?;
+    let game = state
+        .get_game(|game| game.clone())
+        .ok_or("be.error.noActiveGameSession")?;
     let save_id = state.get_save_id().ok_or("be.error.noActiveSaveSession")?;
     let save_path = {
-        let mut saves = saves.0.lock().map_err(|_| "be.error.saveManagerUnavailable")?;
+        let mut saves = saves
+            .0
+            .lock()
+            .map_err(|_| "be.error.saveManagerUnavailable")?;
         saves.save_game(&game, &save_id)?;
         saves.database_path(&save_id)?
     };
@@ -37,10 +42,14 @@ pub async fn start_albion_host(
     // Private LAN/Tailscale games need an externally reachable listener. The
     // join secret is still enforced by albion_server; clients can replace the
     // returned loopback URL with the host's LAN or Tailscale address.
-    let listener = tokio::net::TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0))
-        .await
-        .map_err(|_| "be.error.serverStartFailed")?;
-    let port = listener.local_addr().map_err(|_| "be.error.serverStartFailed")?.port();
+    let listener =
+        tokio::net::TcpListener::bind(SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0))
+            .await
+            .map_err(|_| "be.error.serverStartFailed")?;
+    let port = listener
+        .local_addr()
+        .map_err(|_| "be.error.serverStartFailed")?
+        .port();
     let mut running = host.0.lock().map_err(|_| "be.error.serverStartFailed")?;
     if let Some(previous) = running.take() {
         previous.abort();
@@ -48,7 +57,9 @@ pub async fn start_albion_host(
     *running = Some(tokio::spawn(async move {
         let _ = axum::serve(listener, router(AppState::new(config))).await;
     }));
-    Ok(AlbionHostInfo { server_url: format!("http://127.0.0.1:{port}") })
+    Ok(AlbionHostInfo {
+        server_url: format!("http://127.0.0.1:{port}"),
+    })
 }
 
 #[tauri::command]

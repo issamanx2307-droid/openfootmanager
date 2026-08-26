@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use db::game_database::GameDatabase;
 use db::game_persistence::{GamePersistenceReader, GamePersistenceWriter};
-use db::repositories::meta_repo;
 use db::repositories::authoritative_session_repo::{self, AuthoritativeSessionRecord};
+use db::repositories::meta_repo;
 use ofm_core::game::Game;
 use uuid::Uuid;
 
@@ -28,12 +28,16 @@ impl SqliteCareerStore {
         let path = path.as_ref().to_path_buf();
         let db = GameDatabase::open_save(&path).map_err(|_| "be.error.saveCorrupt".to_string())?;
         let game = GamePersistenceReader::read_game(&db)?;
-        let meta = meta_repo::load_meta(db.conn())?
-            .ok_or_else(|| "be.error.saveCorrupt".to_string())?;
+        let meta =
+            meta_repo::load_meta(db.conn())?.ok_or_else(|| "be.error.saveCorrupt".to_string())?;
         let career_id = Uuid::parse_str(&meta.save_id)
             .unwrap_or_else(|_| Uuid::new_v5(&Uuid::NAMESPACE_OID, meta.save_id.as_bytes()));
         Ok((
-            Self { path, save_id: meta.save_id, save_name: meta.save_name },
+            Self {
+                path,
+                save_id: meta.save_id,
+                save_name: meta.save_name,
+            },
             game,
             career_id,
         ))
@@ -46,21 +50,26 @@ impl SqliteCareerStore {
 
     pub fn load_session_state(&self) -> Result<Option<PersistedSessionState>, String> {
         let db = GameDatabase::open(&self.path)?;
-        authoritative_session_repo::load(db.conn()).map(|record| record.map(|record| PersistedSessionState {
-            career_revision: record.career_revision,
-            claims_json: record.claims_json,
-            reconnect_tokens_json: record.reconnect_tokens_json,
-        }))
+        authoritative_session_repo::load(db.conn()).map(|record| {
+            record.map(|record| PersistedSessionState {
+                career_revision: record.career_revision,
+                claims_json: record.claims_json,
+                reconnect_tokens_json: record.reconnect_tokens_json,
+            })
+        })
     }
 
     pub fn checkpoint_session_state(&self, state: &PersistedSessionState) -> Result<(), String> {
         let db = GameDatabase::open(&self.path)?;
-        authoritative_session_repo::upsert(db.conn(), &AuthoritativeSessionRecord {
-            career_revision: state.career_revision,
-            claims_json: state.claims_json.clone(),
-            reconnect_tokens_json: state.reconnect_tokens_json.clone(),
-            updated_at: chrono::Utc::now().to_rfc3339(),
-        })
+        authoritative_session_repo::upsert(
+            db.conn(),
+            &AuthoritativeSessionRecord {
+                career_revision: state.career_revision,
+                claims_json: state.claims_json.clone(),
+                reconnect_tokens_json: state.reconnect_tokens_json.clone(),
+                updated_at: chrono::Utc::now().to_rfc3339(),
+            },
+        )
     }
 }
 
@@ -75,11 +84,23 @@ mod tests {
 
     fn game() -> Game {
         let mut manager = Manager::new(
-            Uuid::new_v4().to_string(), "Alex".into(), "Manager".into(), "1980-01-01".into(), "ENG".into(),
+            Uuid::new_v4().to_string(),
+            "Alex".into(),
+            "Manager".into(),
+            "1980-01-01".into(),
+            "ENG".into(),
         );
         let team_id = Uuid::new_v4().to_string();
         manager.hire(team_id.clone());
-        let mut team = Team::new(team_id, "Albion".into(), "ALB".into(), "England".into(), "Albion".into(), "Ground".into(), 20_000);
+        let mut team = Team::new(
+            team_id,
+            "Albion".into(),
+            "ALB".into(),
+            "England".into(),
+            "Albion".into(),
+            "Ground".into(),
+            20_000,
+        );
         team.manager_id = Some(manager.id.clone());
         Game::new(
             GameClock::new(Utc.with_ymd_and_hms(2026, 7, 1, 12, 0, 0).unwrap()),

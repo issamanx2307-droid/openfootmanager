@@ -25,7 +25,7 @@ export function EntityListShell({
 }: EntityListShellProps) {
   return (
     <div className="flex flex-col gap-2">
-      <button
+      <button type="button"
         onClick={onAdd}
         className="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-gray-300 dark:border-navy-500 rounded-xl text-sm text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 hover:border-primary-400 dark:hover:border-primary-500 transition-colors"
       >
@@ -121,28 +121,34 @@ export function EntityRow({
         isSelected
           ? "border-primary-400 dark:border-primary-500 bg-primary-50 dark:bg-primary-500/10"
           : "border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 hover:border-gray-300 dark:hover:border-navy-500"
-      } ${onClick ? "cursor-pointer" : ""}`}
-      onClick={confirming ? undefined : onClick}
+      }`}
     >
-      {badge}
-      <div className="flex-1 min-w-0">
-        <p className="font-heading font-bold text-sm uppercase tracking-wide text-gray-800 dark:text-gray-200 truncate">
-          {title}
-        </p>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={confirming || !onClick}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+      >
+        {badge}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-heading text-sm font-bold uppercase tracking-wide text-gray-800 dark:text-gray-200">
+            {title}
+          </span>
         {subtitle && (
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">{subtitle}</p>
+          <span className="block text-[10px] text-gray-400 dark:text-gray-500">{subtitle}</span>
         )}
-      </div>
+        </span>
+      </button>
       {confirming ? (
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
+          <button type="button"
             onClick={handleConfirmDelete}
             className="p-1 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
             title={t("common.confirmDelete")}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
-          <button
+          <button type="button"
             onClick={handleCancelDelete}
             className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
             title={t("common.cancel")}
@@ -152,7 +158,7 @@ export function EntityRow({
         </div>
       ) : (
         <>
-          <button
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="text-gray-400 hover:text-primary-500 transition-colors flex-shrink-0"
             title={editLabel}
@@ -160,7 +166,7 @@ export function EntityRow({
             <Edit2 className="w-4 h-4" />
           </button>
           {onDuplicate && (
-            <button
+            <button type="button"
               onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
               className="text-gray-400 hover:text-primary-500 transition-colors flex-shrink-0"
               title={duplicateLabel}
@@ -169,7 +175,7 @@ export function EntityRow({
               <Copy className="w-4 h-4" />
             </button>
           )}
-          <button
+          <button type="button"
             onClick={handleDeleteClick}
             className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
             title={deleteLabel}
@@ -208,7 +214,7 @@ export function EntityFormShell({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 mb-2">
-        <button
+        <button type="button"
           onClick={onBack}
           className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-navy-600"
         >
@@ -221,7 +227,7 @@ export function EntityFormShell({
 
       <div className="flex flex-col gap-3">{children}</div>
 
-      <button
+      <button type="button"
         onClick={onSave}
         disabled={isBusy || saveDisabled}
         className="w-full py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-heading font-bold uppercase tracking-wide transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"

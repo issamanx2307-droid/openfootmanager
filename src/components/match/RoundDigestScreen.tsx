@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FixtureData, GameStateData } from "../../store/gameStore";
+import type { FixtureData, GameStateData } from "../../store/gameStore";
 import type { CompactMatchEventData } from "../../store/types";
-import { MatchSnapshot, MatchEvent, RoundSummary } from "./types";
+import type { MatchSnapshot, MatchEvent, RoundSummary } from "./types";
 import { getEventDisplay, makeTeamFallback } from "./helpers";
 import { QuickStat } from "./PostMatchHelpers";
 import { Badge, TeamLogo } from "../ui";
@@ -288,7 +288,7 @@ export default function RoundDigestScreen({
                   className="w-12 h-12 rounded-xl flex items-center justify-center font-heading font-bold overflow-hidden"
                   imageClassName="h-9 w-9 object-contain drop-shadow"
                   style={{
-                    backgroundColor: homeTeamColor + "30",
+                    backgroundColor: `${homeTeamColor}30`,
                     borderColor: homeTeamColor,
                     borderWidth: 2,
                   }}
@@ -317,7 +317,7 @@ export default function RoundDigestScreen({
                   className="w-12 h-12 rounded-xl flex items-center justify-center font-heading font-bold overflow-hidden"
                   imageClassName="h-9 w-9 object-contain drop-shadow"
                   style={{
-                    backgroundColor: awayTeamColor + "30",
+                    backgroundColor: `${awayTeamColor}30`,
                     borderColor: awayTeamColor,
                     borderWidth: 2,
                   }}
@@ -512,15 +512,19 @@ export default function RoundDigestScreen({
       {/* Other Match Detail Modal */}
       {selectedOtherFixture && selectedOtherFixtureReport && (
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("match.matchDetails")}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
-          onClick={() => setSelectedOtherFixtureId(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
         >
+          <button
+            type="button"
+            aria-label={t("common.close")}
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setSelectedOtherFixtureId(null)}
+          />
           <div
-            className="w-full max-w-3xl rounded-2xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl transition-colors duration-300"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("match.matchDetails")}
+            className="relative w-full max-w-3xl rounded-2xl border border-gray-200 dark:border-navy-700 bg-white dark:bg-navy-900 shadow-2xl transition-colors duration-300"
           >
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-navy-700 px-5 py-4">
               <div>
@@ -551,7 +555,7 @@ export default function RoundDigestScreen({
                 </h4>
                 {selectedOtherFixtureReport.events.length > 0 ? (
                   <div className="flex max-h-96 flex-col gap-2 overflow-auto">
-                    {selectedOtherFixtureReport.events.map((event, index) => {
+                    {selectedOtherFixtureReport.events.map((event) => {
                       const display = getEventDisplay({
                         ...event,
                         zone: "Midfield",
@@ -566,7 +570,7 @@ export default function RoundDigestScreen({
                           : getTeamNameById(selectedOtherFixture.away_team_id);
                       return (
                         <div
-                          key={`${event.minute}-${event.event_type}-${index}`}
+                          key={`${event.minute}-${event.side}-${event.event_type}-${event.player_id ?? ""}-${event.secondary_player_id ?? ""}`}
                           className="flex items-center gap-2 text-xs"
                         >
                           <span className="w-8 text-right font-heading tabular-nums text-gray-500 dark:text-gray-400">

@@ -284,7 +284,6 @@ async function fetchReleaseByTag(repository, tag, token) {
 async function buildManifest() {
   const repository = getRequiredEnv('GITHUB_REPOSITORY');
   const token = getRequiredEnv('GITHUB_TOKEN');
-  const releaseStream = getOptionalEnv('RELEASE_STREAM', 'stable');
   const manifestFilename = getOptionalEnv('RELEASE_MANIFEST_FILE', 'release-manifest.json');
   const checksumsFilename = getOptionalEnv('RELEASE_CHECKSUMS_FILE', 'checksums.txt');
   const sourceWorkflowFile = process.env.RELEASE_SOURCE_WORKFLOW_FILE;

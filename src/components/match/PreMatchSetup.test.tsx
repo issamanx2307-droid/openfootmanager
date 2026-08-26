@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import PreMatchSetup from "./PreMatchSetup";
+import type { MatchSnapshot } from "./types";
+import type { GameStateData } from "../../store/gameStore";
 
 // Mock the few external dependencies PreMatchSetup pulls in at render time so we
 // can exercise the real component tree (the opponent scout panel in particular).
@@ -91,10 +93,8 @@ function gameState(): Record<string, unknown> {
 function renderSetup() {
   return render(
     <PreMatchSetup
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      snapshot={snapshot() as any}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      gameState={gameState() as any}
+      snapshot={snapshot() as unknown as MatchSnapshot}
+      gameState={gameState() as unknown as GameStateData}
       userSide="Home"
       onStart={vi.fn()}
       onUpdateSnapshot={vi.fn()}

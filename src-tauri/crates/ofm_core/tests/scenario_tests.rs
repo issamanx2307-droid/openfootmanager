@@ -36,7 +36,11 @@ use std::collections::HashSet;
 fn make_scenario_game(seed: u64) -> Game {
     // A small, reproducible world keeps the full-season simulation fast; the
     // invariants under test hold for any world size.
-    let world = generate_world_data_seeded_with(seed, &WorldGenConfig::compact(), &DefinitionSources::embedded_only());
+    let world = generate_world_data_seeded_with(
+        seed,
+        &WorldGenConfig::compact(),
+        &DefinitionSources::embedded_only(),
+    );
 
     let start = Utc.with_ymd_and_hms(2026, 7, 1, 0, 0, 0).unwrap();
     let clock = GameClock::new(start);
@@ -292,7 +296,10 @@ fn ten_season_soak_preserves_game_invariants() {
     for month in 0..(10 * 12) {
         advance_days(&mut game, 31);
         assert_game_invariants(&game);
-        assert!(game.clock.current_date.year() >= 2026, "clock regressed in soak month {month}");
+        assert!(
+            game.clock.current_date.year() >= 2026,
+            "clock regressed in soak month {month}"
+        );
     }
 }
 

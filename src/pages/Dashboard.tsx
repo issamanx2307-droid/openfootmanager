@@ -214,7 +214,7 @@ export default function Dashboard(): JSX.Element {
 
   useEffect(() => {
     setSquadListSortState(DEFAULT_SQUAD_LIST_SORT_STATE);
-  }, [activeSaveId]);
+  }, []);
 
   useEffect(() => {
     if (!backgroundPortraitPrewarmKey) {

@@ -182,7 +182,7 @@ export function FreeAgentContractForm({
         ) : null}
 
         <div className="flex gap-2">
-          <button
+          <button type="button"
             onClick={onSubmit}
             disabled={submitDisabled}
             className="flex-1 py-2 bg-primary-700 hover:bg-primary-800 text-white rounded-lg font-heading font-bold text-sm uppercase tracking-wider transition-colors disabled:opacity-50"
@@ -191,7 +191,7 @@ export function FreeAgentContractForm({
               ? t("transfers.submitting")
               : t("playerProfile.renewalSubmit")}
           </button>
-          <button
+          <button type="button"
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 dark:bg-navy-700 text-gray-600 dark:text-gray-300 rounded-lg font-heading font-bold text-sm uppercase tracking-wider hover:bg-gray-300 dark:hover:bg-navy-600 transition-colors"
           >
@@ -206,18 +206,23 @@ export default function FreeAgentContractModal(
   props: FreeAgentContractModalProps,
 ) {
   const titleId = `free-agent-contract-title-${props.player.id}`;
+  const { t } = useTranslation();
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      onClick={props.onClose}
+      className="fixed inset-0 flex items-center justify-center z-50"
     >
+      <button
+        type="button"
+        aria-label={t("transfers.close")}
+        className="absolute inset-0 bg-black/50"
+        onClick={props.onClose}
+      />
       <div
-        className="bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-sm"
+        className="relative bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-sm"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        onClick={(event) => event.stopPropagation()}
       >
         <FreeAgentContractForm {...props} />
       </div>

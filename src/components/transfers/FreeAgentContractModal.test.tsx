@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PlayerData, TeamData } from "../../store/gameStore";
@@ -225,7 +225,11 @@ describe("FreeAgentContractModal", () => {
       target: { value: "2" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Submit Offer" }));
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Close",
+      }),
+    );
 
     expect(onWageChange).toHaveBeenCalledWith("5000");
     expect(onContractLengthChange).toHaveBeenCalledWith("2");

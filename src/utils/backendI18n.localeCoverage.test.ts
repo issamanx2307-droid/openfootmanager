@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type LocaleTree } from "../i18n/i18nTestHelpers";
+import type { LocaleTree } from "../i18n/i18nTestHelpers";
 import en from "../i18n/locales/en.json";
 
 const LOCALES: Record<string, LocaleTree> = {

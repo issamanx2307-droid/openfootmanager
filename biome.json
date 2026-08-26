@@ -1,6 +1,6 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "files": {
-    "includes": ["**", "!src/App.css", "!src/i18n/locales/**", "!dist/**", "!src-tauri/target/**"]
+    "includes": ["**", "!src/App.css", "!src/i18n/locales", "!dist", "!src-tauri/target"]
   }
 }

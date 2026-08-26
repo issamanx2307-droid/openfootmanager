@@ -335,18 +335,23 @@ export function LoanOfferForm({
 }
 
 export default function LoanOfferModal(props: LoanOfferModalProps) {
+  const { t } = useTranslation();
+
   return (
     <div
-      role="presentation"
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      onClick={props.onClose}
+      className="fixed inset-0 flex items-center justify-center z-50"
     >
+      <button
+        type="button"
+        aria-label={`${t("transfers.close")} backdrop`}
+        className="absolute inset-0 bg-black/50"
+        onClick={props.onClose}
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="loan-offer-modal-title"
-        className="bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-md"
-        onClick={(event) => event.stopPropagation()}
+        className="relative bg-white dark:bg-navy-800 rounded-xl shadow-2xl border border-gray-200 dark:border-navy-600 p-6 w-full max-w-md"
       >
         <LoanOfferForm {...props} />
       </div>

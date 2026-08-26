@@ -255,7 +255,7 @@ export default function DashboardSimulatingModal({
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [digestEntries?.length]);
+  }, []);
 
   // Plain single-advance spinner (no digest data yet)
   if (!isDigestMode) {

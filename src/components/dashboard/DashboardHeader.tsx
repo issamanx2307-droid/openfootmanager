@@ -204,7 +204,7 @@ function renderSearchResults(props: {
 
             return (
               <ContextMenu items={contextItems} key={team.id}>
-                <button
+                <button type="button"
                   onMouseDown={() => onSelectSearchTeam(team.id)}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-navy-600"
                   data-testid={`dashboard-search-team-${team.id}`}
@@ -236,15 +236,16 @@ function renderSearchResults(props: {
               buildViewProfileMenuItem(t, () => onSelectSearchPlayer(player.id)),
             ];
 
-            if (player.team_id) {
+            const teamId = player.team_id;
+            if (teamId) {
               contextItems.push(
-                buildViewTeamMenuItem(t, () => onSelectSearchTeam(player.team_id!)),
+                buildViewTeamMenuItem(t, () => onSelectSearchTeam(teamId)),
               );
             }
 
             return (
               <ContextMenu items={contextItems} key={player.id}>
-                <button
+                <button type="button"
                   onMouseDown={() => onSelectSearchPlayer(player.id)}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-navy-600"
                   data-testid={`dashboard-search-player-${player.id}`}
@@ -343,7 +344,7 @@ export default function DashboardHeader({
     <header className="z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3 shadow-sm transition-colors duration-300 dark:border-navy-700 dark:bg-navy-800">
       <div className="flex items-center gap-3">
         {hasProfileHistory && (
-          <button
+          <button type="button"
             onClick={onBack}
             className="-ml-2 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-navy-700 dark:hover:text-white"
             title={t("common.back")}
@@ -389,7 +390,7 @@ export default function DashboardHeader({
 
       <div className="flex items-center gap-3">
         <ThemeToggle />
-        <button
+        <button type="button"
           onClick={onSave}
           disabled={isSaving}
           className={getSaveButtonClassName(saveFlash, isSaving)}
@@ -399,7 +400,7 @@ export default function DashboardHeader({
           {getSaveButtonLabel(t, saveFlash, isSaving)}
         </button>
         {isUnemployed ? (
-          <button
+          <button type="button"
             onClick={handleContinueClick}
             disabled={isAdvancing}
             className="bg-linear-to-r from-gray-600 to-gray-700 flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-heading font-bold uppercase tracking-wider text-white shadow-md transition-all hover:cursor-pointer hover:brightness-110 hover:shadow-lg disabled:cursor-wait disabled:opacity-70"
@@ -410,7 +411,7 @@ export default function DashboardHeader({
         ) : (
           <div className="relative">
             <div className="flex">
-              <button
+              <button type="button"
                 onClick={handleContinueClick}
                 disabled={isAdvancing || seasonComplete}
                 className={getContinueButtonClassName(
@@ -430,7 +431,7 @@ export default function DashboardHeader({
                   className={`h-4 w-4 ${isAdvancing ? "animate-pulse" : ""}`}
                 />
               </button>
-              <button
+              <button type="button"
                 onClick={handleContinueMenuToggleClick}
                 className={getContinueDropdownButtonClassName(currentModeMeta)}
               >
@@ -445,7 +446,7 @@ export default function DashboardHeader({
                   const optionMeta = modeMeta[mode];
 
                   return (
-                    <button
+                    <button type="button"
                       key={mode}
                       onClick={() => onSelectMatchMode(mode)}
                       className={getModeOptionClassName(isActive)}
@@ -470,7 +471,7 @@ export default function DashboardHeader({
                   );
                 })}
                 <div className="my-1 border-t border-gray-200 dark:border-navy-600" />
-                <button
+                <button type="button"
                   onClick={handleSkipToMatchDayClick}
                   className="w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-navy-600"
                 >

@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use albion_server::{router, AppState, ServerConfig};
+use albion_server::{AppState, ServerConfig, router};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -28,7 +28,9 @@ async fn main() {
             ServerConfig::private_career(career_id, join_secret)
         }
     };
-    let listener = tokio::net::TcpListener::bind(bind).await.expect("bind Albion server");
+    let listener = tokio::net::TcpListener::bind(bind)
+        .await
+        .expect("bind Albion server");
     eprintln!("Albion server listening on {bind}");
     axum::serve(listener, router(AppState::new(config)))
         .with_graceful_shutdown(shutdown_signal())
@@ -39,7 +41,7 @@ async fn main() {
 
 #[cfg(unix)]
 async fn shutdown_signal() {
-    use tokio::signal::unix::{signal, SignalKind};
+    use tokio::signal::unix::{SignalKind, signal};
 
     let mut terminate = signal(SignalKind::terminate()).expect("install SIGTERM handler");
     tokio::select! {

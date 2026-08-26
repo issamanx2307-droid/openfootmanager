@@ -66,12 +66,12 @@ export default function PlayerProfileMovementHistoryCard({
             <CardBody>
                 {sortedHistory.length > 0 ? (
                     <div className="flex flex-col gap-3">
-                        {sortedHistory.map((entry, index) => {
+                        {sortedHistory.map((entry) => {
                             const direction = movementDirection(entry, t);
 
                             return (
                                 <div
-                                    key={`${entry.date}-${entry.kind}-${index}`}
+                                    key={`${entry.date}-${entry.kind}-${entry.from_team_id ?? ""}-${entry.to_team_id ?? ""}`}
                                     className="rounded-lg border border-gray-100 bg-gray-50/60 p-3 text-sm dark:border-navy-600 dark:bg-navy-800/50"
                                 >
                                     <div className="flex flex-wrap items-center gap-2">

@@ -191,7 +191,7 @@ export function MetadataForm({ meta, onChange, onCommit, onAssetError, counts, p
             label={t("worldEditor.baseYear")}
             value={meta.baseYear?.toString() ?? ""}
             type="number"
-            onChange={(v) => set({ baseYear: v === "" ? null : parseInt(v) })}
+            onChange={(v) => set({ baseYear: v === "" ? null : parseInt(v, 10) })}
             placeholder="2026"
           />
         </div>
@@ -203,7 +203,7 @@ export function MetadataForm({ meta, onChange, onCommit, onAssetError, counts, p
 
         {projectDir && (
           <div className="flex flex-col gap-1">
-            <label className={labelClass}>{t("worldEditor.packageLogo")}</label>
+            <p className={labelClass}>{t("worldEditor.packageLogo")}</p>
             <div className="flex items-center gap-3">
               {logoDataUrl ? (
                 <img src={logoDataUrl} alt="" className="w-12 h-12 rounded-lg object-contain border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 flex-shrink-0" />
@@ -236,9 +236,8 @@ export function MetadataForm({ meta, onChange, onCommit, onAssetError, counts, p
 
         {/* License picker */}
         <div className="flex flex-col gap-1">
-          <label className={labelClass}>{t("worldEditor.license")}</label>
           <LabeledSelect
-            label=""
+            label={t("worldEditor.license")}
             value={selectedLicenseKey}
             options={SPDX_LICENSES.map((l) => l.id)}
             optionLabels={Object.fromEntries(SPDX_LICENSES.map((l) => [l.id, l.name]))}

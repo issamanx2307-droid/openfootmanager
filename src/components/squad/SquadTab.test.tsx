@@ -241,8 +241,15 @@ describe("SquadTab", () => {
     );
   }
 
-  it("renders only the full roster table and not the moved tactics controls", () => {
+  async function waitForInitialSquadLoad() {
+    await waitFor(() => {
+      expect(mockedInvoke).toHaveBeenCalledWith("get_squad", { teamId: "team1" });
+    });
+  }
+
+  it("renders only the full roster table and not the moved tactics controls", async () => {
     renderSquadTab(makeGameState());
+    await waitForInitialSquadLoad();
 
     expect(screen.getByText("squad.title")).toBeInTheDocument();
     expect(screen.getByText("Bench DEF")).toBeInTheDocument();
@@ -261,7 +268,7 @@ describe("SquadTab", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("shows progressive injury details in the roster", () => {
+  it("shows progressive injury details in the roster", async () => {
     const gameState = makeGameState();
     gameState.players[0] = makePlayer("gk1", "Goalkeeper", {
       full_name: "Injured Keeper",
@@ -272,20 +279,14 @@ describe("SquadTab", () => {
       },
     });
 
-    render(
-      <SquadTab
-        gameState={gameState}
-        managerId="mgr1"
-        onSelectPlayer={vi.fn()}
-        onGameUpdate={vi.fn()}
-      />,
-    );
+    renderSquadTab(gameState);
+    await waitForInitialSquadLoad();
 
     expect(screen.getByText("Knee bruise")).toBeInTheDocument();
     expect(screen.getByText("10d")).toBeInTheDocument();
   });
 
-  it("honors a persisted OVR sort state from the dashboard", () => {
+  it("honors a persisted OVR sort state from the dashboard", async () => {
     const gameState = makeGameState();
     gameState.players = [
       makePlayer("low", "Forward", {
@@ -309,6 +310,7 @@ describe("SquadTab", () => {
         },
       }),
     ];
+    mockedInvoke.mockResolvedValueOnce(gameState.players);
 
     render(
       <SquadTab
@@ -320,6 +322,7 @@ describe("SquadTab", () => {
         onSortStateChange={vi.fn()}
       />,
     );
+    await waitForInitialSquadLoad();
 
     const rowTexts = screen.getAllByRole("row").map((row) => row.textContent ?? "");
     const highIndex = rowTexts.findIndex((text) => text.includes("High OVR"));

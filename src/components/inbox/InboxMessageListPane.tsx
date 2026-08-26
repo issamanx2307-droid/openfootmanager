@@ -83,15 +83,11 @@ export default function InboxMessageListPane({
             return (
               <ContextMenu items={contextItems} key={message.id}>
                 <div
-                  onClick={() => onSelectMessage(message.id)}
                   className={getMessageRowClassName(isSelected, message.read)}
                   data-testid={`inbox-row-${message.id}`}
                 >
                   {bulkSelectionEnabled ? (
-                    <div
-                      className="mt-1 flex shrink-0 items-center"
-                      onClick={(event) => event.stopPropagation()}
-                    >
+                    <div className="mt-1 flex shrink-0 items-center">
                       <Checkbox
                         checked={selectedMessageIds.includes(message.id)}
                         onChange={() => onToggleMessageSelection(message.id)}
@@ -102,6 +98,11 @@ export default function InboxMessageListPane({
                       />
                     </div>
                   ) : null}
+                  <button
+                    type="button"
+                    onClick={() => onSelectMessage(message.id)}
+                    className="flex min-w-0 flex-1 items-start text-left"
+                  >
                   <div
                     className={getMessageIconClassName(
                       categoryColor,
@@ -113,9 +114,9 @@ export default function InboxMessageListPane({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <h4 className={getMessageSubjectClassName(message.read)}>
+                      <span className={getMessageSubjectClassName(message.read)}>
                         {message.subject}
-                      </h4>
+                      </span>
                       {!message.read ? (
                         <span className="w-2 h-2 rounded-full bg-primary-500 shrink-0" />
                       ) : null}
@@ -127,6 +128,7 @@ export default function InboxMessageListPane({
                       {formatDateShort(message.date, language)}
                     </p>
                   </div>
+                  </button>
                 </div>
               </ContextMenu>
             );

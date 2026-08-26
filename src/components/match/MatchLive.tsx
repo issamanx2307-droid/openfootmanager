@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { GameStateData } from "../../store/gameStore";
-import { MatchSnapshot, MatchEvent, MinuteResult, SimSpeed, SPEED_MS, MINUTES_PER_TICK, FORMATIONS, isPersistableSpeed } from "./types";
+import type { GameStateData } from "../../store/gameStore";
+import { type MatchSnapshot, type MatchEvent, type MinuteResult, type SimSpeed, SPEED_MS, MINUTES_PER_TICK, FORMATIONS, isPersistableSpeed } from "./types";
 import { getEventDisplay, getEventTypeLabel, getPlayerName, makeTeamFallback, phaseLabel } from "./helpers";
 import { Badge, TeamLogo } from "../ui";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -176,14 +176,14 @@ export default function MatchLive({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isRunning, speed, snapshot.current_minute, snapshot.phase, stepMatch, isFinished, showSubPanel]);
+  }, [isRunning, speed, stepMatch, isFinished, showSubPanel]);
 
   // Auto-scroll event feed
   useEffect(() => {
     if (eventFeedRef.current) {
       eventFeedRef.current.scrollTop = eventFeedRef.current.scrollHeight;
     }
-  }, [importantEvents.length]);
+  }, []);
 
   // Apply substitution
   const handleSubstitution = async (playerOffId: string, playerOnId: string) => {
@@ -257,7 +257,7 @@ export default function MatchLive({
                   team={homeFullTeam ?? makeTeamFallback(snapshot.home_team.name)}
                   className="w-10 h-10 rounded-lg flex items-center justify-center font-heading font-bold text-sm overflow-hidden"
                   imageClassName="h-8 w-8 object-contain drop-shadow"
-                  style={{ backgroundColor: homeTeamColor + "30", borderColor: homeTeamColor, borderWidth: 2 }}
+                  style={{ backgroundColor: `${homeTeamColor}30`, borderColor: homeTeamColor, borderWidth: 2 }}
                 />
               </div>
 
@@ -277,7 +277,7 @@ export default function MatchLive({
                   team={awayFullTeam ?? makeTeamFallback(snapshot.away_team.name)}
                   className="w-10 h-10 rounded-lg flex items-center justify-center font-heading font-bold text-sm overflow-hidden"
                   imageClassName="h-8 w-8 object-contain drop-shadow"
-                  style={{ backgroundColor: awayTeamColor + "30", borderColor: awayTeamColor, borderWidth: 2 }}
+                  style={{ backgroundColor: `${awayTeamColor}30`, borderColor: awayTeamColor, borderWidth: 2 }}
                 />
                 <div className="text-left">
                   <p className="font-heading font-bold text-sm uppercase tracking-wider text-gray-800 dark:text-gray-200">
@@ -343,7 +343,7 @@ export default function MatchLive({
               { id: "stats" as ActivePanel, label: t('match.stats'), icon: <BarChart3 className="w-4 h-4" /> },
               { id: "lineups" as ActivePanel, label: t('match.lineups'), icon: <Users className="w-4 h-4" /> },
             ]).map(tab => (
-              <button
+              <button type="button"
                 key={tab.id}
                 onClick={() => setActivePanel(tab.id)}
                 className={`flex items-center gap-2 px-5 py-3 font-heading font-bold text-xs uppercase tracking-wider transition-colors border-b-2 ${activePanel === tab.id
@@ -377,7 +377,7 @@ export default function MatchLive({
                 { id: "fast" as SimSpeed, icon: <FastForward className="w-4 h-4" />, label: t('match.fast') },
                 { id: "instant" as SimSpeed, icon: <SkipForward className="w-4 h-4" />, label: t('match.max') },
               ]).map(s => (
-                <button
+                <button type="button"
                   key={s.id}
                   onClick={() => {
                     setSpeed(s.id);
@@ -395,7 +395,7 @@ export default function MatchLive({
               ))}
             </div>
             {speed === "paused" && (
-              <button
+              <button type="button"
                 onClick={() => stepMatch(1)}
                 className="w-full mt-2 flex items-center justify-center gap-2 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-navy-700 dark:hover:bg-navy-600 rounded-lg text-sm font-heading uppercase tracking-wider text-gray-700 dark:text-gray-300 transition-colors"
               >
@@ -475,7 +475,7 @@ export default function MatchLive({
           {!isSpectator && userSide && (
             <div className="p-4 border-b border-gray-200 dark:border-navy-700 flex flex-col gap-2">
               <h3 className="text-xs font-heading font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">{t('match.teamControls')}</h3>
-              <button
+              <button type="button"
                 onClick={() => setShowSubPanel(!showSubPanel)}
                 className="flex items-center gap-2 px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-navy-700 dark:hover:bg-navy-600 rounded-lg text-sm font-heading uppercase tracking-wider text-gray-700 dark:text-gray-300 transition-colors"
               >
@@ -488,7 +488,7 @@ export default function MatchLive({
                   {FORMATIONS.map(f => {
                     const cur = userSide === "Home" ? snapshot.home_team.formation : snapshot.away_team.formation;
                     return (
-                      <button key={f} onClick={() => handleFormationChange(f)}
+                      <button type="button" key={f} onClick={() => handleFormationChange(f)}
                         className={`px-2 py-1 rounded text-xs font-heading transition-colors ${cur === f ? "bg-primary-500/20 text-primary-500 dark:text-primary-400 ring-1 ring-primary-500/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 dark:bg-navy-700 dark:text-gray-400 dark:hover:text-gray-300"}`}
                       >{f}</button>
                     );
@@ -508,7 +508,7 @@ export default function MatchLive({
                   ].map(s => {
                     const cur = userSide === "Home" ? snapshot.home_team.play_style : snapshot.away_team.play_style;
                     return (
-                      <button key={s.id} onClick={() => handlePlayStyleChange(s.id)}
+                      <button type="button" key={s.id} onClick={() => handlePlayStyleChange(s.id)}
                         className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-heading transition-colors ${cur === s.id ? "bg-primary-500/20 text-primary-500 dark:text-primary-400 ring-1 ring-primary-500/50" : "bg-gray-100 text-gray-600 hover:text-gray-900 dark:bg-navy-700 dark:text-gray-400 dark:hover:text-gray-300"}`}
                       >{s.icon}{t(`common.playStyles.${s.id}`, s.id)}</button>
                     );

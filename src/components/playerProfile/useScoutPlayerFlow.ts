@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 
@@ -23,6 +23,16 @@ interface UseScoutPlayerFlowResult {
   sendScout: () => void;
 }
 
+interface ScoutPlayerState {
+  status: PlayerProfileScoutStatus;
+  error: string | null;
+}
+
+const INITIAL_SCOUT_PLAYER_STATE: ScoutPlayerState = {
+  status: "idle",
+  error: null,
+};
+
 /**
  * Sending a scout to watch this player.
  *
@@ -36,17 +46,23 @@ export function useScoutPlayerFlow({
   onGameUpdate,
 }: UseScoutPlayerFlowArgs): UseScoutPlayerFlowResult {
   const { t } = useTranslation();
-  const [scoutStatus, setScoutStatus] =
-    useState<PlayerProfileScoutStatus>("idle");
-  const [scoutError, setScoutError] = useState<string | null>(null);
+  const [scoutPlayerStates, setScoutPlayerStates] = useState<
+    Record<string, ScoutPlayerState>
+  >({});
+  const scoutPlayerState =
+    scoutPlayerStates[player.id] ?? INITIAL_SCOUT_PLAYER_STATE;
+  const scoutStatus = scoutPlayerState.status;
+  const scoutError = scoutPlayerState.error;
 
-  // The profile is not remounted when the manager moves to another player, so
-  // without this the last player's "sent" status carries over and the new
-  // profile claims a scout is already watching them.
-  useEffect(() => {
-    setScoutStatus("idle");
-    setScoutError(null);
-  }, [player.id]);
+  function updateScoutPlayerState(update: Partial<ScoutPlayerState>): void {
+    setScoutPlayerStates((states) => ({
+      ...states,
+      [player.id]: {
+        ...(states[player.id] ?? INITIAL_SCOUT_PLAYER_STATE),
+        ...update,
+      },
+    }));
+  }
 
   const scoutAvailability = getScoutAvailability({
     staff: gameState.staff,
@@ -64,8 +80,7 @@ export function useScoutPlayerFlow({
     }
 
     void (async () => {
-      setScoutStatus("sending");
-      setScoutError(null);
+      updateScoutPlayerState({ status: "sending", error: null });
 
       try {
         const updated = await invoke<GameStateData>("send_scout", {
@@ -73,10 +88,12 @@ export function useScoutPlayerFlow({
           playerId: player.id,
         });
         onGameUpdate(updated);
-        setScoutStatus("sent");
+        updateScoutPlayerState({ status: "sent" });
       } catch (err) {
-        setScoutError(resolveTranslatedErrorMessage(err, t));
-        setScoutStatus("error");
+        updateScoutPlayerState({
+          error: resolveTranslatedErrorMessage(err, t),
+          status: "error",
+        });
       }
     })();
   }

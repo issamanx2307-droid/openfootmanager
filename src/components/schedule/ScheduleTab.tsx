@@ -114,12 +114,12 @@ export default function ScheduleTab({ gameState, onSelectTeam }: ScheduleTabProp
     return () => {
       cancelled = true;
     };
-  }, [selectedCompetition?.id, t]);
+  }, [selectedCompetition?.id, t, selectedCompetition]);
 
   // Reset past-group paging when competition changes.
   useEffect(() => {
     setVisiblePastCount(PAST_PAGE_SIZE);
-  }, [selectedCompetition?.id]);
+  }, []);
 
   const scrollToDate = useCallback((date: string) => {
     const el = groupRefs.current.get(date);
@@ -134,7 +134,7 @@ export default function ScheduleTab({ gameState, onSelectTeam }: ScheduleTabProp
     const date = slice.next_user_match_date;
     const id = setTimeout(() => scrollToDate(date), 50);
     return () => clearTimeout(id);
-  }, [slice?.competition_id, slice?.next_user_match_date, slice?.past_groups.length, scrollToDate]);
+  }, [slice?.next_user_match_date, slice?.past_groups.length, scrollToDate]);
 
   const buildTeamMenuItem = (label: string, teamId: string): ContextMenuItem => ({
     label,
@@ -281,7 +281,7 @@ function ViewButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={`rounded-lg px-4 py-2 font-heading text-sm font-bold uppercase tracking-wider transition-all ${
         active
@@ -378,7 +378,7 @@ function CalendarView({
             ))}
           </div>
           {slice.past_groups.length > visiblePastCount && (
-            <button
+            <button type="button"
               onClick={onShowMorePast}
               className="mx-auto mt-1 rounded-lg border border-gray-200 bg-white px-4 py-2 font-heading text-sm font-bold uppercase tracking-wider text-gray-500 transition-all hover:text-gray-700 dark:border-navy-600 dark:bg-navy-800 dark:text-gray-400 dark:hover:text-gray-200"
             >
@@ -521,7 +521,8 @@ function MatchdayGroupCard({
                     }`}
                     data-testid={`schedule-fixture-${fixture.id}`}
                   >
-                    <span
+                    <button
+                      type="button"
                       onClick={() => onSelectTeam(fixture.home_team_id)}
                       className={`flex-1 cursor-pointer text-right text-sm font-semibold hover:underline ${
                         fixture.home_team_id === userTeamId
@@ -530,7 +531,7 @@ function MatchdayGroupCard({
                       }`}
                     >
                       {fixture.home_team_name}
-                    </span>
+                    </button>
                     <div className="mx-3 w-24 text-center">
                       {completed && fixture.result ? (
                         <span className="font-heading text-lg font-bold text-gray-800 dark:text-gray-100">
@@ -542,7 +543,8 @@ function MatchdayGroupCard({
                         </Badge>
                       )}
                     </div>
-                    <span
+                    <button
+                      type="button"
                       onClick={() => onSelectTeam(fixture.away_team_id)}
                       className={`flex-1 cursor-pointer text-left text-sm font-semibold hover:underline ${
                         fixture.away_team_id === userTeamId
@@ -551,7 +553,7 @@ function MatchdayGroupCard({
                       }`}
                     >
                       {fixture.away_team_name}
-                    </span>
+                    </button>
                   </div>
                 </ContextMenu>
               );
@@ -730,7 +732,7 @@ function StandingsView({
                 {["#", t("common.team"), t("common.played"), t("common.won"), t("common.drawn"), t("common.lost"), t("common.gf"), t("common.ga"), t("common.gd"), t("common.pts")].map(
                   (header, idx) => (
                     <th
-                      key={idx}
+                      key={header}
                       className={`px-4 py-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 ${idx === 0 ? "w-8" : ""} ${idx >= 2 ? "text-center" : ""}`}
                     >
                       {header}
@@ -777,23 +779,31 @@ function StandingsView({
                       >
                         {index + 1}
                       </td>
-                      <td
-                        onClick={() => onSelectTeam(entry.team_id)}
-                        className={`cursor-pointer px-4 py-3 text-sm font-semibold hover:underline ${
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => onSelectTeam(entry.team_id)}
+                          className={`text-left text-sm font-semibold hover:underline ${
                           isUser
                             ? "text-primary-600 dark:text-primary-400"
                             : "text-gray-800 dark:text-gray-200"
                         }`}
-                      >
-                        {getTeamName(gameState.teams, entry.team_id)}
+                        >
+                          {getTeamName(gameState.teams, entry.team_id)}
+                        </button>
                       </td>
-                      {[entry.played, entry.won, entry.drawn, entry.lost, entry.goals_for, entry.goals_against].map(
-                        (val, i) => (
-                          <td key={i} className="px-4 py-3 text-center text-sm tabular-nums text-gray-600 dark:text-gray-400">
+                      {[
+                        ["played", entry.played],
+                        ["won", entry.won],
+                        ["drawn", entry.drawn],
+                        ["lost", entry.lost],
+                        ["goals-for", entry.goals_for],
+                        ["goals-against", entry.goals_against],
+                      ].map(([metric, val]) => (
+                          <td key={metric} className="px-4 py-3 text-center text-sm tabular-nums text-gray-600 dark:text-gray-400">
                             {val}
                           </td>
-                        ),
-                      )}
+                        ))}
                       <td
                         className={`px-4 py-3 text-center text-sm font-semibold tabular-nums ${
                           gd > 0 ? "text-primary-500" : gd < 0 ? "text-red-500" : "text-gray-500 dark:text-gray-400"

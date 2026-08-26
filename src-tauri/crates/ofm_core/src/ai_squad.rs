@@ -91,6 +91,8 @@ fn sign_best_free_agent(
         return false;
     }
 
+    let current_date = game.clock.current_date.date_naive();
+    let today = current_date.format("%Y-%m-%d").to_string();
     let candidate_index = game
         .players
         .iter()
@@ -98,6 +100,12 @@ fn sign_best_free_agent(
         .filter(|(_, player)| {
             !player.retired
                 && player.team_id.is_none()
+                // A contract-expiry sweep runs earlier in the same daily turn.
+                // Do not immediately undo that release by signing the player to
+                // another club before the player can appear as a free agent.
+                && !player.movement_history.last().is_some_and(|movement| {
+                    movement.date == today && movement.kind == PlayerMovementKind::Released
+                })
                 && player.position.to_group_position() == *required_group
         })
         .max_by_key(|(_, player)| player_quality_key(player))
@@ -106,7 +114,13 @@ fn sign_best_free_agent(
             game.players
                 .iter()
                 .enumerate()
-                .filter(|(_, player)| !player.retired && player.team_id.is_none())
+                .filter(|(_, player)| {
+                    !player.retired
+                        && player.team_id.is_none()
+                        && !player.movement_history.last().is_some_and(|movement| {
+                            movement.date == today && movement.kind == PlayerMovementKind::Released
+                        })
+                })
                 .max_by_key(|(_, player)| player_quality_key(player))
                 .map(|(index, _)| index)
         });
@@ -114,11 +128,9 @@ fn sign_best_free_agent(
     let Some(candidate_index) = candidate_index else {
         return false;
     };
-    let current_date = game.clock.current_date.date_naive();
     let Some(contract_end) = current_date.checked_add_months(Months::new(12)) else {
         return false;
     };
-    let today = current_date.format("%Y-%m-%d").to_string();
     let player = &mut game.players[candidate_index];
     player.team_id = Some(team.id.clone());
     player.contract_end = Some(contract_end.format("%Y-%m-%d").to_string());

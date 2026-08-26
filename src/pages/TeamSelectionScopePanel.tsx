@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { LeagueData, WorldRegionData } from "../store/gameStore";
+import type { LeagueData, WorldRegionData } from "../store/gameStore";
 import { countryName } from "../lib/countries";
 import { competitionDisplayName } from "../lib/competitionName";
 import { buildRegionLabel } from "../lib/teamRegions";
@@ -137,20 +137,15 @@ export default function TeamSelectionScopePanel({
               return (
                 <div
                   key={region.id}
-                  role="button"
-                  aria-pressed={enabled}
-                  aria-disabled={isLocked}
-                  tabIndex={isLocked ? -1 : 0}
-                  onClick={() => !isLocked && onRegionToggle(region.id)}
-                  onKeyDown={(e) => {
-                    if (!isLocked && (e.key === "Enter" || e.key === " ")) {
-                      e.preventDefault();
-                      onRegionToggle(region.id);
-                    }
-                  }}
-                  className={`flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-navy-600 dark:bg-navy-800 ${!isLocked ? "cursor-pointer" : ""}`}
+                  className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-navy-600 dark:bg-navy-800"
                 >
-                  <span className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isLocked}
+                    aria-pressed={enabled}
+                    onClick={() => onRegionToggle(region.id)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
+                  >
                     <Globe className="h-4 w-4 text-primary-500" />
                     <span>{buildRegionLabel(t, region.id, region.name)}</span>
                     {isLocked && (
@@ -158,11 +153,8 @@ export default function TeamSelectionScopePanel({
                         {t("teamSelect.homeBadge")}
                       </Badge>
                     )}
-                  </span>
-                  <span
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
+                  </button>
+                  <span>
                     <Checkbox
                       checked={enabled}
                       disabled={isLocked}
@@ -194,28 +186,20 @@ export default function TeamSelectionScopePanel({
               return (
                 <div
                   key={competition.id}
-                  role="button"
-                  aria-pressed={enabled}
-                  aria-disabled={isLocked}
-                  tabIndex={isLocked ? -1 : 0}
-                  onClick={() => !isLocked && onCompetitionToggle(competition)}
-                  onKeyDown={(e) => {
-                    if (!isLocked && (e.key === "Enter" || e.key === " ")) {
-                      e.preventDefault();
-                      onCompetitionToggle(competition);
-                    }
-                  }}
-                  className={`block rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-navy-600 dark:bg-navy-800 ${!isLocked ? "cursor-pointer" : ""}`}
+                  className="block rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-navy-600 dark:bg-navy-800"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isLocked}
+                      aria-pressed={enabled}
+                      onClick={() => onCompetitionToggle(competition)}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
+                    >
                       <Trophy className="h-4 w-4 shrink-0 text-accent-500" />
                       <span className="truncate">{compName(competition)}</span>
-                    </span>
-                    <span
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
+                    </button>
+                    <span>
                       <Checkbox
                         checked={enabled}
                         disabled={isLocked}

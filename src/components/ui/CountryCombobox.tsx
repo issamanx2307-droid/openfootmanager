@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronDown } from "lucide-react";
 import type { CountryFlag as CountryFlagType } from "./CountryFlag";
@@ -61,6 +61,16 @@ export function CountryCombobox({ label, value, onChange, placeholder }: Country
   const [resources, setResources] = useState<CountryResources | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const ensureResources = useCallback(async () => {
+    if (resources || loading) return;
+    setLoading(true);
+    try {
+      setResources(await loadCountryResources());
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, resources]);
+
   useEffect(() => {
     if (!isOpen) return;
     function handleClick(e: MouseEvent) {
@@ -72,7 +82,7 @@ export function CountryCombobox({ label, value, onChange, placeholder }: Country
 
   useEffect(() => {
     if (!resources && value) void ensureResources();
-  }, [value, resources]);
+  }, [value, resources, ensureResources]);
 
   // Follow the active option with the scroll, or arrowing past the visible few
   // moves a selection the author cannot see.
@@ -82,17 +92,7 @@ export function CountryCombobox({ label, value, onChange, placeholder }: Country
     // Guarded: jsdom has no layout and does not implement this, and keeping the
     // active option in view is a nicety the keyboard model must not depend on.
     option?.scrollIntoView?.({ block: "nearest" });
-  }, [isOpen, activeIndex, search]);
-
-  async function ensureResources() {
-    if (resources || loading) return;
-    setLoading(true);
-    try {
-      setResources(await loadCountryResources());
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [isOpen]);
 
   function open() {
     if (!resources) void ensureResources();
@@ -242,7 +242,6 @@ export function CountryCombobox({ label, value, onChange, placeholder }: Country
                 <div className="border-b border-gray-100 dark:border-navy-600 p-2">
                   <input
                     type="text"
-                    autoFocus
                     role="combobox"
                     aria-expanded="true"
                     aria-controls={listboxId}

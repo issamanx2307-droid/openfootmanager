@@ -266,8 +266,8 @@ function createGameState(
   };
 }
 
-describe("HomeTab", function (): void {
-  it("resolves latest news articles before rendering the home widget", function (): void {
+describe("HomeTab", (): void => {
+  it("resolves latest news articles before rendering the home widget", (): void => {
     backendI18nMocks.resolveNewsArticle.mockImplementationOnce(
       (value: unknown) => ({
         ...(value as NewsArticle),
@@ -303,7 +303,7 @@ describe("HomeTab", function (): void {
     expect(screen.getByText(/Resolved source/)).toBeInTheDocument();
   });
 
-  it("renders the next opponent and league digest widgets when data is available", function (): void {
+  it("renders the next opponent and league digest widgets when data is available", (): void => {
     render(
       <HomeTab
         gameState={createGameState({
@@ -326,7 +326,7 @@ describe("HomeTab", function (): void {
     expect(screen.getAllByText("Standings headline").length).toBeGreaterThan(0);
   });
 
-  it("renders widget empty states when opponent and digest data are unavailable", function (): void {
+  it("renders widget empty states when opponent and digest data are unavailable", (): void => {
     render(
       <HomeTab
         gameState={createGameState({
@@ -347,7 +347,7 @@ describe("HomeTab", function (): void {
     expect(screen.getByText("No league digest yet.")).toBeInTheDocument();
   });
 
-  it("keeps youth academy players out of first-team home summaries", function (): void {
+  it("keeps youth academy players out of first-team home summaries", (): void => {
     render(
       <HomeTab
         gameState={createGameState({
@@ -391,7 +391,7 @@ describe("HomeTab", function (): void {
   // Regression: HomeTab sorted gameState.news and league.standings IN PLACE
   // during render — a mutation of the Zustand store's arrays that silently
   // reordered them for every other consumer.
-  it("does not mutate the store's news or standings arrays when rendering", function (): void {
+  it("does not mutate the store's news or standings arrays when rendering", (): void => {
     const gameState = createGameState({
       news: [
         createNewsArticle({ id: "news-old", date: "2025-01-10" }),
@@ -429,7 +429,9 @@ describe("HomeTab", function (): void {
       },
     });
     const newsBefore = gameState.news;
-    const standingsBefore = gameState.league!.standings;
+    const league = gameState.league;
+    if (!league) throw new Error("Expected test game state to include a league");
+    const standingsBefore = league.standings;
     const newsOrder = newsBefore.map((article) => article.id);
     const standingsOrder = standingsBefore.map((entry) => entry.team_id);
 
@@ -442,8 +444,8 @@ describe("HomeTab", function (): void {
 
     expect(gameState.news).toBe(newsBefore);
     expect(gameState.news.map((article) => article.id)).toEqual(newsOrder);
-    expect(gameState.league!.standings).toBe(standingsBefore);
-    expect(gameState.league!.standings.map((entry) => entry.team_id)).toEqual(
+    expect(league.standings).toBe(standingsBefore);
+    expect(league.standings.map((entry) => entry.team_id)).toEqual(
       standingsOrder,
     );
   });

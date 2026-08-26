@@ -46,6 +46,7 @@ export default function JobOpportunitiesCard({
   );
 
   useEffect(() => {
+    void currentDate;
     let cancelled = false;
     setLoading(true);
     getAvailableJobs()
@@ -143,7 +144,7 @@ export default function JobOpportunitiesCard({
             <Briefcase className="w-4 h-4 text-primary-500" />
             {t("jobs.opportunitiesTitle")}
           </div>
-          <button
+          <button type="button"
             onClick={handleRefresh}
             disabled={loading}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -195,15 +196,15 @@ export default function JobOpportunitiesCard({
                         {job.city}
                       </span>
                       <span className="flex items-center gap-0.5 text-xs">
-                        {Array.from({ length: stars }, (_, i) => (
+                        {Array.from({ length: stars }, (_, starNumber) => starNumber + 1).map((starNumber) => (
                           <Star
-                            key={i}
+                            key={`filled-star-${job.team_id}-${starNumber}`}
                             className="w-3 h-3 fill-accent-400 text-accent-400"
                           />
                         ))}
-                        {Array.from({ length: 5 - stars }, (_, i) => (
+                        {Array.from({ length: 5 - stars }, (_, starNumber) => starNumber + 1).map((starNumber) => (
                           <Star
-                            key={`e${i}`}
+                            key={`empty-star-${job.team_id}-${starNumber}`}
                             className="w-3 h-3 text-gray-300 dark:text-navy-600"
                           />
                         ))}
@@ -217,7 +218,7 @@ export default function JobOpportunitiesCard({
                       )}
                     </div>
                   </div>
-                  <button
+                  <button type="button"
                     onClick={() => handleApply(job)}
                     disabled={applyingTo !== null}
                     className="ml-3 shrink-0 rounded-lg bg-primary-500 px-4 py-1.5 text-xs font-heading font-bold uppercase tracking-wider text-white transition-all hover:bg-primary-600 disabled:opacity-50"

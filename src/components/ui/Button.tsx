@@ -39,7 +39,7 @@ export function Button({
   };
 
   return (
-    <button
+    <button type="button"
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
       disabled={disabled}
       {...props}

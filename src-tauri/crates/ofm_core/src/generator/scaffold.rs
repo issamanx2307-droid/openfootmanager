@@ -15,7 +15,7 @@
 
 use std::path::Path;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::package::WorldMetaDef;
 
@@ -352,7 +352,8 @@ pub fn entity_template(kind: EntityKind, name: Option<&str>) -> Value {
 /// never declared. What is lost is the editor's ability to *see* the field: no
 /// form can show it, no code can read it without a cast, and nobody adding a
 /// feature knows it exists.
-pub const SCHEMA_FIELDS_FIXTURE: &str = "src/components/menu/PackageEditor/schemaFields.generated.json";
+pub const SCHEMA_FIELDS_FIXTURE: &str =
+    "src/components/menu/PackageEditor/schemaFields.generated.json";
 
 /// Write `value` to `path` without leaving a half-written file behind.
 ///
@@ -388,7 +389,10 @@ pub fn scaffold_package(dir: &Path, meta: &WorldMetaDef) -> Result<(), String> {
         }
     }
 
-    write_json_atomic(&dir.join(EntityKind::World.file_name()), &manifest_json(meta)?)?;
+    write_json_atomic(
+        &dir.join(EntityKind::World.file_name()),
+        &manifest_json(meta)?,
+    )?;
 
     for kind in EntityKind::ALL {
         let Some(sub) = kind.dir() else { continue };
@@ -405,11 +409,11 @@ pub fn scaffold_package(dir: &Path, meta: &WorldMetaDef) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::generator::competition_def::{CompetitionDefinition, FormatDef, ParticipantSpec};
+    use crate::generator::definitions::{NamePool, NamesDefinition, TeamColorsDef, TeamDef};
+    use crate::generator::package::{ConfederationDef, CountryDef, PlayerDef, StaffDef};
     use domain::league::{CompetitionFormat, CompetitionScope, CompetitionType};
     use domain::player::PlayerAttributes;
     use domain::staff::{CoachingSpecialization, StaffAttributes, StaffRole};
-    use crate::generator::definitions::{NamePool, NamesDefinition, TeamColorsDef, TeamDef};
-    use crate::generator::package::{ConfederationDef, CountryDef, PlayerDef, StaffDef};
 
     /// Top-level keys a value serializes to.
     fn keys(value: &Value) -> Vec<String> {
@@ -602,10 +606,7 @@ mod tests {
             (EntityKind::Team, serde_json::to_value(&team).unwrap()),
             (EntityKind::Player, serde_json::to_value(&player).unwrap()),
             (EntityKind::Staff, serde_json::to_value(&staff).unwrap()),
-            (
-                EntityKind::Country,
-                serde_json::to_value(&country).unwrap(),
-            ),
+            (EntityKind::Country, serde_json::to_value(&country).unwrap()),
             (
                 EntityKind::Confederation,
                 serde_json::to_value(&confederation).unwrap(),
@@ -630,7 +631,6 @@ mod tests {
             assert_template_covers(kind, &serialized);
         }
     }
-
 
     /// Naming every field correctly is not the same as filling them with values
     /// the definition can parse, and the key-parity check above cannot tell the
@@ -687,7 +687,10 @@ mod tests {
         assert_eq!(template["confederation"], "south-america");
 
         // The name is matched the way a person types it, not exactly.
-        assert_eq!(entity_template(EntityKind::Country, Some("brazil"))["id"], "BR");
+        assert_eq!(
+            entity_template(EntityKind::Country, Some("brazil"))["id"],
+            "BR"
+        );
         assert_eq!(entity_template(EntityKind::Country, Some("BR"))["id"], "BR");
     }
 
@@ -696,9 +699,18 @@ mod tests {
         // `eq_ignore_ascii_case` compares bytes, so `Ü` and `ü` are different
         // characters to it and `TÜRKIYE` would scaffold a *custom* country named
         // after one the catalog already has.
-        assert_eq!(entity_template(EntityKind::Country, Some("TÜRKIYE"))["id"], "TR");
-        assert_eq!(entity_template(EntityKind::Country, Some("türkiye"))["id"], "TR");
-        assert_eq!(entity_template(EntityKind::Country, Some("CURAÇAO"))["id"], "CW");
+        assert_eq!(
+            entity_template(EntityKind::Country, Some("TÜRKIYE"))["id"],
+            "TR"
+        );
+        assert_eq!(
+            entity_template(EntityKind::Country, Some("türkiye"))["id"],
+            "TR"
+        );
+        assert_eq!(
+            entity_template(EntityKind::Country, Some("CURAÇAO"))["id"],
+            "CW"
+        );
         assert_eq!(
             entity_template(EntityKind::Country, Some("SÃO TOMÉ AND PRÍNCIPE"))["id"],
             "ST"
@@ -752,7 +764,10 @@ mod tests {
 
         let (package, errors) = crate::generator::load_world_package(&dir);
 
-        assert!(errors.is_empty(), "the CLI's own output must load: {errors:?}");
+        assert!(
+            errors.is_empty(),
+            "the CLI's own output must load: {errors:?}"
+        );
         let names = package.names.expect("the pools have to reach the package");
         assert!(names.pools.contains_key("ENG"));
         std::fs::remove_dir_all(&dir).ok();
@@ -779,9 +794,13 @@ mod tests {
             names.sort();
             expected.insert(kind.schema_name().to_string(), json!(names));
         }
-        let mut manifest_names: Vec<String> = keys(&serde_json::to_value(populated_meta()).unwrap());
+        let mut manifest_names: Vec<String> =
+            keys(&serde_json::to_value(populated_meta()).unwrap());
         manifest_names.sort();
-        expected.insert(EntityKind::World.schema_name().to_string(), json!(manifest_names));
+        expected.insert(
+            EntityKind::World.schema_name().to_string(),
+            json!(manifest_names),
+        );
 
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../")
@@ -867,7 +886,10 @@ mod tests {
 
         let (package, errors) = crate::generator::load_world_package(&dir);
 
-        assert!(errors.is_empty(), "a fresh package must validate: {errors:?}");
+        assert!(
+            errors.is_empty(),
+            "a fresh package must validate: {errors:?}"
+        );
         assert_eq!(package.meta.expect("manifest loads").id, "sample-package");
         // The names stub has to be a real (empty) NamesDefinition, not merely a
         // file that parses. `ofm-cli new` used to write `{"schema":"names",
@@ -880,7 +902,6 @@ mod tests {
         );
         std::fs::remove_dir_all(&dir).ok();
     }
-
 
     #[test]
     fn every_entity_kind_has_a_home_in_the_skeleton() {
@@ -902,7 +923,10 @@ mod tests {
 
     #[test]
     fn slugify_matches_the_ids_the_loader_will_accept() {
-        assert_eq!(slugify("Trendyol Süper Lig 25/26"), "trendyol-s-per-lig-25-26");
+        assert_eq!(
+            slugify("Trendyol Süper Lig 25/26"),
+            "trendyol-s-per-lig-25-26"
+        );
         assert_eq!(slugify("  Man Utd  "), "man-utd");
         assert_eq!(slugify("já--foi"), "j-foi");
         // Whatever it produces has to be usable as a filename, because the id
@@ -920,5 +944,4 @@ mod tests {
             );
         }
     }
-
 }

@@ -24,8 +24,8 @@ mod startup;
 // from here and from the tests below. The names the rest of the crate calls are
 // re-exported explicitly, and they are the only promise this module makes.
 use helpers::*;
-use startup::*;
 pub(crate) use helpers::{default_save_name, first_package_error_message};
+use startup::*;
 pub(crate) use startup::{start_phase_for_game, StartPhase};
 
 fn load_world_data_from_path(world_source: &str) -> Result<ofm_core::generator::WorldData, String> {
@@ -96,7 +96,10 @@ fn snapshot_lockfile_entry(
         .filter(|source| source.contains(ALBION_SNAPSHOT_WORLD_FILENAME))
         .map(|_| ofm_core::generator::PackageLock {
             id: "albion-snapshot".to_string(),
-            version: metadata.snapshot_date.clone().unwrap_or_else(|| "unknown".to_string()),
+            version: metadata
+                .snapshot_date
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
             hash: metadata.world_id.trim_start_matches("sha256:").to_string(),
         })
 }
@@ -128,19 +131,27 @@ fn load_england_ruleset(
         .flatten()
         .find(|path| path.is_file())
         .ok_or_else(|| "be.error.worldReadFileFailed".to_string())?;
-    let ruleset =
-        albion_rules::load_from_path(&path).map_err(|_| "be.error.worldReadFileFailed".to_string())?;
+    let ruleset = albion_rules::load_from_path(&path)
+        .map_err(|_| "be.error.worldReadFileFailed".to_string())?;
     albion_rules::validate(&ruleset).map_err(|_| "be.error.worldReadFileFailed".to_string())?;
     Ok(ruleset)
 }
 
 fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifest) {
-    let mut competition_indices: Vec<usize> = game.competitions.iter().enumerate()
-        .filter(|(_, competition)| competition.country_id.as_deref() == Some("ENG") && competition.kind == CompetitionType::League)
+    let mut competition_indices: Vec<usize> = game
+        .competitions
+        .iter()
+        .enumerate()
+        .filter(|(_, competition)| {
+            competition.country_id.as_deref() == Some("ENG")
+                && competition.kind == CompetitionType::League
+        })
         .map(|(index, _)| index)
         .collect();
     competition_indices.sort_by_key(|&index| game.competitions[index].priority);
-    let mut sources: Vec<&albion_rules::CompetitionRules> = ruleset.competitions.iter()
+    let mut sources: Vec<&albion_rules::CompetitionRules> = ruleset
+        .competitions
+        .iter()
         .filter(|source| source.format == albion_rules::CompetitionFormat::League)
         .collect();
     sources.sort_by_key(|source| source.tier);
@@ -148,12 +159,18 @@ fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifes
     for (tier, competition_index) in competition_indices.into_iter().enumerate() {
         let competition = &mut game.competitions[competition_index];
         let Some(source) = sources.get(tier).copied().or_else(|| {
-            sources.iter().copied().find(|source| source.participant_clubs as usize == competition.participant_ids.len())
-        }) else { continue; };
+            sources.iter().copied().find(|source| {
+                source.participant_clubs as usize == competition.participant_ids.len()
+            })
+        }) else {
+            continue;
+        };
         if let Some(substitutions) = source.substitutions {
             competition.rules.max_substitutes = substitutions.max_substitutes;
             competition.rules.max_substitution_windows = substitutions.max_windows;
-            competition.rules.half_time_does_not_count_as_substitution_window =
+            competition
+                .rules
+                .half_time_does_not_count_as_substitution_window =
                 substitutions.half_time_does_not_count_as_window;
         }
         if let Some(promotion) = &source.promotion {
@@ -164,16 +181,18 @@ fn apply_england_ruleset(game: &mut Game, ruleset: &albion_rules::RulesetManifes
             competition.rules.relegation_automatic_slots = relegation.automatic_slots as u8;
         }
         if source.id == "premier-league" {
-            game.transfer_windows = source.transfer_windows.iter().map(|window| {
-                ofm_core::game::TransferWindowRule {
+            game.transfer_windows = source
+                .transfer_windows
+                .iter()
+                .map(|window| ofm_core::game::TransferWindowRule {
                     name: window.name.clone(),
                     start_month: window.start_month,
                     start_day: window.start_day,
                     end_month: window.end_month,
                     end_day: window.end_day,
                     max_squad_size: source.registration.as_ref().map(|rule| rule.max_squad_size),
-                }
-            }).collect();
+                })
+                .collect();
         }
     }
     game.ruleset_id = Some(ruleset.ruleset_id.clone());
@@ -642,9 +661,7 @@ fn team_season_anchor(game: &Game, team_id: &str) -> Option<DateTime<Utc>> {
         .fixtures
         .iter()
         .filter(|fixture| fixture.competition != FixtureCompetition::Friendly)
-        .filter(|fixture| {
-            fixture.home_team_id == team_id || fixture.away_team_id == team_id
-        })
+        .filter(|fixture| fixture.home_team_id == team_id || fixture.away_team_id == team_id)
         .filter_map(|fixture| chrono::NaiveDate::parse_from_str(&fixture.date, "%Y-%m-%d").ok())
         .min()
         .and_then(|date| date.and_hms_opt(0, 0, 0))
@@ -922,7 +939,10 @@ fn build_foundation_competition_plan(
                     required_region_ids: vec![region_id.clone()],
                     priority,
                     format: make_format(CompetitionFormat::Knockout),
-                    participants: ParticipantSpec { explicit: Some(team_ids.clone()), selector: None },
+                    participants: ParticipantSpec {
+                        explicit: Some(team_ids.clone()),
+                        selector: None,
+                    },
                     berths: Vec::new(),
                     season_start_month: Some(efl_cup_start.month() as u8),
                     season_start_day: Some(efl_cup_start.day() as u8),
@@ -945,7 +965,10 @@ fn build_foundation_competition_plan(
                     required_region_ids: vec![region_id.clone()],
                     priority,
                     format: make_format(CompetitionFormat::Knockout),
-                    participants: ParticipantSpec { explicit: Some(team_ids.iter().take(2).cloned().collect()), selector: None },
+                    participants: ParticipantSpec {
+                        explicit: Some(team_ids.iter().take(2).cloned().collect()),
+                        selector: None,
+                    },
                     berths: Vec::new(),
                     season_start_month: Some(community_shield_start.month() as u8),
                     season_start_day: Some(community_shield_start.day() as u8),
@@ -2180,14 +2203,15 @@ mod testkit;
 mod tests {
     use super::testkit::*;
     use super::{
-        apply_england_ruleset, bootstrap_team_selection, brazil_state_region, build_foundation_competition_plan,
-        build_foundation_competitions,
-        build_game_from_world_data, create_new_save, ensure_international_windows,
-        game_clock_for_world, load_world_data_from_path, package_folder_name,
-        parse_competition_definitions, rebuild_competitions_for_management_date,
-        resolve_simulation_scope, select_continental_entrants, snapshot_lockfile_entry, split_england_into_divisions,
-        england_division_name, split_into_divisions,
-        start_date_for_year, StartPhase, StartupOptions, DEFAULT_GENERATED_HISTORY_DEPTH_YEARS,
+        apply_england_ruleset, bootstrap_team_selection, brazil_state_region,
+        build_foundation_competition_plan, build_foundation_competitions,
+        build_game_from_world_data, create_new_save, england_division_name,
+        ensure_international_windows, game_clock_for_world, load_world_data_from_path,
+        package_folder_name, parse_competition_definitions,
+        rebuild_competitions_for_management_date, resolve_simulation_scope,
+        select_continental_entrants, snapshot_lockfile_entry, split_england_into_divisions,
+        split_into_divisions, start_date_for_year, StartPhase, StartupOptions,
+        DEFAULT_GENERATED_HISTORY_DEPTH_YEARS,
     };
     use chrono::{TimeZone, Utc};
     use db::save_manager::SaveManager;
@@ -2234,9 +2258,11 @@ mod tests {
         assert_eq!(game.transfer_windows.len(), 1);
         assert_eq!(game.transfer_windows[0].end_month, 9);
         assert_eq!(game.transfer_windows[0].max_squad_size, Some(25));
-        assert!(!game.competitions[0]
-            .rules
-            .half_time_does_not_count_as_substitution_window);
+        assert!(
+            !game.competitions[0]
+                .rules
+                .half_time_does_not_count_as_substitution_window
+        );
     }
 
     #[test]
@@ -2244,13 +2270,28 @@ mod tests {
         let mut game = Game::new(
             GameClock::new(start_date_for_year(2026).unwrap()),
             manager_for("eng-team-1"),
-            vec![], vec![], vec![], vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
         );
-        let team_ids = (1..=20).map(|number| format!("eng-team-{number}")).collect::<Vec<_>>();
-        let mut premier = League::new("eng-d1".to_string(), "Premier League".to_string(), 2026, &team_ids);
+        let team_ids = (1..=20)
+            .map(|number| format!("eng-team-{number}"))
+            .collect::<Vec<_>>();
+        let mut premier = League::new(
+            "eng-d1".to_string(),
+            "Premier League".to_string(),
+            2026,
+            &team_ids,
+        );
         premier.country_id = Some("ENG".to_string());
         premier.priority = 0;
-        let mut championship = League::new("eng-d2".to_string(), "Championship".to_string(), 2026, &team_ids);
+        let mut championship = League::new(
+            "eng-d2".to_string(),
+            "Championship".to_string(),
+            2026,
+            &team_ids,
+        );
         championship.country_id = Some("ENG".to_string());
         championship.priority = 1;
         game.competitions = vec![premier, championship];
@@ -2290,14 +2331,28 @@ mod tests {
         assert_eq!(fa_cup.r#type, CompetitionType::Cup);
         assert_eq!(fa_cup.scope, CompetitionScope::Domestic);
         assert_eq!(fa_cup.participants.explicit.as_ref().map(Vec::len), Some(8));
-        let efl_cup = plan.iter().map(|(definition, _)| definition)
+        let efl_cup = plan
+            .iter()
+            .map(|(definition, _)| definition)
             .find(|definition| definition.id == "eng-efl-cup")
             .expect("England creates the EFL Cup");
-        assert_eq!(efl_cup.participants.explicit.as_ref().map(Vec::len), Some(8));
-        let community_shield = plan.iter().map(|(definition, _)| definition)
+        assert_eq!(
+            efl_cup.participants.explicit.as_ref().map(Vec::len),
+            Some(8)
+        );
+        let community_shield = plan
+            .iter()
+            .map(|(definition, _)| definition)
             .find(|definition| definition.id == "eng-community-shield")
             .expect("England creates the Community Shield");
-        assert_eq!(community_shield.participants.explicit.as_ref().map(Vec::len), Some(2));
+        assert_eq!(
+            community_shield
+                .participants
+                .explicit
+                .as_ref()
+                .map(Vec::len),
+            Some(2)
+        );
         assert!(!plan
             .iter()
             .any(|(definition, _)| definition.id == "eng-cup"));
@@ -2312,11 +2367,8 @@ mod tests {
             base_year: Some(2026),
             snapshot_date: Some("2026/27".to_string()),
         };
-        let lock = snapshot_lockfile_entry(
-            Some("C:/data/albion-snapshot-world.json"),
-            &metadata,
-        )
-        .expect("snapshot source should be retained");
+        let lock = snapshot_lockfile_entry(Some("C:/data/albion-snapshot-world.json"), &metadata)
+            .expect("snapshot source should be retained");
         assert_eq!(lock.id, "albion-snapshot");
         assert_eq!(lock.version, "2026/27");
         assert_eq!(lock.hash, "abc123");
@@ -2415,8 +2467,9 @@ mod tests {
             "the World Cup keeps its June schedule through a February re-anchor"
         );
         assert!(
-            after.iter().all(|date| date.starts_with("2026-06")
-                || date.starts_with("2026-07")),
+            after
+                .iter()
+                .all(|date| date.starts_with("2026-06") || date.starts_with("2026-07")),
             "World Cup fixtures stay in the cup window, not pulled back to February"
         );
     }
@@ -2670,7 +2723,9 @@ competitions:
         use std::time::Instant;
 
         let t = Instant::now();
-        let world = ofm_core::generator::generate_world_data(&ofm_core::generator::DefinitionSources::embedded_only());
+        let world = ofm_core::generator::generate_world_data(
+            &ofm_core::generator::DefinitionSources::embedded_only(),
+        );
         let gen = t.elapsed();
         let teams = world.teams.len();
         let players = world.players.len();

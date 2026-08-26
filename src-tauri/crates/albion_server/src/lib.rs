@@ -16,20 +16,19 @@ use albion_protocol::event::{
     CommandAckBody, CommandRejectedBody, HelloBody, ReadyStateChangedBody, ServerEvent,
 };
 use albion_protocol::{
-    CURRENT_VERSIONS, Envelope, EnvelopePayload, ErrorCode, MessageKind, ProtocolError,
-    VersionSet,
+    CURRENT_VERSIONS, Envelope, EnvelopePayload, ErrorCode, MessageKind, ProtocolError, VersionSet,
 };
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Query, State};
-use axum::http::{header, HeaderValue, Method, StatusCode};
+use axum::http::{HeaderValue, Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use ofm_core::live_match_manager::LiveMatchSession;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
-use tower_http::cors::{Any, AllowOrigin, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 use uuid::Uuid;
-use ofm_core::live_match_manager::LiveMatchSession;
 
 pub use canonical::{Advancement, CanonicalCareer};
 pub use store::{PersistedSessionState, SqliteCareerStore};
@@ -58,7 +57,10 @@ impl ServerConfig {
         }
     }
 
-    pub fn open_save(path: impl AsRef<std::path::Path>, join_secret: impl Into<String>) -> Result<Self, String> {
+    pub fn open_save(
+        path: impl AsRef<std::path::Path>,
+        join_secret: impl Into<String>,
+    ) -> Result<Self, String> {
         let (store, game, career_id) = SqliteCareerStore::open(path)?;
         let persisted_session = store.load_session_state()?;
         Ok(Self {
@@ -86,7 +88,10 @@ pub struct AppState {
 impl AppState {
     pub fn new(config: ServerConfig) -> Self {
         let (events, _) = broadcast::channel(128);
-        Self { session: Arc::new(Mutex::new(CareerSession::new(config))), events }
+        Self {
+            session: Arc::new(Mutex::new(CareerSession::new(config))),
+            events,
+        }
     }
 }
 
@@ -147,7 +152,15 @@ async fn readyz(State(state): State<AppState>) -> StatusCode {
 }
 
 async fn version(State(state): State<AppState>) -> Json<VersionSet> {
-    Json(state.session.lock().expect("career session lock poisoned").config.versions.clone())
+    Json(
+        state
+            .session
+            .lock()
+            .expect("career session lock poisoned")
+            .config
+            .versions
+            .clone(),
+    )
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -232,10 +245,10 @@ async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id:
     let initial_events = {
         let session = state.session.lock().expect("career session lock poisoned");
         let mut events = vec![ServerEvent::Hello(HelloBody {
-                career_id: session.config.career_id,
-                server_versions: session.config.versions.clone(),
-                current_revision: session.revision,
-            })];
+            career_id: session.config.career_id,
+            server_versions: session.config.versions.clone(),
+            current_revision: session.revision,
+        })];
         if let Some(view) = session.manager_dashboard_event(manager_id) {
             events.push(view);
         }
@@ -290,7 +303,10 @@ async fn websocket_session(socket: &mut WebSocket, state: &AppState, manager_id:
 
 async fn send_event(socket: &mut WebSocket, event: ServerEvent) -> Result<(), ()> {
     let text = serde_json::to_string(&event).map_err(|_| ())?;
-    socket.send(Message::Text(text.into())).await.map_err(|_| ())
+    socket
+        .send(Message::Text(text.into()))
+        .await
+        .map_err(|_| ())
 }
 
 struct CareerSession {
@@ -340,18 +356,26 @@ impl CareerSession {
             .and_then(|state| serde_json::from_str::<PersistedClaims>(&state.claims_json).ok());
         let reconnect_tokens = persisted_session
             .as_ref()
-            .and_then(|state| serde_json::from_str::<HashMap<String, Uuid>>(&state.reconnect_tokens_json).ok())
+            .and_then(|state| {
+                serde_json::from_str::<HashMap<String, Uuid>>(&state.reconnect_tokens_json).ok()
+            })
             .unwrap_or_default();
         let mut live_matches = restored_claims
             .as_mut()
-            .map_or_else(HashMap::new, |claims| std::mem::take(&mut claims.live_matches));
+            .map_or_else(HashMap::new, |claims| {
+                std::mem::take(&mut claims.live_matches)
+            });
         for active in live_matches.values_mut() {
             active.session.reset_rng_after_restore();
         }
         Self {
             config,
-            revision: persisted_session.as_ref().map_or(0, |state| state.career_revision),
-            slots: restored_claims.as_ref().map_or_else(HashMap::new, |claims| claims.slots.clone()),
+            revision: persisted_session
+                .as_ref()
+                .map_or(0, |state| state.career_revision),
+            slots: restored_claims
+                .as_ref()
+                .map_or_else(HashMap::new, |claims| claims.slots.clone()),
             claimed_clubs: restored_claims.map_or_else(HashMap::new, |claims| claims.claimed_clubs),
             reconnect_tokens,
             manager_connection_counts: HashMap::new(),
@@ -368,7 +392,10 @@ impl CareerSession {
         if request.join_secret != self.config.join_secret {
             return Err(ApiError::protocol(ErrorCode::AuthInvalid));
         }
-        if !request.client_versions.is_compatible_with(&self.config.versions) {
+        if !request
+            .client_versions
+            .is_compatible_with(&self.config.versions)
+        {
             return Err(ApiError::protocol(ErrorCode::ProtocolIncompatible));
         }
         if self
@@ -383,11 +410,9 @@ impl CareerSession {
         {
             return Err(ApiError::protocol(ErrorCode::ClubAlreadyControlled));
         }
-        if self
-            .claimed_clubs
-            .iter()
-            .any(|(club_id, manager_id)| *manager_id == request.manager_id && *club_id != request.club_id)
-        {
+        if self.claimed_clubs.iter().any(|(club_id, manager_id)| {
+            *manager_id == request.manager_id && *club_id != request.club_id
+        }) {
             return Err(ApiError::protocol(ErrorCode::ClubAlreadyControlled));
         }
         if !self.slots.contains_key(&request.manager_id) && self.slots.len() >= MAX_MANAGER_SLOTS {
@@ -400,9 +425,11 @@ impl CareerSession {
             ManagerSlot::Guest
         };
         let slot = *self.slots.entry(request.manager_id).or_insert(new_slot);
-        self.claimed_clubs.insert(request.club_id, request.manager_id);
+        self.claimed_clubs
+            .insert(request.club_id, request.manager_id);
         let reconnect_token = Uuid::new_v4().to_string();
-        self.reconnect_tokens.insert(reconnect_token.clone(), request.manager_id);
+        self.reconnect_tokens
+            .insert(reconnect_token.clone(), request.manager_id);
         if self.persist_session_state().is_err() {
             return Err(ApiError::protocol(ErrorCode::SaveCorrupt));
         }
@@ -416,7 +443,10 @@ impl CareerSession {
     }
 
     fn reconnect(&self, request: ReconnectRequest) -> Result<JoinResponse, ApiError> {
-        if !request.client_versions.is_compatible_with(&self.config.versions) {
+        if !request
+            .client_versions
+            .is_compatible_with(&self.config.versions)
+        {
             return Err(ApiError::protocol(ErrorCode::ProtocolIncompatible));
         }
         let manager_id = self.manager_for_token(&request.reconnect_token)?;
@@ -425,7 +455,10 @@ impl CareerSession {
             manager_id,
             reconnect_token: request.reconnect_token,
             current_revision: self.revision,
-            slot: *self.slots.get(&manager_id).expect("token manager has a slot"),
+            slot: *self
+                .slots
+                .get(&manager_id)
+                .expect("token manager has a slot"),
         })
     }
 
@@ -437,11 +470,16 @@ impl CareerSession {
     }
 
     fn manager_connected(&mut self, manager_id: Uuid) {
-        *self.manager_connection_counts.entry(manager_id).or_default() += 1;
+        *self
+            .manager_connection_counts
+            .entry(manager_id)
+            .or_default() += 1;
     }
 
     fn manager_disconnected(&mut self, manager_id: Uuid) {
-        let Some(count) = self.manager_connection_counts.get_mut(&manager_id) else { return; };
+        let Some(count) = self.manager_connection_counts.get_mut(&manager_id) else {
+            return;
+        };
         *count = count.saturating_sub(1);
         if *count == 0 {
             self.manager_connection_counts.remove(&manager_id);
@@ -450,11 +488,14 @@ impl CareerSession {
     }
 
     fn live_match_managers(&self, live_match: &LiveMatchSession) -> Vec<Uuid> {
-        [live_match.home_team_id.as_str(), live_match.away_team_id.as_str()]
-            .into_iter()
-            .filter_map(|club_id| Uuid::parse_str(club_id).ok())
-            .filter_map(|club_id| self.claimed_clubs.get(&club_id).copied())
-            .collect()
+        [
+            live_match.home_team_id.as_str(),
+            live_match.away_team_id.as_str(),
+        ]
+        .into_iter()
+        .filter_map(|club_id| Uuid::parse_str(club_id).ok())
+        .filter_map(|club_id| self.claimed_clubs.get(&club_id).copied())
+        .collect()
     }
 
     fn live_match_needs_ready(live_match: &LiveMatchSession) -> bool {
@@ -467,23 +508,33 @@ impl CareerSession {
     fn manager_has_intermission_ready_barrier(&self, manager_id: Uuid) -> bool {
         self.live_matches.values().any(|active| {
             Self::live_match_needs_ready(&active.session)
-                && self.live_match_managers(&active.session).contains(&manager_id)
+                && self
+                    .live_match_managers(&active.session)
+                    .contains(&manager_id)
         })
     }
 
     fn live_match_waits_for_ready(&self, live_match: &LiveMatchSession) -> bool {
         Self::live_match_needs_ready(live_match)
-            && self.live_match_managers(live_match).iter().any(|manager_id| {
-                !self.manager_is_connected(manager_id) || !self.ready_managers.contains(manager_id)
-            })
+            && self
+                .live_match_managers(live_match)
+                .iter()
+                .any(|manager_id| {
+                    !self.manager_is_connected(manager_id)
+                        || !self.ready_managers.contains(manager_id)
+                })
     }
 
     fn manager_is_connected(&self, manager_id: &Uuid) -> bool {
-        self.manager_connection_counts.get(manager_id).is_some_and(|count| *count > 0)
+        self.manager_connection_counts
+            .get(manager_id)
+            .is_some_and(|count| *count > 0)
     }
 
     fn persist_session_state(&self) -> Result<(), String> {
-        let Some(store) = &self.store else { return Ok(()); };
+        let Some(store) = &self.store else {
+            return Ok(());
+        };
         let claims = PersistedClaimsRef {
             slots: &self.slots,
             claimed_clubs: &self.claimed_clubs,
@@ -507,7 +558,9 @@ impl CareerSession {
             return previous.clone();
         }
         let mut event = self.apply_new_command(authenticated_manager_id, envelope);
-        if event.iter().any(|item| matches!(item, ServerEvent::CommandAck(_)))
+        if event
+            .iter()
+            .any(|item| matches!(item, ServerEvent::CommandAck(_)))
             && self.persist_session_state().is_err()
         {
             event = vec![ServerEvent::CommandRejected(CommandRejectedBody {
@@ -544,18 +597,26 @@ impl CareerSession {
         };
         match command {
             Command::MarkReady(MarkReadyBody {}) => {
-                if !self.live_matches.is_empty() && !self.manager_has_intermission_ready_barrier(manager_id) {
+                if !self.live_matches.is_empty()
+                    && !self.manager_has_intermission_ready_barrier(manager_id)
+                {
                     return vec![reject(ErrorCode::MatchCommandNotAllowed)];
                 }
                 self.ready_managers.insert(manager_id);
                 self.revision += 1;
-                let mut events = vec![ServerEvent::CommandAck(CommandAckBody {
-                    command_id,
-                    applied_revision: self.revision,
-                }), self.ready_state_event(manager_id)];
+                let mut events = vec![
+                    ServerEvent::CommandAck(CommandAckBody {
+                        command_id,
+                        applied_revision: self.revision,
+                    }),
+                    self.ready_state_event(manager_id),
+                ];
                 if self.live_matches.is_empty()
                     && self.ready_managers.len() == self.slots.len()
-                    && self.slots.keys().all(|manager_id| self.manager_is_connected(manager_id))
+                    && self
+                        .slots
+                        .keys()
+                        .all(|manager_id| self.manager_is_connected(manager_id))
                 {
                     events.extend(self.advance_ready_barrier());
                 }
@@ -574,14 +635,18 @@ impl CareerSession {
                 };
                 self.revision += 1;
                 vec![
-                    ServerEvent::CommandAck(CommandAckBody { command_id, applied_revision: self.revision }),
+                    ServerEvent::CommandAck(CommandAckBody {
+                        command_id,
+                        applied_revision: self.revision,
+                    }),
                     ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
                         match_id: body.match_id,
                         phase: format!("{:?}", snapshot.phase),
                         match_second: u32::from(snapshot.current_minute) * 60,
                         home_score: snapshot.home_score,
                         away_score: snapshot.away_score,
-                        snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
+                        snapshot: serde_json::to_value(&snapshot)
+                            .unwrap_or(serde_json::Value::Null),
                     }),
                 ]
             }
@@ -611,7 +676,10 @@ impl CareerSession {
                 let from_revision = self.revision;
                 self.revision += 1;
                 vec![
-                    ServerEvent::CommandAck(CommandAckBody { command_id, applied_revision: self.revision }),
+                    ServerEvent::CommandAck(CommandAckBody {
+                        command_id,
+                        applied_revision: self.revision,
+                    }),
                     ServerEvent::StateDelta(albion_protocol::event::StateDeltaBody {
                         from_revision,
                         to_revision: self.revision,
@@ -637,41 +705,48 @@ impl CareerSession {
     fn manager_dashboard_event(&self, manager_id: Uuid) -> Option<ServerEvent> {
         let career = self.career.as_ref()?;
         let payload = career.manager_dashboard(manager_id).ok()?;
-        Some(ServerEvent::ViewSnapshot(albion_protocol::event::ViewSnapshotBody {
-            revision: self.revision,
-            view_name: "dashboard".into(),
-            payload,
-        }))
+        Some(ServerEvent::ViewSnapshot(
+            albion_protocol::event::ViewSnapshotBody {
+                revision: self.revision,
+                view_name: "dashboard".into(),
+                payload,
+            },
+        ))
     }
 
     fn live_reconnect_events(&self, manager_id: Uuid) -> Vec<ServerEvent> {
-        self.live_matches.iter().filter_map(|(match_id, active)| {
-            let home_club_id = Uuid::parse_str(&active.session.home_team_id).ok()?;
-            let away_club_id = Uuid::parse_str(&active.session.away_team_id).ok()?;
-            let controls_match = [home_club_id, away_club_id]
-                .into_iter()
-                .any(|club_id| self.claimed_clubs.get(&club_id) == Some(&manager_id));
-            if !controls_match {
-                return None;
-            }
-            let snapshot = active.session.snapshot();
-            Some(vec![
-                ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
-                    match_id: *match_id,
-                    fixture_id: active.fixture_id.to_string(),
-                    home_club_id: home_club_id.to_string(),
-                    away_club_id: away_club_id.to_string(),
-                }),
-                ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
-                    match_id: *match_id,
-                    phase: format!("{:?}", snapshot.phase),
-                    match_second: u32::from(snapshot.current_minute) * 60,
-                    home_score: snapshot.home_score,
-                    away_score: snapshot.away_score,
-                    snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
-                }),
-            ])
-        }).flatten().collect()
+        self.live_matches
+            .iter()
+            .filter_map(|(match_id, active)| {
+                let home_club_id = Uuid::parse_str(&active.session.home_team_id).ok()?;
+                let away_club_id = Uuid::parse_str(&active.session.away_team_id).ok()?;
+                let controls_match = [home_club_id, away_club_id]
+                    .into_iter()
+                    .any(|club_id| self.claimed_clubs.get(&club_id) == Some(&manager_id));
+                if !controls_match {
+                    return None;
+                }
+                let snapshot = active.session.snapshot();
+                Some(vec![
+                    ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
+                        match_id: *match_id,
+                        fixture_id: active.fixture_id.to_string(),
+                        home_club_id: home_club_id.to_string(),
+                        away_club_id: away_club_id.to_string(),
+                    }),
+                    ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
+                        match_id: *match_id,
+                        phase: format!("{:?}", snapshot.phase),
+                        match_second: u32::from(snapshot.current_minute) * 60,
+                        home_score: snapshot.home_score,
+                        away_score: snapshot.away_score,
+                        snapshot: serde_json::to_value(&snapshot)
+                            .unwrap_or(serde_json::Value::Null),
+                    }),
+                ])
+            })
+            .flatten()
+            .collect()
     }
 
     fn apply_live_command(
@@ -696,32 +771,40 @@ impl CareerSession {
             return Err(ErrorCode::AuthInvalid);
         };
         let command = match &body.command {
-            albion_protocol::command::LiveMatchCommandKind::Substitute { player_out_id, player_in_id } => {
-                engine::MatchCommand::Substitute {
-                    side,
-                    player_off_id: player_out_id.clone(),
-                    player_on_id: player_in_id.clone(),
-                }
-            }
+            albion_protocol::command::LiveMatchCommandKind::Substitute {
+                player_out_id,
+                player_in_id,
+            } => engine::MatchCommand::Substitute {
+                side,
+                player_off_id: player_out_id.clone(),
+                player_on_id: player_in_id.clone(),
+            },
             albion_protocol::command::LiveMatchCommandKind::ChangeFormation { formation } => {
-                engine::MatchCommand::ChangeFormation { side, formation: formation.clone() }
+                engine::MatchCommand::ChangeFormation {
+                    side,
+                    formation: formation.clone(),
+                }
             }
             albion_protocol::command::LiveMatchCommandKind::SetTeamInstruction { key, value }
-                if key == "play_style" => {
-                    let play_style = match value.as_str() {
-                        "balanced" => engine::PlayStyle::Balanced,
-                        "attacking" => engine::PlayStyle::Attacking,
-                        "defensive" => engine::PlayStyle::Defensive,
-                        "possession" => engine::PlayStyle::Possession,
-                        "counter" => engine::PlayStyle::Counter,
-                        "high_press" | "highpress" => engine::PlayStyle::HighPress,
-                        _ => return Err(ErrorCode::MatchCommandNotAllowed),
-                    };
-                    engine::MatchCommand::ChangePlayStyle { side, play_style }
-                }
+                if key == "play_style" =>
+            {
+                let play_style = match value.as_str() {
+                    "balanced" => engine::PlayStyle::Balanced,
+                    "attacking" => engine::PlayStyle::Attacking,
+                    "defensive" => engine::PlayStyle::Defensive,
+                    "possession" => engine::PlayStyle::Possession,
+                    "counter" => engine::PlayStyle::Counter,
+                    "high_press" | "highpress" => engine::PlayStyle::HighPress,
+                    _ => return Err(ErrorCode::MatchCommandNotAllowed),
+                };
+                engine::MatchCommand::ChangePlayStyle { side, play_style }
+            }
             _ => return Err(ErrorCode::MatchCommandNotAllowed),
         };
-        session.session.apply_command(command).map_err(|_| ErrorCode::MatchCommandNotAllowed)?;
+        session
+            .session
+            .apply_command(command)
+            .map_err(|_| ErrorCode::MatchCommandNotAllowed)?;
         Ok(session.session.snapshot())
     }
 
@@ -740,59 +823,98 @@ impl CareerSession {
         {
             *career = previous;
             self.ready_managers.clear();
-            return vec![ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
-                severity: albion_protocol::event::ServerNoticeSeverity::Critical,
-                message_key: "server.saveFailed".into(),
-            })];
+            return vec![ServerEvent::ServerNotice(
+                albion_protocol::event::ServerNoticeBody {
+                    severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                    message_key: "server.saveFailed".into(),
+                },
+            )];
         }
         self.ready_managers.clear();
         self.revision += 1;
         match outcome {
-            Advancement::AdvancedThrough { date: _ } => vec![ServerEvent::GameTimeChanged(
-                albion_protocol::event::GameTimeChangedBody {
-                    career_year: career.game().clock.current_date.format("%Y").to_string().parse().unwrap_or_default(),
-                    career_month: career.game().clock.current_date.format("%-m").to_string().parse().unwrap_or_default(),
-                    career_day: career.game().clock.current_date.format("%-d").to_string().parse().unwrap_or_default(),
+            Advancement::AdvancedThrough { date: _ } => vec![
+                ServerEvent::GameTimeChanged(albion_protocol::event::GameTimeChangedBody {
+                    career_year: career
+                        .game()
+                        .clock
+                        .current_date
+                        .format("%Y")
+                        .to_string()
+                        .parse()
+                        .unwrap_or_default(),
+                    career_month: career
+                        .game()
+                        .clock
+                        .current_date
+                        .format("%-m")
+                        .to_string()
+                        .parse()
+                        .unwrap_or_default(),
+                    career_day: career
+                        .game()
+                        .clock
+                        .current_date
+                        .format("%-d")
+                        .to_string()
+                        .parse()
+                        .unwrap_or_default(),
                     revision: self.revision,
-                },
-            ), ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
-                severity: albion_protocol::event::ServerNoticeSeverity::Info,
-                message_key: "server.advancedThrough".into(),
-            })],
-            Advancement::HumanFixture { fixture_id, home_club_id, away_club_id } => {
+                }),
+                ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
+                    severity: albion_protocol::event::ServerNoticeSeverity::Info,
+                    message_key: "server.advancedThrough".into(),
+                }),
+            ],
+            Advancement::HumanFixture {
+                fixture_id,
+                home_club_id,
+                away_club_id,
+            } => {
                 let match_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, fixture_id.as_bytes());
                 match career.open_live_match(fixture_id, &controlled_clubs) {
                     Ok(session) => {
-                        self.live_matches.insert(match_id, ActiveLiveMatch {
-                            fixture_id,
-                            session,
-                            next_event_sequence: 1,
-                        });
-                        vec![ServerEvent::MatchOpened(albion_protocol::event::MatchOpenedBody {
+                        self.live_matches.insert(
                             match_id,
-                            fixture_id: fixture_id.to_string(),
-                            home_club_id: home_club_id.to_string(),
-                            away_club_id: away_club_id.to_string(),
-                        })]
+                            ActiveLiveMatch {
+                                fixture_id,
+                                session,
+                                next_event_sequence: 1,
+                            },
+                        );
+                        vec![ServerEvent::MatchOpened(
+                            albion_protocol::event::MatchOpenedBody {
+                                match_id,
+                                fixture_id: fixture_id.to_string(),
+                                home_club_id: home_club_id.to_string(),
+                                away_club_id: away_club_id.to_string(),
+                            },
+                        )]
                     }
-                    Err(_) => vec![ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
-                        severity: albion_protocol::event::ServerNoticeSeverity::Critical,
-                        message_key: "server.liveMatchOpenFailed".into(),
-                    })],
+                    Err(_) => vec![ServerEvent::ServerNotice(
+                        albion_protocol::event::ServerNoticeBody {
+                            severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                            message_key: "server.liveMatchOpenFailed".into(),
+                        },
+                    )],
                 }
             }
         }
     }
 
     fn tick_live_matches(&mut self) -> Vec<ServerEvent> {
-        if self.live_matches.is_empty() || self.last_live_tick.elapsed() < Duration::from_millis(500) {
+        if self.live_matches.is_empty()
+            || self.last_live_tick.elapsed() < Duration::from_millis(500)
+        {
             return Vec::new();
         }
         self.last_live_tick = Instant::now();
         let match_ids: Vec<Uuid> = self.live_matches.keys().copied().collect();
         let mut events = Vec::new();
         for match_id in match_ids {
-            let Some(mut active) = self.live_matches.remove(&match_id) else { continue; };
+            let Some(mut active) = self.live_matches.remove(&match_id) else {
+                continue;
+            };
             if self.has_disconnected_human_for_match(&active.session) {
                 self.live_matches.insert(match_id, active);
                 continue;
@@ -812,40 +934,61 @@ impl CareerSession {
             if event_count > 0 {
                 let from_seq = active.next_event_sequence;
                 active.next_event_sequence += event_count;
-                events.push(ServerEvent::MatchEventBatch(albion_protocol::event::MatchEventBatchBody {
-                    match_id,
-                    from_seq,
-                    to_seq: active.next_event_sequence - 1,
-                    events: minute.events.iter().map(|event| serde_json::to_value(event).unwrap_or(serde_json::Value::Null)).collect(),
-                }));
+                events.push(ServerEvent::MatchEventBatch(
+                    albion_protocol::event::MatchEventBatchBody {
+                        match_id,
+                        from_seq,
+                        to_seq: active.next_event_sequence - 1,
+                        events: minute
+                            .events
+                            .iter()
+                            .map(|event| {
+                                serde_json::to_value(event).unwrap_or(serde_json::Value::Null)
+                            })
+                            .collect(),
+                    },
+                ));
             }
-            events.push(ServerEvent::MatchState(albion_protocol::event::MatchStateBody {
-                match_id,
-                phase: format!("{:?}", snapshot.phase),
-                match_second: u32::from(snapshot.current_minute) * 60,
-                home_score: snapshot.home_score,
-                away_score: snapshot.away_score,
-                snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
-            }));
+            events.push(ServerEvent::MatchState(
+                albion_protocol::event::MatchStateBody {
+                    match_id,
+                    phase: format!("{:?}", snapshot.phase),
+                    match_second: u32::from(snapshot.current_minute) * 60,
+                    home_score: snapshot.home_score,
+                    away_score: snapshot.away_score,
+                    snapshot: serde_json::to_value(&snapshot).unwrap_or(serde_json::Value::Null),
+                },
+            ));
             if minute.is_finished {
-                let Some(career) = self.career.as_mut() else { continue; };
+                let Some(career) = self.career.as_mut() else {
+                    continue;
+                };
                 let previous = career.clone();
                 match career.finish_live_match(active.session) {
-                    Ok(report) if !self.store.as_ref().is_some_and(|store| store.checkpoint(career.game()).is_err()) => {
+                    Ok(report)
+                        if !self
+                            .store
+                            .as_ref()
+                            .is_some_and(|store| store.checkpoint(career.game()).is_err()) =>
+                    {
                         self.revision += 1;
-                        events.push(ServerEvent::MatchFinished(albion_protocol::event::MatchFinishedBody {
-                            match_id,
-                            home_score: snapshot.home_score,
-                            away_score: snapshot.away_score,
-                            report,
-                        }));
+                        events.push(ServerEvent::MatchFinished(
+                            albion_protocol::event::MatchFinishedBody {
+                                match_id,
+                                home_score: snapshot.home_score,
+                                away_score: snapshot.away_score,
+                                report,
+                            },
+                        ));
                     }
                     _ => {
                         *career = previous;
-                        events.push(ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
-                            severity: albion_protocol::event::ServerNoticeSeverity::Critical,
-                            message_key: "server.liveMatchSaveFailed".into(),
-                        }));
+                        events.push(ServerEvent::ServerNotice(
+                            albion_protocol::event::ServerNoticeBody {
+                                severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                                message_key: "server.liveMatchSaveFailed".into(),
+                            },
+                        ));
                     }
                 }
             } else {
@@ -853,20 +996,25 @@ impl CareerSession {
             }
         }
         if !events.is_empty() && self.persist_session_state().is_err() {
-            events.push(ServerEvent::ServerNotice(albion_protocol::event::ServerNoticeBody {
-                severity: albion_protocol::event::ServerNoticeSeverity::Critical,
-                message_key: "server.liveMatchSaveFailed".into(),
-            }));
+            events.push(ServerEvent::ServerNotice(
+                albion_protocol::event::ServerNoticeBody {
+                    severity: albion_protocol::event::ServerNoticeSeverity::Critical,
+                    message_key: "server.liveMatchSaveFailed".into(),
+                },
+            ));
         }
         events
     }
 
     fn has_disconnected_human_for_match(&self, live_match: &LiveMatchSession) -> bool {
-        [live_match.home_team_id.as_str(), live_match.away_team_id.as_str()]
-            .into_iter()
-            .filter_map(|club_id| Uuid::parse_str(club_id).ok())
-            .filter_map(|club_id| self.claimed_clubs.get(&club_id))
-            .any(|manager_id| !self.manager_is_connected(manager_id))
+        [
+            live_match.home_team_id.as_str(),
+            live_match.away_team_id.as_str(),
+        ]
+        .into_iter()
+        .filter_map(|club_id| Uuid::parse_str(club_id).ok())
+        .filter_map(|club_id| self.claimed_clubs.get(&club_id))
+        .any(|manager_id| !self.manager_is_connected(manager_id))
     }
 }
 
@@ -894,7 +1042,9 @@ impl IntoResponse for ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use albion_protocol::command::{ApplyLiveMatchCommandBody, LiveMatchCommandKind, SetTacticsBody};
+    use albion_protocol::command::{
+        ApplyLiveMatchCommandBody, LiveMatchCommandKind, SetTacticsBody,
+    };
     use axum::body::Body;
     use axum::body::to_bytes;
     use axum::http::Request;
@@ -909,16 +1059,19 @@ mod tests {
     use domain::player::{Player, PlayerAttributes, Position};
     use domain::team::Team;
     use futures_util::{SinkExt, StreamExt};
-    use std::future::IntoFuture;
     use ofm_core::clock::GameClock;
     use ofm_core::game::Game;
-    use tower::ServiceExt;
+    use std::future::IntoFuture;
+    use tempfile::tempdir;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
-    use tempfile::tempdir;
+    use tower::ServiceExt;
 
     fn session() -> CareerSession {
-        CareerSession::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"))
+        CareerSession::new(ServerConfig::private_career(
+            Uuid::new_v4(),
+            "private-secret",
+        ))
     }
 
     #[tokio::test]
@@ -940,7 +1093,10 @@ mod tests {
         .unwrap();
 
         assert!(response.status().is_success());
-        assert_eq!(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(), "*");
+        assert_eq!(
+            response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN).unwrap(),
+            "*"
+        );
     }
 
     fn join_request(manager_id: Uuid, club_id: Uuid) -> JoinRequest {
@@ -969,13 +1125,41 @@ mod tests {
         let manager_b_id = Uuid::new_v4();
         let club_a_id = Uuid::new_v4();
         let club_b_id = Uuid::new_v4();
-        let mut manager_a = Manager::new(manager_a_id.to_string(), "Alex".into(), "Host".into(), "1980-01-01".into(), "ENG".into());
+        let mut manager_a = Manager::new(
+            manager_a_id.to_string(),
+            "Alex".into(),
+            "Host".into(),
+            "1980-01-01".into(),
+            "ENG".into(),
+        );
         manager_a.hire(club_a_id.to_string());
-        let mut manager_b = Manager::new(manager_b_id.to_string(), "Bea".into(), "Guest".into(), "1981-01-01".into(), "ENG".into());
+        let mut manager_b = Manager::new(
+            manager_b_id.to_string(),
+            "Bea".into(),
+            "Guest".into(),
+            "1981-01-01".into(),
+            "ENG".into(),
+        );
         manager_b.hire(club_b_id.to_string());
-        let mut club_a = Team::new(club_a_id.to_string(), "Alpha".into(), "ALP".into(), "England".into(), "Alpha".into(), "Ground A".into(), 20_000);
+        let mut club_a = Team::new(
+            club_a_id.to_string(),
+            "Alpha".into(),
+            "ALP".into(),
+            "England".into(),
+            "Alpha".into(),
+            "Ground A".into(),
+            20_000,
+        );
         club_a.manager_id = Some(manager_a_id.to_string());
-        let mut club_b = Team::new(club_b_id.to_string(), "Beta".into(), "BET".into(), "England".into(), "Beta".into(), "Ground B".into(), 20_000);
+        let mut club_b = Team::new(
+            club_b_id.to_string(),
+            "Beta".into(),
+            "BET".into(),
+            "England".into(),
+            "Beta".into(),
+            "Ground B".into(),
+            20_000,
+        );
         club_b.manager_id = Some(manager_b_id.to_string());
         let mut game = Game::new(
             GameClock::new(Utc.with_ymd_and_hms(2026, 7, 1, 12, 0, 0).unwrap()),
@@ -990,12 +1174,35 @@ mod tests {
     }
 
     fn live_player(id: String, team_id: &Uuid, position: Position) -> Player {
-        let mut player = Player::new(id, "Player".into(), "Live Player".into(), "1995-01-01".into(), "ENG".into(), position, PlayerAttributes {
-            pace: 65, stamina: 65, strength: 65, agility: 65, passing: 65, shooting: 65,
-            tackling: 65, dribbling: 65, defending: 65, positioning: 65, vision: 65,
-            decisions: 65, composure: 65, aggression: 50, teamwork: 65, leadership: 50,
-            handling: 65, reflexes: 65, aerial: 65,
-        });
+        let mut player = Player::new(
+            id,
+            "Player".into(),
+            "Live Player".into(),
+            "1995-01-01".into(),
+            "ENG".into(),
+            position,
+            PlayerAttributes {
+                pace: 65,
+                stamina: 65,
+                strength: 65,
+                agility: 65,
+                passing: 65,
+                shooting: 65,
+                tackling: 65,
+                dribbling: 65,
+                defending: 65,
+                positioning: 65,
+                vision: 65,
+                decisions: 65,
+                composure: 65,
+                aggression: 50,
+                teamwork: 65,
+                leadership: 50,
+                handling: 65,
+                reflexes: 65,
+                aerial: 65,
+            },
+        );
         player.team_id = Some(team_id.to_string());
         player
     }
@@ -1003,16 +1210,30 @@ mod tests {
     fn two_manager_live_game() -> (Game, Uuid, Uuid, Uuid, Uuid) {
         let (mut game, manager_a, manager_b, club_a, club_b) = two_manager_game();
         let positions = [
-            Position::Goalkeeper, Position::Defender, Position::Defender, Position::Defender,
-            Position::Defender, Position::Midfielder, Position::Midfielder, Position::Midfielder,
-            Position::Midfielder, Position::Forward, Position::Forward,
+            Position::Goalkeeper,
+            Position::Defender,
+            Position::Defender,
+            Position::Defender,
+            Position::Defender,
+            Position::Midfielder,
+            Position::Midfielder,
+            Position::Midfielder,
+            Position::Midfielder,
+            Position::Forward,
+            Position::Forward,
         ];
-        game.players.extend(positions.iter().enumerate().flat_map(|(index, position)| [
-            live_player(format!("a-{index}"), &club_a, position.clone()),
-            live_player(format!("b-{index}"), &club_b, position.clone()),
-        ]));
+        game.players
+            .extend(positions.iter().enumerate().flat_map(|(index, position)| {
+                [
+                    live_player(format!("a-{index}"), &club_a, position.clone()),
+                    live_player(format!("b-{index}"), &club_b, position.clone()),
+                ]
+            }));
         let fixture_id = Uuid::new_v4();
-        let mut league = League { id: "test-league".into(), ..Default::default() };
+        let mut league = League {
+            id: "test-league".into(),
+            ..Default::default()
+        };
         league.fixtures.push(Fixture {
             id: fixture_id.to_string(),
             competition_id: league.id.clone(),
@@ -1024,12 +1245,19 @@ mod tests {
             status: FixtureStatus::Scheduled,
             result: None,
         });
-        league.standings = vec![StandingEntry::new(club_a.to_string()), StandingEntry::new(club_b.to_string())];
+        league.standings = vec![
+            StandingEntry::new(club_a.to_string()),
+            StandingEntry::new(club_b.to_string()),
+        ];
         game.competitions.push(league);
         (game, manager_a, manager_b, club_a, club_b)
     }
 
-    fn tactics_envelope(session: &CareerSession, manager_id: Uuid, expected_revision: u64) -> Envelope {
+    fn tactics_envelope(
+        session: &CareerSession,
+        manager_id: Uuid,
+        expected_revision: u64,
+    ) -> Envelope {
         Envelope {
             protocol_version: session.config.versions.protocol_version,
             message_id: Uuid::new_v4(),
@@ -1050,7 +1278,9 @@ mod tests {
         let manager_a = Uuid::new_v4();
         let club = Uuid::new_v4();
         session.join(join_request(manager_a, club)).unwrap();
-        let error = session.join(join_request(Uuid::new_v4(), club)).unwrap_err();
+        let error = session
+            .join(join_request(Uuid::new_v4(), club))
+            .unwrap_err();
         assert_eq!(error.0.code, ErrorCode::ClubAlreadyControlled);
     }
 
@@ -1059,7 +1289,9 @@ mod tests {
         let mut session = session();
         let manager = Uuid::new_v4();
         session.join(join_request(manager, Uuid::new_v4())).unwrap();
-        let error = session.join(join_request(manager, Uuid::new_v4())).unwrap_err();
+        let error = session
+            .join(join_request(manager, Uuid::new_v4()))
+            .unwrap_err();
         assert_eq!(error.0.code, ErrorCode::ClubAlreadyControlled);
     }
 
@@ -1071,11 +1303,18 @@ mod tests {
         let command_id = Uuid::new_v4();
         let first = session.apply_command(manager, ready_envelope(&session, manager, command_id));
         let second = session.apply_command(manager, ready_envelope(&session, manager, command_id));
-        let ServerEvent::CommandAck(first) = &first[0] else { panic!("ready should acknowledge") };
-        let ServerEvent::CommandAck(second) = &second[0] else { panic!("retry should acknowledge") };
+        let ServerEvent::CommandAck(first) = &first[0] else {
+            panic!("ready should acknowledge")
+        };
+        let ServerEvent::CommandAck(second) = &second[0] else {
+            panic!("retry should acknowledge")
+        };
         assert_eq!(first.applied_revision, 1);
         assert_eq!(second.applied_revision, 1);
-        assert!(matches!(session.apply_command(manager, ready_envelope(&session, manager, command_id))[1], ServerEvent::ReadyStateChanged(_)));
+        assert!(matches!(
+            session.apply_command(manager, ready_envelope(&session, manager, command_id))[1],
+            ServerEvent::ReadyStateChanged(_)
+        ));
         assert_eq!(session.revision, 1);
     }
 
@@ -1084,7 +1323,9 @@ mod tests {
         let mut session = session();
         let manager = Uuid::new_v4();
         session.join(join_request(manager, Uuid::new_v4())).unwrap();
-        session.join(join_request(Uuid::new_v4(), Uuid::new_v4())).unwrap();
+        session
+            .join(join_request(Uuid::new_v4(), Uuid::new_v4()))
+            .unwrap();
         session.manager_connected(manager);
         session.apply_command(manager, ready_envelope(&session, manager, Uuid::new_v4()));
         assert!(session.ready_managers.contains(&manager));
@@ -1110,26 +1351,42 @@ mod tests {
     fn two_ready_humans_open_and_tick_one_canonical_live_match() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
         let mut session = CareerSession::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         session.join(join_request(manager_a, club_a)).unwrap();
         session.join(join_request(manager_b, club_b)).unwrap();
         session.manager_connected(manager_a);
         session.manager_connected(manager_b);
-        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-        let opened = session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
-        assert!(opened.iter().any(|event| matches!(event, ServerEvent::MatchOpened(_))));
+        session.apply_command(
+            manager_a,
+            ready_envelope(&session, manager_a, Uuid::new_v4()),
+        );
+        let opened = session.apply_command(
+            manager_b,
+            ready_envelope(&session, manager_b, Uuid::new_v4()),
+        );
+        assert!(
+            opened
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchOpened(_)))
+        );
         assert_eq!(session.live_matches.len(), 1);
 
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
         let updates = session.tick_live_matches();
-        assert!(updates.iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+        assert!(
+            updates
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchState(_)))
+        );
     }
 
     #[test]
     fn one_human_can_open_and_tick_a_canonical_match_against_ai() {
         let (mut game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
-        game.managers.retain(|manager| manager.id == manager_a.to_string());
+        game.managers
+            .retain(|manager| manager.id == manager_a.to_string());
         game.teams
             .iter_mut()
             .find(|team| team.id == club_b.to_string())
@@ -1138,40 +1395,66 @@ mod tests {
         assert_ne!(manager_a, manager_b);
 
         let mut session = CareerSession::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         session.join(join_request(manager_a, club_a)).unwrap();
         session.manager_connected(manager_a);
-        let opened = session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-        assert!(opened.iter().any(|event| matches!(event, ServerEvent::MatchOpened(_))));
+        let opened = session.apply_command(
+            manager_a,
+            ready_envelope(&session, manager_a, Uuid::new_v4()),
+        );
+        assert!(
+            opened
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchOpened(_)))
+        );
         assert_eq!(session.live_matches.len(), 1);
 
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
         let updates = session.tick_live_matches();
-        assert!(updates.iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+        assert!(
+            updates
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchState(_)))
+        );
     }
 
     #[test]
     fn manager_dashboard_squad_is_limited_to_the_controlled_club() {
         let (game, manager_a, _, _, _) = two_manager_live_game();
         let career = CanonicalCareer::new(game);
-        let squad = career.manager_dashboard(manager_a).unwrap()["squad"].as_array().unwrap().clone();
+        let squad = career.manager_dashboard(manager_a).unwrap()["squad"]
+            .as_array()
+            .unwrap()
+            .clone();
         assert_eq!(squad.len(), 11);
-        assert!(squad.iter().all(|player| player["id"].as_str().is_some_and(|id| id.starts_with("a-"))));
+        assert!(
+            squad
+                .iter()
+                .all(|player| player["id"].as_str().is_some_and(|id| id.starts_with("a-")))
+        );
     }
 
     #[test]
     fn human_live_match_pauses_until_the_disconnected_manager_returns() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
         let mut session = CareerSession::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         session.join(join_request(manager_a, club_a)).unwrap();
         session.join(join_request(manager_b, club_b)).unwrap();
         session.manager_connected(manager_a);
         session.manager_connected(manager_b);
-        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        session.apply_command(
+            manager_a,
+            ready_envelope(&session, manager_a, Uuid::new_v4()),
+        );
+        session.apply_command(
+            manager_b,
+            ready_envelope(&session, manager_b, Uuid::new_v4()),
+        );
         assert_eq!(session.live_matches.len(), 1);
 
         session.manager_disconnected(manager_b);
@@ -1180,21 +1463,33 @@ mod tests {
 
         session.manager_connected(manager_b);
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
-        assert!(session.tick_live_matches().iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+        assert!(
+            session
+                .tick_live_matches()
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchState(_)))
+        );
     }
 
     #[test]
     fn human_live_match_waits_for_both_managers_at_half_time() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
         let mut session = CareerSession::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         session.join(join_request(manager_a, club_a)).unwrap();
         session.join(join_request(manager_b, club_b)).unwrap();
         session.manager_connected(manager_a);
         session.manager_connected(manager_b);
-        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        session.apply_command(
+            manager_a,
+            ready_envelope(&session, manager_a, Uuid::new_v4()),
+        );
+        session.apply_command(
+            manager_b,
+            ready_envelope(&session, manager_b, Uuid::new_v4()),
+        );
         let match_id = *session.live_matches.keys().next().unwrap();
 
         let active = session.live_matches.get_mut(&match_id).unwrap();
@@ -1203,39 +1498,76 @@ mod tests {
         }
 
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
-        assert!(session.tick_live_matches().is_empty(), "half time must not auto-resume");
+        assert!(
+            session.tick_live_matches().is_empty(),
+            "half time must not auto-resume"
+        );
 
-        let first_ready = session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-        assert!(first_ready.iter().any(|event| matches!(event, ServerEvent::ReadyStateChanged(body) if body.is_ready)));
+        let first_ready = session.apply_command(
+            manager_a,
+            ready_envelope(&session, manager_a, Uuid::new_v4()),
+        );
+        assert!(
+            first_ready.iter().any(
+                |event| matches!(event, ServerEvent::ReadyStateChanged(body) if body.is_ready)
+            )
+        );
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
-        assert!(session.tick_live_matches().is_empty(), "one manager is not enough to resume");
+        assert!(
+            session.tick_live_matches().is_empty(),
+            "one manager is not enough to resume"
+        );
 
-        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        session.apply_command(
+            manager_b,
+            ready_envelope(&session, manager_b, Uuid::new_v4()),
+        );
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
         let resumed = session.tick_live_matches();
-        assert!(resumed.iter().any(|event| matches!(event, ServerEvent::MatchState(body) if body.phase == "SecondHalf")));
-        assert!(session.ready_managers.is_empty(), "intermission readiness is consumed after resuming");
+        assert!(resumed.iter().any(
+            |event| matches!(event, ServerEvent::MatchState(body) if body.phase == "SecondHalf")
+        ));
+        assert!(
+            session.ready_managers.is_empty(),
+            "intermission readiness is consumed after resuming"
+        );
     }
 
     #[test]
     fn two_humans_complete_one_authoritative_match_with_live_command_and_half_time_barrier() {
         let (mut game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
-        game.players.push(live_player("a-sub".into(), &club_a, Position::Forward));
-        game.teams.iter_mut().find(|team| team.id == club_a.to_string()).unwrap()
+        game.players
+            .push(live_player("a-sub".into(), &club_a, Position::Forward));
+        game.teams
+            .iter_mut()
+            .find(|team| team.id == club_a.to_string())
+            .unwrap()
             .starting_xi_ids = (0..11).map(|index| format!("a-{index}")).collect();
         let mut session = CareerSession::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         session.join(join_request(manager_a, club_a)).unwrap();
         session.join(join_request(manager_b, club_b)).unwrap();
         session.manager_connected(manager_a);
         session.manager_connected(manager_b);
-        session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-        session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+        session.apply_command(
+            manager_a,
+            ready_envelope(&session, manager_a, Uuid::new_v4()),
+        );
+        session.apply_command(
+            manager_b,
+            ready_envelope(&session, manager_b, Uuid::new_v4()),
+        );
         let match_id = *session.live_matches.keys().next().unwrap();
 
         session.last_live_tick = Instant::now() - Duration::from_millis(501);
-        assert!(session.tick_live_matches().iter().any(|event| matches!(event, ServerEvent::MatchState(_))));
+        assert!(
+            session
+                .tick_live_matches()
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchState(_)))
+        );
 
         let substitute = Envelope {
             protocol_version: session.config.versions.protocol_version,
@@ -1244,18 +1576,28 @@ mod tests {
             career_id: session.config.career_id,
             manager_id: manager_a,
             expected_revision: Some(session.revision),
-            payload: EnvelopePayload::Command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
-                match_id,
-                command: LiveMatchCommandKind::Substitute {
-                    player_out_id: "a-10".into(),
-                    player_in_id: "a-sub".into(),
+            payload: EnvelopePayload::Command(Command::ApplyLiveMatchCommand(
+                ApplyLiveMatchCommandBody {
+                    match_id,
+                    command: LiveMatchCommandKind::Substitute {
+                        player_out_id: "a-10".into(),
+                        player_in_id: "a-sub".into(),
+                    },
                 },
-            })),
+            )),
         };
         let command_events = session.apply_command(manager_a, substitute);
-        assert!(command_events.iter().any(|event| matches!(event, ServerEvent::CommandAck(_))));
-        assert!(command_events.iter().any(|event| matches!(event, ServerEvent::MatchState(body)
-            if body.snapshot["substitutions"].as_array().is_some_and(|subs| !subs.is_empty()))));
+        assert!(
+            command_events
+                .iter()
+                .any(|event| matches!(event, ServerEvent::CommandAck(_)))
+        );
+        assert!(
+            command_events
+                .iter()
+                .any(|event| matches!(event, ServerEvent::MatchState(body)
+            if body.snapshot["substitutions"].as_array().is_some_and(|subs| !subs.is_empty())))
+        );
 
         let mut final_score = None;
         for _ in 0..160 {
@@ -1263,11 +1605,20 @@ mod tests {
                 break;
             }
             let at_intermission = session.live_matches.values().any(|active| {
-                matches!(active.session.match_state.phase(), engine::MatchPhase::HalfTime | engine::MatchPhase::ExtraTimeHalfTime)
+                matches!(
+                    active.session.match_state.phase(),
+                    engine::MatchPhase::HalfTime | engine::MatchPhase::ExtraTimeHalfTime
+                )
             });
             if at_intermission {
-                session.apply_command(manager_a, ready_envelope(&session, manager_a, Uuid::new_v4()));
-                session.apply_command(manager_b, ready_envelope(&session, manager_b, Uuid::new_v4()));
+                session.apply_command(
+                    manager_a,
+                    ready_envelope(&session, manager_a, Uuid::new_v4()),
+                );
+                session.apply_command(
+                    manager_b,
+                    ready_envelope(&session, manager_b, Uuid::new_v4()),
+                );
             }
             session.last_live_tick = Instant::now() - Duration::from_millis(501);
             for event in session.tick_live_matches() {
@@ -1277,12 +1628,22 @@ mod tests {
             }
         }
 
-        let (home_score, away_score) = final_score.expect("match must finish through canonical server ticks");
+        let (home_score, away_score) =
+            final_score.expect("match must finish through canonical server ticks");
         assert!(session.live_matches.is_empty());
-        let career = session.career.as_ref().expect("canonical career remains available");
+        let career = session
+            .career
+            .as_ref()
+            .expect("canonical career remains available");
         let fixture = &career.game().competitions[0].fixtures[0];
         assert_eq!(fixture.status, FixtureStatus::Completed);
-        assert_eq!(fixture.result.as_ref().map(|result| (result.home_goals, result.away_goals)), Some((home_score, away_score)));
+        assert_eq!(
+            fixture
+                .result
+                .as_ref()
+                .map(|result| (result.home_goals, result.away_goals)),
+            Some((home_score, away_score))
+        );
     }
 
     #[test]
@@ -1298,14 +1659,20 @@ mod tests {
         let mut original = CareerSession::new(config);
         let joined = original.join(join_request(manager_a, club_a)).unwrap();
         let command = tactics_envelope(&original, manager_a, 0);
-        assert!(matches!(original.apply_command(manager_a, command)[0], ServerEvent::CommandAck(_)));
+        assert!(matches!(
+            original.apply_command(manager_a, command)[0],
+            ServerEvent::CommandAck(_)
+        ));
         drop(original);
 
-        let restarted = CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
-        let reconnected = restarted.reconnect(ReconnectRequest {
-            reconnect_token: joined.reconnect_token.clone(),
-            client_versions: CURRENT_VERSIONS.to_owned_set(),
-        }).unwrap();
+        let restarted =
+            CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
+        let reconnected = restarted
+            .reconnect(ReconnectRequest {
+                reconnect_token: joined.reconnect_token.clone(),
+                client_versions: CURRENT_VERSIONS.to_owned_set(),
+            })
+            .unwrap();
         assert_eq!(reconnected.manager_id, manager_a);
         assert_eq!(reconnected.slot, ManagerSlot::Host);
         assert_eq!(reconnected.reconnect_token, joined.reconnect_token);
@@ -1322,26 +1689,46 @@ mod tests {
         GamePersistenceWriter::write_game(&db, &game, "albion-live", "Albion Live").unwrap();
         drop(db);
 
-        let mut original = CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
+        let mut original =
+            CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
         original.join(join_request(manager_a, club_a)).unwrap();
         original.join(join_request(manager_b, club_b)).unwrap();
         original.manager_connected(manager_a);
         original.manager_connected(manager_b);
-        original.apply_command(manager_a, ready_envelope(&original, manager_a, Uuid::new_v4()));
-        original.apply_command(manager_b, ready_envelope(&original, manager_b, Uuid::new_v4()));
+        original.apply_command(
+            manager_a,
+            ready_envelope(&original, manager_a, Uuid::new_v4()),
+        );
+        original.apply_command(
+            manager_b,
+            ready_envelope(&original, manager_b, Uuid::new_v4()),
+        );
         let match_id = *original.live_matches.keys().next().unwrap();
         original.last_live_tick = Instant::now() - Duration::from_millis(501);
         original.tick_live_matches();
-        let before = original.live_matches.get(&match_id).unwrap().session.snapshot();
+        let before = original
+            .live_matches
+            .get(&match_id)
+            .unwrap()
+            .session
+            .snapshot();
         drop(original);
 
-        let restarted = CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
-        let restored = restarted.live_matches.get(&match_id).expect("live match checkpoint").session.snapshot();
+        let restarted =
+            CareerSession::new(ServerConfig::open_save(&path, "private-secret").unwrap());
+        let restored = restarted
+            .live_matches
+            .get(&match_id)
+            .expect("live match checkpoint")
+            .session
+            .snapshot();
         assert_eq!(restored.current_minute, before.current_minute);
         assert_eq!(restored.home_score, before.home_score);
         assert_eq!(restored.away_score, before.away_score);
         let replay = restarted.live_reconnect_events(manager_a);
-        assert!(replay.iter().any(|event| matches!(event, ServerEvent::MatchOpened(body) if body.match_id == match_id)));
+        assert!(replay.iter().any(
+            |event| matches!(event, ServerEvent::MatchOpened(body) if body.match_id == match_id)
+        ));
         assert!(replay.iter().any(|event| matches!(event, ServerEvent::MatchState(body)
             if body.match_id == match_id
                 && body.match_second == u32::from(before.current_minute) * 60
@@ -1350,7 +1737,10 @@ mod tests {
 
     #[tokio::test]
     async fn health_and_readiness_endpoints_are_available() {
-        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let state = AppState::new(ServerConfig::private_career(
+            Uuid::new_v4(),
+            "private-secret",
+        ));
         for path in ["/healthz", "/readyz"] {
             let response = router(state.clone())
                 .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
@@ -1362,30 +1752,43 @@ mod tests {
 
     #[tokio::test]
     async fn http_join_assigns_two_distinct_clubs_and_rejects_a_duplicate_claim() {
-        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let state = AppState::new(ServerConfig::private_career(
+            Uuid::new_v4(),
+            "private-secret",
+        ));
         let club_a = Uuid::new_v4();
         let club_b = Uuid::new_v4();
         let manager_a = Uuid::new_v4();
         let manager_b = Uuid::new_v4();
-        for request in [join_request(manager_a, club_a), join_request(manager_b, club_b)] {
+        for request in [
+            join_request(manager_a, club_a),
+            join_request(manager_b, club_b),
+        ] {
             let response = router(state.clone())
-                .oneshot(Request::post("/api/v1/session/join")
-                    .header(CONTENT_TYPE, "application/json")
-                    .body(Body::from(serde_json::to_vec(&request).unwrap()))
-                    .unwrap())
+                .oneshot(
+                    Request::post("/api/v1/session/join")
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(serde_json::to_vec(&request).unwrap()))
+                        .unwrap(),
+                )
                 .await
                 .unwrap();
             assert_eq!(response.status(), StatusCode::OK);
             let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
             let joined: JoinResponse = serde_json::from_slice(&body).unwrap();
-            assert!(matches!(joined.slot, ManagerSlot::Host | ManagerSlot::Guest));
+            assert!(matches!(
+                joined.slot,
+                ManagerSlot::Host | ManagerSlot::Guest
+            ));
         }
         let duplicate = join_request(Uuid::new_v4(), club_a);
         let response = router(state)
-            .oneshot(Request::post("/api/v1/session/join")
-                .header(CONTENT_TYPE, "application/json")
-                .body(Body::from(serde_json::to_vec(&duplicate).unwrap()))
-                .unwrap())
+            .oneshot(
+                Request::post("/api/v1/session/join")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(serde_json::to_vec(&duplicate).unwrap()))
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::CONFLICT);
@@ -1393,14 +1796,19 @@ mod tests {
 
     #[tokio::test]
     async fn reconnect_restores_the_original_manager_slot() {
-        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let state = AppState::new(ServerConfig::private_career(
+            Uuid::new_v4(),
+            "private-secret",
+        ));
         let manager_id = Uuid::new_v4();
         let join = join_request(manager_id, Uuid::new_v4());
         let response = router(state.clone())
-            .oneshot(Request::post("/api/v1/session/join")
-                .header(CONTENT_TYPE, "application/json")
-                .body(Body::from(serde_json::to_vec(&join).unwrap()))
-                .unwrap())
+            .oneshot(
+                Request::post("/api/v1/session/join")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(serde_json::to_vec(&join).unwrap()))
+                    .unwrap(),
+            )
             .await
             .unwrap();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
@@ -1410,10 +1818,12 @@ mod tests {
             client_versions: CURRENT_VERSIONS.to_owned_set(),
         };
         let response = router(state)
-            .oneshot(Request::post("/api/v1/session/reconnect")
-                .header(CONTENT_TYPE, "application/json")
-                .body(Body::from(serde_json::to_vec(&reconnect).unwrap()))
-                .unwrap())
+            .oneshot(
+                Request::post("/api/v1/session/reconnect")
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Body::from(serde_json::to_vec(&reconnect).unwrap()))
+                    .unwrap(),
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
@@ -1426,27 +1836,52 @@ mod tests {
 
     #[tokio::test]
     async fn two_websocket_clients_receive_hello_and_duplicate_ready_is_safe() {
-        let state = AppState::new(ServerConfig::private_career(Uuid::new_v4(), "private-secret"));
+        let state = AppState::new(ServerConfig::private_career(
+            Uuid::new_v4(),
+            "private-secret",
+        ));
         let (token_a, token_b, manager_a) = {
             let mut session = state.session.lock().unwrap();
             let manager_a = Uuid::new_v4();
-            let joined_a = session.join(join_request(manager_a, Uuid::new_v4())).unwrap();
-            let joined_b = session.join(join_request(Uuid::new_v4(), Uuid::new_v4())).unwrap();
-            (joined_a.reconnect_token, joined_b.reconnect_token, manager_a)
+            let joined_a = session
+                .join(join_request(manager_a, Uuid::new_v4()))
+                .unwrap();
+            let joined_b = session
+                .join(join_request(Uuid::new_v4(), Uuid::new_v4()))
+                .unwrap();
+            (
+                joined_a.reconnect_token,
+                joined_b.reconnect_token,
+                manager_a,
+            )
         };
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let server = tokio::spawn(axum::serve(listener, router(state.clone())).into_future());
-        let (mut client_a, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_a}")).await.unwrap();
-        let (mut client_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
+        let (mut client_a, _) =
+            connect_async(format!("ws://{address}/ws?reconnect_token={token_a}"))
+                .await
+                .unwrap();
+        let (mut client_b, _) =
+            connect_async(format!("ws://{address}/ws?reconnect_token={token_b}"))
+                .await
+                .unwrap();
 
         for client in [&mut client_a, &mut client_b] {
-            let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("server must send hello") };
-            assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::Hello(_)));
+            let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else {
+                panic!("server must send hello")
+            };
+            assert!(matches!(
+                serde_json::from_str::<ServerEvent>(&text).unwrap(),
+                ServerEvent::Hello(_)
+            ));
         }
         let (career_id, protocol_version) = {
             let session = state.session.lock().unwrap();
-            (session.config.career_id, session.config.versions.protocol_version)
+            (
+                session.config.career_id,
+                session.config.versions.protocol_version,
+            )
         };
         let ready = Envelope {
             protocol_version,
@@ -1458,17 +1893,45 @@ mod tests {
             payload: EnvelopePayload::Command(Command::MarkReady(MarkReadyBody {})),
         };
         let message = serde_json::to_string(&ready).unwrap();
-        client_a.send(TungsteniteMessage::Text(message.clone().into())).await.unwrap();
-        let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else { panic!("ready needs acknowledgement") };
-        assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::CommandAck(_)));
-        let Some(Ok(TungsteniteMessage::Text(_))) = client_a.next().await else { panic!("ready state event must follow acknowledgement") };
-        let Some(Ok(TungsteniteMessage::Text(text))) = client_b.next().await else { panic!("guest must receive the shared acknowledgement") };
-        assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::CommandAck(_)));
-        let Some(Ok(TungsteniteMessage::Text(text))) = client_b.next().await else { panic!("guest must receive the shared ready state") };
-        assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::ReadyStateChanged(_)));
-        client_a.send(TungsteniteMessage::Text(message.into())).await.unwrap();
-        let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else { panic!("duplicate needs acknowledgement") };
-        let ServerEvent::CommandAck(ack) = serde_json::from_str::<ServerEvent>(&text).unwrap() else { panic!("duplicate must replay ack") };
+        client_a
+            .send(TungsteniteMessage::Text(message.clone().into()))
+            .await
+            .unwrap();
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else {
+            panic!("ready needs acknowledgement")
+        };
+        assert!(matches!(
+            serde_json::from_str::<ServerEvent>(&text).unwrap(),
+            ServerEvent::CommandAck(_)
+        ));
+        let Some(Ok(TungsteniteMessage::Text(_))) = client_a.next().await else {
+            panic!("ready state event must follow acknowledgement")
+        };
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_b.next().await else {
+            panic!("guest must receive the shared acknowledgement")
+        };
+        assert!(matches!(
+            serde_json::from_str::<ServerEvent>(&text).unwrap(),
+            ServerEvent::CommandAck(_)
+        ));
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_b.next().await else {
+            panic!("guest must receive the shared ready state")
+        };
+        assert!(matches!(
+            serde_json::from_str::<ServerEvent>(&text).unwrap(),
+            ServerEvent::ReadyStateChanged(_)
+        ));
+        client_a
+            .send(TungsteniteMessage::Text(message.into()))
+            .await
+            .unwrap();
+        let Some(Ok(TungsteniteMessage::Text(text))) = client_a.next().await else {
+            panic!("duplicate needs acknowledgement")
+        };
+        let ServerEvent::CommandAck(ack) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+        else {
+            panic!("duplicate must replay ack")
+        };
         assert_eq!(ack.applied_revision, 1);
         server.abort();
     }
@@ -1477,24 +1940,47 @@ mod tests {
     async fn two_websocket_clients_open_the_same_canonical_live_match() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_live_game();
         let state = AppState::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         let (token_a, token_b, career_id, protocol_version) = {
             let mut session = state.session.lock().unwrap();
-            let token_a = session.join(join_request(manager_a, club_a)).unwrap().reconnect_token;
-            let token_b = session.join(join_request(manager_b, club_b)).unwrap().reconnect_token;
-            (token_a, token_b, session.config.career_id, session.config.versions.protocol_version)
+            let token_a = session
+                .join(join_request(manager_a, club_a))
+                .unwrap()
+                .reconnect_token;
+            let token_b = session
+                .join(join_request(manager_b, club_b))
+                .unwrap()
+                .reconnect_token;
+            (
+                token_a,
+                token_b,
+                session.config.career_id,
+                session.config.versions.protocol_version,
+            )
         };
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let server = tokio::spawn(axum::serve(listener, router(state.clone())).into_future());
-        let (mut client_a, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_a}")).await.unwrap();
-        let (mut client_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
+        let (mut client_a, _) =
+            connect_async(format!("ws://{address}/ws?reconnect_token={token_a}"))
+                .await
+                .unwrap();
+        let (mut client_b, _) =
+            connect_async(format!("ws://{address}/ws?reconnect_token={token_b}"))
+                .await
+                .unwrap();
 
         for client in [&mut client_a, &mut client_b] {
             for _ in 0..2 {
-                let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("server must send initial view") };
-                assert!(matches!(serde_json::from_str::<ServerEvent>(&text).unwrap(), ServerEvent::Hello(_) | ServerEvent::ViewSnapshot(_)));
+                let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else {
+                    panic!("server must send initial view")
+                };
+                assert!(matches!(
+                    serde_json::from_str::<ServerEvent>(&text).unwrap(),
+                    ServerEvent::Hello(_) | ServerEvent::ViewSnapshot(_)
+                ));
             }
         }
         for manager_id in [manager_a, manager_b] {
@@ -1507,20 +1993,35 @@ mod tests {
                 expected_revision: None,
                 payload: EnvelopePayload::Command(Command::MarkReady(MarkReadyBody {})),
             };
-            let client = if manager_id == manager_a { &mut client_a } else { &mut client_b };
-            client.send(TungsteniteMessage::Text(serde_json::to_string(&ready).unwrap().into())).await.unwrap();
+            let client = if manager_id == manager_a {
+                &mut client_a
+            } else {
+                &mut client_b
+            };
+            client
+                .send(TungsteniteMessage::Text(
+                    serde_json::to_string(&ready).unwrap().into(),
+                ))
+                .await
+                .unwrap();
         }
 
         let mut match_ids = Vec::new();
         for client in [&mut client_a, &mut client_b] {
             let match_id = tokio::time::timeout(Duration::from_secs(3), async {
                 loop {
-                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("socket closed before match opened") };
-                    if let ServerEvent::MatchOpened(body) = serde_json::from_str::<ServerEvent>(&text).unwrap() {
+                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else {
+                        panic!("socket closed before match opened")
+                    };
+                    if let ServerEvent::MatchOpened(body) =
+                        serde_json::from_str::<ServerEvent>(&text).unwrap()
+                    {
                         break body.match_id;
                     }
                 }
-            }).await.expect("match must open for both clients");
+            })
+            .await
+            .expect("match must open for both clients");
             match_ids.push(match_id);
         }
         assert_eq!(match_ids[0], match_ids[1]);
@@ -1528,8 +2029,11 @@ mod tests {
         for client in [&mut client_a, &mut client_b] {
             let snapshot = tokio::time::timeout(Duration::from_secs(3), async {
                 loop {
-                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("socket closed before match state") };
-                    if let ServerEvent::MatchState(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else {
+                        panic!("socket closed before match state")
+                    };
+                    if let ServerEvent::MatchState(body) =
+                        serde_json::from_str::<ServerEvent>(&text).unwrap()
                         && body.match_id == match_ids[0]
                     {
                         break (
@@ -1540,51 +2044,111 @@ mod tests {
                         );
                     }
                 }
-            }).await.expect("match state must reach both clients");
+            })
+            .await
+            .expect("match state must reach both clients");
             snapshots.push(snapshot);
         }
         for snapshot in &snapshots {
             let canonical_snapshot: serde_json::Value = serde_json::from_str(&snapshot.3).unwrap();
-            assert_eq!(canonical_snapshot["current_minute"].as_u64(), Some(u64::from(snapshot.0 / 60)));
-            assert_eq!(canonical_snapshot["home_score"].as_u64(), Some(u64::from(snapshot.1)));
-            assert_eq!(canonical_snapshot["away_score"].as_u64(), Some(u64::from(snapshot.2)));
-            assert_eq!(canonical_snapshot["home_team"]["players"].as_array().map(Vec::len), Some(11));
-            assert_eq!(canonical_snapshot["away_team"]["players"].as_array().map(Vec::len), Some(11));
+            assert_eq!(
+                canonical_snapshot["current_minute"].as_u64(),
+                Some(u64::from(snapshot.0 / 60))
+            );
+            assert_eq!(
+                canonical_snapshot["home_score"].as_u64(),
+                Some(u64::from(snapshot.1))
+            );
+            assert_eq!(
+                canonical_snapshot["away_score"].as_u64(),
+                Some(u64::from(snapshot.2))
+            );
+            assert_eq!(
+                canonical_snapshot["home_team"]["players"]
+                    .as_array()
+                    .map(Vec::len),
+                Some(11)
+            );
+            assert_eq!(
+                canonical_snapshot["away_team"]["players"]
+                    .as_array()
+                    .map(Vec::len),
+                Some(11)
+            );
         }
 
         let mut event_batches = Vec::new();
         for client in [&mut client_a, &mut client_b] {
             let batch = tokio::time::timeout(Duration::from_secs(5), async {
                 loop {
-                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else { panic!("socket closed before a semantic event batch") };
-                    if let ServerEvent::MatchEventBatch(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+                    let Some(Ok(TungsteniteMessage::Text(text))) = client.next().await else {
+                        panic!("socket closed before a semantic event batch")
+                    };
+                    if let ServerEvent::MatchEventBatch(body) =
+                        serde_json::from_str::<ServerEvent>(&text).unwrap()
                         && body.match_id == match_ids[0]
                     {
-                        break (body.from_seq, body.to_seq, serde_json::to_string(&body.events).unwrap());
+                        break (
+                            body.from_seq,
+                            body.to_seq,
+                            serde_json::to_string(&body.events).unwrap(),
+                        );
                     }
                 }
-            }).await.expect("both clients must receive a semantic event batch");
+            })
+            .await
+            .expect("both clients must receive a semantic event batch");
             event_batches.push(batch);
         }
         assert_eq!(event_batches[0], event_batches[1]);
 
         client_b.close(None).await.unwrap();
-        let (mut reconnected_b, _) = connect_async(format!("ws://{address}/ws?reconnect_token={token_b}")).await.unwrap();
+        let (mut reconnected_b, _) =
+            connect_async(format!("ws://{address}/ws?reconnect_token={token_b}"))
+                .await
+                .unwrap();
         let reconnect_snapshot = tokio::time::timeout(Duration::from_secs(3), async {
             loop {
-                let Some(Ok(TungsteniteMessage::Text(text))) = reconnected_b.next().await else { panic!("socket closed before reconnect state") };
-                if let ServerEvent::MatchState(body) = serde_json::from_str::<ServerEvent>(&text).unwrap()
+                let Some(Ok(TungsteniteMessage::Text(text))) = reconnected_b.next().await else {
+                    panic!("socket closed before reconnect state")
+                };
+                if let ServerEvent::MatchState(body) =
+                    serde_json::from_str::<ServerEvent>(&text).unwrap()
                     && body.match_id == match_ids[0]
                 {
-                    break (body.match_second, body.home_score, body.away_score, serde_json::to_string(&body.snapshot).unwrap());
+                    break (
+                        body.match_second,
+                        body.home_score,
+                        body.away_score,
+                        serde_json::to_string(&body.snapshot).unwrap(),
+                    );
                 }
             }
-        }).await.expect("reconnecting guest must receive the canonical match state");
-        let reconnected_payload: serde_json::Value = serde_json::from_str(&reconnect_snapshot.3).unwrap();
-        assert_eq!(reconnected_payload["current_minute"].as_u64(), Some(u64::from(reconnect_snapshot.0 / 60)));
-        assert_eq!(reconnected_payload["home_score"].as_u64(), Some(u64::from(reconnect_snapshot.1)));
-        assert_eq!(reconnected_payload["away_score"].as_u64(), Some(u64::from(reconnect_snapshot.2)));
-        assert!(reconnected_payload["events"].as_array().is_some_and(|events| events.len() >= serde_json::from_str::<Vec<serde_json::Value>>(&event_batches[0].2).unwrap().len()));
+        })
+        .await
+        .expect("reconnecting guest must receive the canonical match state");
+        let reconnected_payload: serde_json::Value =
+            serde_json::from_str(&reconnect_snapshot.3).unwrap();
+        assert_eq!(
+            reconnected_payload["current_minute"].as_u64(),
+            Some(u64::from(reconnect_snapshot.0 / 60))
+        );
+        assert_eq!(
+            reconnected_payload["home_score"].as_u64(),
+            Some(u64::from(reconnect_snapshot.1))
+        );
+        assert_eq!(
+            reconnected_payload["away_score"].as_u64(),
+            Some(u64::from(reconnect_snapshot.2))
+        );
+        assert!(
+            reconnected_payload["events"]
+                .as_array()
+                .is_some_and(|events| events.len()
+                    >= serde_json::from_str::<Vec<serde_json::Value>>(&event_batches[0].2)
+                        .unwrap()
+                        .len())
+        );
         server.abort();
     }
 
@@ -1592,7 +2156,8 @@ mod tests {
     fn conflicting_two_manager_commands_commit_once_at_one_revision() {
         let (game, manager_a, manager_b, club_a, club_b) = two_manager_game();
         let mut session = CareerSession::new(
-            ServerConfig::private_career(Uuid::new_v4(), "private-secret").with_canonical_game(game),
+            ServerConfig::private_career(Uuid::new_v4(), "private-secret")
+                .with_canonical_game(game),
         );
         session.join(join_request(manager_a, club_a)).unwrap();
         session.join(join_request(manager_b, club_b)).unwrap();
@@ -1600,10 +2165,31 @@ mod tests {
         let first = session.apply_command(manager_a, tactics_envelope(&session, manager_a, 0));
         let second = session.apply_command(manager_b, tactics_envelope(&session, manager_b, 0));
 
-        assert!(matches!(first[0], ServerEvent::CommandAck(CommandAckBody { applied_revision: 1, .. })));
-        assert!(matches!(second[0], ServerEvent::CommandRejected(CommandRejectedBody { error: ProtocolError { code: ErrorCode::StaleRevision, .. }, .. })));
+        assert!(matches!(
+            first[0],
+            ServerEvent::CommandAck(CommandAckBody {
+                applied_revision: 1,
+                ..
+            })
+        ));
+        assert!(matches!(
+            second[0],
+            ServerEvent::CommandRejected(CommandRejectedBody {
+                error: ProtocolError {
+                    code: ErrorCode::StaleRevision,
+                    ..
+                },
+                ..
+            })
+        ));
         assert_eq!(session.revision, 1);
-        assert_eq!(session.career.as_ref().unwrap().game().teams[0].formation, "4-3-3");
-        assert_eq!(session.career.as_ref().unwrap().game().teams[1].formation, "4-4-2");
+        assert_eq!(
+            session.career.as_ref().unwrap().game().teams[0].formation,
+            "4-3-3"
+        );
+        assert_eq!(
+            session.career.as_ref().unwrap().game().teams[1].formation,
+            "4-4-2"
+        );
     }
 }

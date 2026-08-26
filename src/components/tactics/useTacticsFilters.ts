@@ -43,9 +43,7 @@ export function useTacticsFilters({
       startingXI,
       playerSearch,
       positionFilter,
-      sortKey,
-      sortDir,
-      xiActivePosition,
+      xiActivePosition
     ],
   );
   const filteredBench = useMemo(
@@ -65,7 +63,7 @@ export function useTacticsFilters({
           xiActivePosition,
         },
       ),
-    [bench, playerSearch, positionFilter, sortKey, sortDir, xiActivePosition],
+    [bench, playerSearch, positionFilter, xiActivePosition],
   );
 
   function handleClearFilters(): void {

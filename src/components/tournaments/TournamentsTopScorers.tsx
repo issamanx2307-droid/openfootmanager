@@ -45,9 +45,11 @@ export default function TournamentsTopScorers({
           </p>
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-navy-600">
-            {topScorers.map((entry, i) => (
-              <ContextMenu
-                items={menuItems(entry.playerId, entry.playerName!.team_id)}
+            {topScorers.map((entry, i) => {
+              const player = entry.playerName;
+              if (!player) return null;
+              return <ContextMenu
+                items={menuItems(entry.playerId, player.team_id)}
                 key={entry.playerId}
               >
                 <div
@@ -59,11 +61,11 @@ export default function TournamentsTopScorers({
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-                      {entry.playerName!.full_name}
+                      {player.full_name}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {entry.playerName!.team_name ??
-                        entry.playerName!.team_id ??
+                      {player.team_name ??
+                        player.team_id ??
                         ""}
                     </p>
                   </div>
@@ -71,8 +73,8 @@ export default function TournamentsTopScorers({
                     {entry.goals}
                   </span>
                 </div>
-              </ContextMenu>
-            ))}
+              </ContextMenu>;
+            })}
           </div>
         )}
       </CardBody>

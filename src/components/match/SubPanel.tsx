@@ -176,12 +176,18 @@ export function SubPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div
-        className="bg-white dark:bg-navy-800 rounded-2xl border border-gray-200 dark:border-navy-600 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden transition-colors duration-300"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        className="relative bg-white dark:bg-navy-800 rounded-2xl border border-gray-200 dark:border-navy-600 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden transition-colors duration-300"
       >
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-gray-200 bg-linear-to-r from-gray-100 to-white px-5 py-3 dark:border-navy-700 dark:from-navy-700 dark:to-navy-800">
@@ -197,7 +203,7 @@ export function SubPanel({
               {t("match.subsUsed", { used: subsMade, max: snapshot.max_subs })}
             </Badge>
           </div>
-          <button
+          <button type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-navy-600 dark:hover:text-white"
           >
@@ -360,6 +366,7 @@ export function SubPanel({
                           const isSelected = selectedOff === p.id;
                           const isSubOn = subbedOnIds.has(p.id);
                           const row = (
+                            // biome-ignore lint/a11y/useSemanticElements: A native table row cannot be replaced by a button without invalid table markup.
                             <tr
                               key={p.id}
                               data-testid={`sub-panel-off-${p.id}`}
@@ -482,6 +489,7 @@ export function SubPanel({
                             ? p.position === selectedPlayer.position
                             : true;
                           const benchRow = (
+                            // biome-ignore lint/a11y/useSemanticElements: A native table row cannot be replaced by a button without invalid table markup.
                             <tr
                               key={p.id}
                               data-testid={`sub-panel-bench-${p.id}`}
@@ -589,9 +597,9 @@ export function SubPanel({
                     </p>
                     {snapshot.substitutions
                       .filter((s) => s.side === side)
-                      .map((sub, i) => (
+                      .map((sub) => (
                         <div
-                          key={i}
+                          key={`${sub.minute}-${sub.side}-${sub.player_off_id}-${sub.player_on_id}`}
                           className="flex items-center gap-1.5 py-0.5 text-[11px]"
                         >
                           <span className="w-5 text-right font-heading tabular-nums text-gray-600 dark:text-gray-500">

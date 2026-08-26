@@ -1,3 +1,4 @@
+pub mod authoritative_session_repo;
 pub mod career_version_repo;
 pub mod competition_repo;
 pub mod league_repo;
@@ -12,4 +13,3 @@ pub mod scouting_repo;
 pub mod staff_repo;
 pub mod stats_repo;
 pub mod team_repo;
-pub mod authoritative_session_repo;

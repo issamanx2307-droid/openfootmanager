@@ -77,7 +77,7 @@ export default function InboxDelegatedRenewalReport({
 
           return (
             <div
-              key={`${renewalCase.player_id}-${index}`}
+              key={renewalCase.player_id}
               className="flex flex-wrap items-center justify-between gap-2"
             >
               <div className="min-w-0 flex-1">

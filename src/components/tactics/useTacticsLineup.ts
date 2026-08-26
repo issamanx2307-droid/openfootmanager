@@ -106,11 +106,7 @@ export function useTacticsLineup({
         savedStartingXiIds: team?.starting_xi_ids || [],
       }),
     [
-      available.map((player) => player.id).join(","),
-      formation,
-      (team?.starting_xi_ids || []).join(","),
-      (pendingStartingXiIds || []).join(","),
-      roster.map((player) => player.id).join(","),
+      formation, pendingStartingXiIds, team?.starting_xi_ids, playersById, available
     ],
   );
 

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { MatchSnapshot, MatchEvent, EnginePlayerData } from "./types";
+import type { MatchSnapshot, MatchEvent, EnginePlayerData } from "./types";
 import { getEventDisplay, getEventTypeLabel, getPlayerName } from "./helpers";
 import { getCommentary } from "./commentary";
 import { Badge } from "../ui";
@@ -34,13 +34,13 @@ export function EventFeed({
           </p>
         </div>
       ) : (
-        events.map((evt, i) => {
+        events.map((evt) => {
           const display = getEventDisplay(evt);
           const isHome = evt.side === "Home";
           const commentary = getCommentary(evt, snapshot, t);
           return (
             <div
-              key={i}
+              key={`${evt.minute}-${evt.side}-${evt.event_type}-${evt.player_id ?? ""}-${evt.secondary_player_id ?? ""}`}
               className={`flex items-start gap-3 px-3 py-2 rounded-lg transition-colors ${display.important ? "bg-white dark:bg-navy-800/80 border border-gray-200 dark:border-navy-700 shadow-sm" : "opacity-60"}`}
             >
               <span className="text-gray-600 dark:text-gray-500 tabular-nums font-heading text-sm w-8 text-right flex-shrink-0 pt-0.5">
@@ -167,13 +167,13 @@ export function MatchStats({ snapshot }: { snapshot: MatchSnapshot }) {
 
   return (
     <div className="max-w-lg mx-auto flex flex-col gap-3">
-      {stats.map((stat, i) => {
+      {stats.map((stat) => {
         const hv = typeof stat.home === "number" ? stat.home : 0;
         const av = typeof stat.away === "number" ? stat.away : 0;
         const total = hv + av || 1;
         const pct = stat.homePct ?? (hv / total) * 100;
         return (
-          <div key={i}>
+          <div key={stat.label}>
             <div className="flex justify-between text-xs mb-1">
               <span className="font-heading font-bold text-primary-400 tabular-nums">
                 {stat.home}
@@ -328,9 +328,9 @@ export function Lineups({ snapshot }: { snapshot: MatchSnapshot }) {
             </p>
             {snapshot.substitutions
               .filter((s) => s.side === side)
-              .map((sub, i) => (
+              .map((sub) => (
                 <div
-                  key={i}
+                  key={`${sub.minute}-${sub.side}-${sub.player_off_id}-${sub.player_on_id}`}
                   className="flex items-center gap-1.5 py-0.5 text-[11px]"
                 >
                   <span className="text-gray-600 dark:text-gray-500 tabular-nums w-5 text-right font-heading">

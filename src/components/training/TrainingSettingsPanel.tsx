@@ -1,5 +1,5 @@
 import { Gauge } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 import { Card, CardBody, CardHeader } from "../ui";
 
@@ -53,7 +53,7 @@ export default function TrainingSettingsPanel({
         <CardBody>
           <div className="flex gap-3 mb-4">
             {scheduleIds.map((scheduleId) => (
-              <button
+              <button type="button"
                 key={scheduleId}
                 disabled={isSaving}
                 onClick={() => onSetSchedule(scheduleId)}
@@ -77,15 +77,15 @@ export default function TrainingSettingsPanel({
 
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
             {t(`training.schedules.${currentSchedule}.detail`)}{" "}
-            <span
-              dangerouslySetInnerHTML={{
-                __html: t("training.todayIs", {
-                  day: t(`training.days.${dayKeys[todayWeekday]}`),
-                  type: isTodayTraining
-                    ? t("training.aTrainingDay")
-                    : t("training.aRestDay"),
-                }),
+            <Trans
+              i18nKey="training.todayIs"
+              values={{
+                day: t(`training.days.${dayKeys[todayWeekday]}`),
+                type: isTodayTraining
+                  ? t("training.aTrainingDay")
+                  : t("training.aRestDay"),
               }}
+              components={{ strong: <strong /> }}
             />
           </p>
         </CardBody>
@@ -96,7 +96,7 @@ export default function TrainingSettingsPanel({
         <CardBody>
           <div className="grid grid-cols-3 gap-3">
             {trainingFocusIds.map((focusId) => (
-              <button
+              <button type="button"
                 key={focusId}
                 disabled={isSaving}
                 onClick={() => onSetTraining(focusId, currentIntensity)}
@@ -139,7 +139,7 @@ export default function TrainingSettingsPanel({
             </div>
             <div className="flex gap-3">
               {intensityIds.map((intensityId) => (
-                <button
+                <button type="button"
                   key={intensityId}
                   disabled={isSaving}
                   onClick={() => onSetTraining(currentFocus, intensityId)}
@@ -166,15 +166,15 @@ export default function TrainingSettingsPanel({
             {activeFocusAttrs.length > 0 && (
               <>
                 {" "}
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: t("training.currentlyTraining", {
-                      attrs: activeFocusAttrs
-                        .map((attribute) => t(`common.attributes.${attribute}`))
-                        .join(", "),
-                      intensity: t(`training.intensities.${currentIntensity}.label`),
-                    }),
+                <Trans
+                  i18nKey="training.currentlyTraining"
+                  values={{
+                    attrs: activeFocusAttrs
+                      .map((attribute) => t(`common.attributes.${attribute}`))
+                      .join(", "),
+                    intensity: t(`training.intensities.${currentIntensity}.label`),
                   }}
+                  components={{ strong: <strong /> }}
                 />
               </>
             )}

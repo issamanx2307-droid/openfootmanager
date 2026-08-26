@@ -74,7 +74,9 @@ pub struct CompetitionRules {
     pub relegation_automatic_slots: u8,
 }
 
-fn default_knockout_matches_per_day() -> u32 { 1 }
+fn default_knockout_matches_per_day() -> u32 {
+    1
+}
 fn default_max_substitutes() -> u8 {
     5
 }

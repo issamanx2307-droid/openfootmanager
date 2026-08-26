@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { GameStateData } from "../../store/gameStore";
+import type { GameStateData } from "../../store/gameStore";
 import {
-  MatchSnapshot,
-  MatchEvent,
-  MinuteResult,
-  SimSpeed,
+  type MatchSnapshot,
+  type MatchEvent,
+  type MinuteResult,
+  type SimSpeed,
   SPEED_MS,
 } from "./types";
 import {
@@ -103,7 +103,7 @@ export default function PenaltyShootoutScreen({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isRunning, speed, snapshot.current_minute, snapshot.phase, stepMatch]);
+  }, [isRunning, speed, stepMatch]);
 
   const shootoutEvents = snapshot.events.filter((e) =>
     SHOOTOUT_EVENTS.has(e.event_type),
@@ -178,9 +178,9 @@ export default function PenaltyShootoutScreen({
       {/* Event feed */}
       {shootoutEvents.length > 0 && (
         <div className="w-full max-w-lg bg-white dark:bg-navy-800 rounded-xl p-4 mb-4 space-y-1">
-          {shootoutEvents.slice(-8).map((evt, i) => (
+          {shootoutEvents.slice(-8).map((evt) => (
             <div
-              key={i}
+              key={`${evt.minute}-${evt.side}-${evt.event_type}-${evt.player_id ?? ""}`}
               className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
             >
               <span className="text-gray-400 dark:text-gray-500 tabular-nums w-6 text-right">
@@ -266,21 +266,22 @@ export function KickRow({
         {label}
       </span>
       <div className="flex gap-1.5 flex-wrap">
-        {Array.from({ length: cells }).map((_, i) => {
-          if (i >= taken) {
+        {Array.from({ length: cells }, (_, round) => round + 1).map((round) => {
+          const roundIndex = round - 1;
+          if (roundIndex >= taken) {
             return (
               <span
-                key={i}
+                key={`penalty-round-${round}`}
                 className="w-6 h-6 rounded-full border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center text-xs text-gray-300"
               >
                 ?
               </span>
             );
           }
-          const isGoal = i < scored;
+          const isGoal = roundIndex < scored;
           return (
             <span
-              key={i}
+              key={`penalty-round-${round}`}
               className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
                 isGoal
                   ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"

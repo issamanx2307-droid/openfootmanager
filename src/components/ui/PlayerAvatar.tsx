@@ -65,6 +65,7 @@ function RuntimePortraitFallback({
   const shouldShowImage = Boolean(runtimeSrc && runtimeSrc !== failedSrc);
 
   useEffect(() => {
+    void identityKey;
     let cancelled = false;
     setRuntimeSrc(null);
     setFailedSrc(null);

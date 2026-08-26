@@ -80,7 +80,7 @@ export default function ScoutingPlayerSearchCard({
           <span>{t("scouting.findPlayers")}</span>
           <div className="ml-auto flex items-center gap-2">
             {POSITION_FILTERS.map((position) => (
-              <button
+              <button type="button"
                 key={position}
                 onClick={() => onPositionFilterChange(position)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-heading font-bold uppercase tracking-wider transition-colors ${posFilter === position
@@ -153,7 +153,7 @@ export default function ScoutingPlayerSearchCard({
                   ...(player.team_id && onSelectTeam
                     ? [
                       buildViewTeamMenuItem(t, () => {
-                        onSelectTeam(player.team_id!);
+                        if (player.team_id) onSelectTeam(player.team_id);
                       }),
                     ]
                     : []),
@@ -185,7 +185,7 @@ export default function ScoutingPlayerSearchCard({
                       <div className="flex items-center gap-2">
                         <PlayerAvatar player={player} className="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-navy-700 flex items-center justify-center text-[10px] font-heading font-bold text-gray-500 dark:text-gray-300" />
                         <div className="min-w-0">
-                          <button
+                          <button type="button"
                             onClick={() => onSelectPlayer?.(player.id)}
                             className="font-heading font-bold text-gray-800 dark:text-gray-100 hover:text-primary-500 transition-colors text-left"
                           >
@@ -237,7 +237,7 @@ export default function ScoutingPlayerSearchCard({
                           {t("scouting.noScoutsFree")}
                         </span>
                       ) : (
-                        <button
+                        <button type="button"
                           disabled={sendingPlayerId === player.id}
                           onClick={() => onSendScout(player.id)}
                           className="flex items-center gap-1 ml-auto px-2.5 py-1 rounded-lg bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-colors text-xs font-heading font-bold uppercase tracking-wider disabled:opacity-50"
@@ -275,7 +275,7 @@ export default function ScoutingPlayerSearchCard({
               })}
             </span>
             <div className="flex items-center gap-2">
-              <button
+              <button type="button"
                 aria-label={t("scouting.previousPage")}
                 disabled={safePage === 0}
                 onClick={onPreviousPage}
@@ -286,7 +286,7 @@ export default function ScoutingPlayerSearchCard({
               <span className="text-xs font-heading font-bold text-gray-500 dark:text-gray-400 tabular-nums">
                 {safePage + 1} / {totalPages}
               </span>
-              <button
+              <button type="button"
                 aria-label={t("scouting.nextPage")}
                 disabled={safePage >= totalPages - 1}
                 onClick={onNextPage}

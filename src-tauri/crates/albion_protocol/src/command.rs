@@ -82,10 +82,22 @@ pub struct MarkReadyBody {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "body")]
 pub enum LiveMatchCommandKind {
-    Substitute { player_out_id: String, player_in_id: String },
-    ChangeFormation { formation: String },
-    ChangeRoleDuty { player_id: String, role: String, duty: String },
-    SetTeamInstruction { key: String, value: String },
+    Substitute {
+        player_out_id: String,
+        player_in_id: String,
+    },
+    ChangeFormation {
+        formation: String,
+    },
+    ChangeRoleDuty {
+        player_id: String,
+        role: String,
+        duty: String,
+    },
+    SetTeamInstruction {
+        key: String,
+        value: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

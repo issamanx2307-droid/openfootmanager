@@ -27,7 +27,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../ui", () => ({
   Button: ({ children, iconRight: _iconRight, ...props }: ComponentPropsWithoutRef<"button"> & { iconRight?: unknown }) => (
-    <button {...props}>{children}</button>
+    <button type="button" {...props}>{children}</button>
   ),
 }));
 

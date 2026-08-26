@@ -44,6 +44,7 @@ export function useTournamentsData(
   const currentDate = gameState.clock?.current_date;
 
   useEffect(() => {
+    void currentDate;
     let cancelled = false;
     fetchCompetitionsView()
       .then((view) => {
@@ -123,8 +124,13 @@ export function useTournamentsData(
 
   const activeCompetitionIds = activeCompetitions.map((c) => c.id).join(",");
   const userCompetitionIds = userCompetitions.map((c) => c.id).join(",");
+  const hasSelectedCompetition = activeCompetitionIds
+    .split(",")
+    .includes(selectedCompetitionId ?? "");
 
   useEffect(() => {
+    void activeCompetitionIds;
+    void userCompetitionIds;
     if (activeCompetitions.length === 0) {
       if (selectedCompetitionId !== null) {
         setSelectedCompetitionId(null);
@@ -132,10 +138,7 @@ export function useTournamentsData(
       return;
     }
 
-    const hasSelection = activeCompetitions.some(
-      (competition) => competition.id === selectedCompetitionId,
-    );
-    if (hasSelection) {
+    if (hasSelectedCompetition) {
       return;
     }
 
@@ -145,7 +148,15 @@ export function useTournamentsData(
   // above on every render, so depending on the arrays themselves would refire
   // this effect forever. The disable can go once they are memoized.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCompetitionIds, selectedCompetitionId, userCompetitionIds]);
+  }, [
+    activeCompetitionIds,
+    activeCompetitions.length,
+    activeCompetitions[0]?.id,
+    hasSelectedCompetition,
+    selectedCompetitionId,
+    userCompetitionIds,
+    userCompetitions[0]?.id,
+  ]);
 
   return {
     teamNames,

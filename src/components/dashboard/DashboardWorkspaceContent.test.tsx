@@ -9,6 +9,16 @@ import {
 import { createDashboardTabContentModel } from "./dashboardTabContentModel";
 import DashboardWorkspaceContent from "./DashboardWorkspaceContent";
 
+type PlayerProfileMockProps = {
+  onClose: () => void;
+  onSelectTeam: (id: string) => void;
+  startWithRenewalModal?: boolean;
+  startWithTerminationModal?: boolean;
+};
+type TeamProfileMockProps = { onClose: () => void; onSelectPlayer: (id: string) => void };
+type DashboardAlertsMockProps = { onNavigate: (tab: string) => void };
+type DashboardTabContentMockProps = { viewModel: { activeTab: string } };
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -21,37 +31,37 @@ vi.mock("../playerProfile/PlayerProfile", () => ({
     onSelectTeam,
     startWithRenewalModal,
     startWithTerminationModal,
-  }: any) => (
+  }: PlayerProfileMockProps) => (
     <div>
       <span>Player Profile Mock</span>
       <span>{startWithRenewalModal ? "renewal-open" : "renewal-closed"}</span>
       <span>
         {startWithTerminationModal ? "termination-open" : "termination-closed"}
       </span>
-      <button onClick={onClose}>close-player</button>
-      <button onClick={() => onSelectTeam("team-2")}>select-team</button>
+      <button type="button" onClick={onClose}>close-player</button>
+      <button type="button" onClick={() => onSelectTeam("team-2")}>select-team</button>
     </div>
   ),
 }));
 
 vi.mock("../teamProfile", () => ({
-  default: ({ onClose, onSelectPlayer }: any) => (
+  default: ({ onClose, onSelectPlayer }: TeamProfileMockProps) => (
     <div>
       <span>Team Profile Mock</span>
-      <button onClick={onClose}>close-team</button>
-      <button onClick={() => onSelectPlayer("player-2")}>select-player</button>
+      <button type="button" onClick={onClose}>close-team</button>
+      <button type="button" onClick={() => onSelectPlayer("player-2")}>select-player</button>
     </div>
   ),
 }));
 
 vi.mock("./DashboardAlerts", () => ({
-  default: ({ onNavigate }: any) => (
-    <button onClick={() => onNavigate("Inbox")}>alerts-mock</button>
+  default: ({ onNavigate }: DashboardAlertsMockProps) => (
+    <button type="button" onClick={() => onNavigate("Inbox")}>alerts-mock</button>
   ),
 }));
 
 vi.mock("./DashboardTabContent", () => ({
-  default: ({ viewModel }: any) => <div>Tab Content {viewModel.activeTab}</div>,
+  default: ({ viewModel }: DashboardTabContentMockProps) => <div>Tab Content {viewModel.activeTab}</div>,
 }));
 
 function createGameState(): GameStateData {

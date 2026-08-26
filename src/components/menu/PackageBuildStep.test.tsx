@@ -19,7 +19,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../ui", () => ({
   Button: ({ children, iconRight: _iconRight, ...props }: ComponentPropsWithoutRef<"button"> & { iconRight?: unknown }) => (
-    <button {...props}>{children}</button>
+    <button type="button" {...props}>{children}</button>
   ),
 }));
 
@@ -52,10 +52,13 @@ const baseProps = {
   onClose: vi.fn(),
 };
 
-/** The card is a button named after the package — the accessible handle a
- *  player actually uses, so tests reach for it the same way. */
+/** The toggle is the accessible handle; its parent contains the card details. */
 function cardFor(pkg: PackageInfo): HTMLElement {
-  return screen.getByRole("button", { name: new RegExp(pkg.name) });
+  const toggle = screen.getByRole("button", { name: new RegExp(pkg.name) });
+  if (!toggle.parentElement) {
+    throw new Error("Package toggle is missing its card container");
+  }
+  return toggle.parentElement;
 }
 
 describe("PackageBuildStep package card", () => {

@@ -485,7 +485,7 @@ export default function MultiplayerLobby() {
         {livePresentation.matchId && <fieldset className="mt-4 grid gap-2 rounded border border-primary-500 p-3">
           <legend className="px-1 font-bold">{copy.liveMatch}</legend>
           <p aria-live="polite">{copy.score}: {livePresentation.homeScore}–{livePresentation.awayScore} · {Math.floor(livePresentation.matchSecond / 60)}′ · {formatAlbionMatchPhase(livePresentation.phase, thai)}</p>
-          {livePresentation.snapshot && <div aria-label={copy.possession} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs">
+          {livePresentation.snapshot && <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs">
             <span className="font-semibold text-emerald-300">{homePossession.toFixed(0)}%</span>
             <div className="flex h-2 overflow-hidden rounded bg-navy-700" aria-hidden="true">
               <span className="bg-emerald-500" style={{ width: `${Math.max(0, Math.min(100, homePossession))}%` }} />

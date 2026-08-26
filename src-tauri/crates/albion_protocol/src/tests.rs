@@ -59,7 +59,9 @@ fn every_command_variant_round_trips() {
     }));
     roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
         match_id: Uuid::new_v4(),
-        command: LiveMatchCommandKind::ChangeFormation { formation: "4-2-3-1".into() },
+        command: LiveMatchCommandKind::ChangeFormation {
+            formation: "4-2-3-1".into(),
+        },
     }));
     roundtrip_command(Command::ApplyLiveMatchCommand(ApplyLiveMatchCommandBody {
         match_id: Uuid::new_v4(),
@@ -203,14 +205,18 @@ fn version_sets_compare_by_full_equality() {
 
 #[test]
 fn ruleset_version_participates_in_compatibility() {
-    let base = CURRENT_VERSIONS.to_owned_set().with_ruleset(RulesetVersion {
-        ruleset_id: "england-2026-27-v1".into(),
-        ruleset_version: 1,
-    });
-    let bumped_ruleset = CURRENT_VERSIONS.to_owned_set().with_ruleset(RulesetVersion {
-        ruleset_id: "england-2026-27-v1".into(),
-        ruleset_version: 2,
-    });
+    let base = CURRENT_VERSIONS
+        .to_owned_set()
+        .with_ruleset(RulesetVersion {
+            ruleset_id: "england-2026-27-v1".into(),
+            ruleset_version: 1,
+        });
+    let bumped_ruleset = CURRENT_VERSIONS
+        .to_owned_set()
+        .with_ruleset(RulesetVersion {
+            ruleset_id: "england-2026-27-v1".into(),
+            ruleset_version: 2,
+        });
 
     assert!(base.is_compatible_with(&base.clone()));
     assert!(!base.is_compatible_with(&bumped_ruleset));

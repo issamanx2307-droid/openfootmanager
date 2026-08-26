@@ -186,20 +186,20 @@ function HookHarness({
 
     return (
         <div>
-            <button onClick={() => openBidNegotiation(target)}>Open</button>
+            <button type="button" onClick={() => openBidNegotiation(target)}>Open</button>
             <label htmlFor="bid-amount">Bid amount</label>
             <input
                 id="bid-amount"
                 value={bidAmount}
                 onChange={(event) => setBidAmount(event.target.value)}
             />
-            <button onClick={() => void handleMakeBid()}>Submit</button>
+            <button type="button" onClick={() => void handleMakeBid()}>Submit</button>
             <output aria-label="bid-result">{bidResult ?? "idle"}</output>
         </div>
     );
 }
 
-describe("useTransferBidFlow", function (): void {
+describe("useTransferBidFlow", (): void => {
     beforeEach(function resetMocks(): void {
         mockedMakeTransferBid.mockReset();
         mockedPreviewTransferBidFinancialImpact.mockReset();
@@ -223,7 +223,7 @@ describe("useTransferBidFlow", function (): void {
         });
     });
 
-    it("does not submit a bid when the computed fee is invalid", async function (): Promise<void> {
+    it("does not submit a bid when the computed fee is invalid", async (): Promise<void> => {
         const target = createPlayer();
         const gameState = createGameState([target]);
 
@@ -231,7 +231,7 @@ describe("useTransferBidFlow", function (): void {
 
         fireEvent.click(screen.getByRole("button", { name: "Open" }));
 
-        await waitFor(function (): void {
+        await waitFor((): void => {
             expect(mockedPreviewTransferBidFinancialImpact).toHaveBeenCalledWith(
                 target.id,
                 1500000,
@@ -243,12 +243,12 @@ describe("useTransferBidFlow", function (): void {
         });
         fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
-        await waitFor(function (): void {
+        await waitFor((): void => {
             expect(mockedMakeTransferBid).not.toHaveBeenCalled();
         });
     });
 
-    it("keeps the acceptance state visible so the modal does not auto-close", async function (): Promise<void> {
+    it("keeps the acceptance state visible so the modal does not auto-close", async (): Promise<void> => {
         const target = createPlayer();
         const gameState = createGameState([target]);
         mockedMakeTransferBid.mockResolvedValue({
@@ -272,7 +272,7 @@ describe("useTransferBidFlow", function (): void {
         fireEvent.click(screen.getByRole("button", { name: "Open" }));
         fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
-        await waitFor(function (): void {
+        await waitFor((): void => {
             expect(screen.getByLabelText("bid-result")).toHaveTextContent("accepted");
         });
 
@@ -284,7 +284,7 @@ describe("useTransferBidFlow", function (): void {
         expect(screen.getByLabelText("bid-result")).toHaveTextContent("accepted");
     });
 
-    it("pre-fills a counter-offer suggestion in millions, not raw euros", async function (): Promise<void> {
+    it("pre-fills a counter-offer suggestion in millions, not raw euros", async (): Promise<void> => {
         // Regression for #300: `suggested_fee` is raw euros, but this input is
         // millions-denominated. If it isn't converted, "650000" in a millions
         // input becomes a €650 billion resubmit (1,000,000× too large).
@@ -311,7 +311,7 @@ describe("useTransferBidFlow", function (): void {
         fireEvent.click(screen.getByRole("button", { name: "Open" }));
         fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
-        await waitFor(function (): void {
+        await waitFor((): void => {
             expect(screen.getByLabelText("bid-result")).toHaveTextContent(
                 "counter_offer",
             );

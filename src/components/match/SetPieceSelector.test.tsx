@@ -165,7 +165,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span data-testid="icon">PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId={null}
         players={players}
         allSquad={allSquad}
@@ -182,7 +182,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span>PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId="p1"
         players={players}
         allSquad={allSquad}
@@ -197,7 +197,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span>PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId={null}
         players={[
           { id: "cb", name: "Center Back Player", position: "Center Back" },
@@ -217,7 +217,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span>PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId={null}
         players={players}
         allSquad={allSquad}
@@ -238,7 +238,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span>PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId="p1"
         players={players}
         allSquad={allSquad}
@@ -262,7 +262,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span>PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId={null}
         players={players}
         allSquad={allSquad}
@@ -281,7 +281,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Penalty Taker"
         icon={<span>PK</span>}
-        role="penalty"
+        setPieceRole="penalty"
         currentId="p1"
         players={players}
         allSquad={allSquad}
@@ -302,7 +302,7 @@ describe("SetPieceSelector component", () => {
       <SetPieceSelector
         label="Vice-captain"
         icon={<span>VC</span>}
-        role="vicecaptain"
+        setPieceRole="vicecaptain"
         currentId={null}
         players={players}
         allSquad={allSquad}

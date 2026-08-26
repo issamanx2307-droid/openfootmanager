@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlayerData } from "../../store/gameStore";
+import type { PlayerData } from "../../store/gameStore";
 import { getAttributeValueClassName } from "../../lib/playerAttributeDisplay";
 import { normalisePosition } from "../squad/SquadTab.helpers";
 import { Badge } from "../ui";
@@ -26,11 +26,11 @@ function getStatAttributeKey(label: string): string | null {
 }
 
 export function getSetPieceStats(
-  role: string,
+  setPieceRole: string,
   p: PlayerData,
 ): { score: number; stats: { label: string; value: number }[] } {
   const a = p.attributes;
-  switch (role) {
+  switch (setPieceRole) {
     case "penalty":
       return {
         score: Math.round((a.shooting + a.composure) / 2),
@@ -70,14 +70,14 @@ export function getSetPieceStats(
   }
 }
 
-function roleAllowsGoalkeeper(role: string): boolean {
-  return role === "captain" || role === "vicecaptain";
+function setPieceRoleAllowsGoalkeeper(setPieceRole: string): boolean {
+  return setPieceRole === "captain" || setPieceRole === "vicecaptain";
 }
 
 export default function SetPieceSelector({
   label,
   icon,
-  role,
+  setPieceRole,
   currentId,
   players,
   allSquad,
@@ -85,7 +85,7 @@ export default function SetPieceSelector({
 }: {
   label: string;
   icon: React.ReactNode;
-  role: string;
+  setPieceRole: string;
   currentId: string | null;
   players: { id: string; name: string; position: string }[];
   allSquad: PlayerData[];
@@ -96,15 +96,18 @@ export default function SetPieceSelector({
   const currentPlayer = players.find((p) => p.id === currentId);
   const currentSquad = allSquad.find((sp) => sp.id === currentId);
   const currentStats = currentSquad
-    ? getSetPieceStats(role, currentSquad)
+    ? getSetPieceStats(setPieceRole, currentSquad)
     : null;
 
   const sortedPlayers = [...players]
-    .filter((p) => roleAllowsGoalkeeper(role) || p.position !== "Goalkeeper")
+    .filter(
+      (p) =>
+        setPieceRoleAllowsGoalkeeper(setPieceRole) || p.position !== "Goalkeeper",
+    )
     .map((p) => {
       const squad = allSquad.find((sp) => sp.id === p.id);
       const spStats = squad
-        ? getSetPieceStats(role, squad)
+        ? getSetPieceStats(setPieceRole, squad)
         : { score: 0, stats: [] };
       return { ...p, squad, spStats };
     })
@@ -133,7 +136,7 @@ export default function SetPieceSelector({
 
   return (
     <div className="mb-4 last:mb-0">
-      <button
+      <button type="button"
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-navy-700/50 dark:hover:bg-navy-700 transition-colors"
       >
@@ -172,7 +175,7 @@ export default function SetPieceSelector({
           {sortedPlayers.map((p) => {
             const isCurrent = p.id === currentId;
             return (
-              <button
+              <button type="button"
                 key={p.id}
                 onClick={() => {
                   onSelect(p.id);

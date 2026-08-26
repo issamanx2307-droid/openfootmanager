@@ -242,9 +242,10 @@ export function CompetitionForm({
 
       {/* Country ID — show team countries if available */}
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>{t("worldEditor.competitionCountryId")}</label>
+        <label htmlFor="package-competition-country" className={labelClass}>{t("worldEditor.competitionCountryId")}</label>
         {teamCountries.length > 0 ? (
           <Select
+            id="package-competition-country"
             value={editing.countryId ?? ""}
             onChange={(e) => updateField("countryId", e.target.value || undefined)}
             fullWidth
@@ -256,6 +257,7 @@ export function CompetitionForm({
           </Select>
         ) : (
           <input
+            id="package-competition-country"
             type="text"
             value={editing.countryId ?? ""}
             onChange={(e) => updateField("countryId", e.target.value || undefined)}
@@ -266,9 +268,10 @@ export function CompetitionForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>{t("worldEditor.competitionRegionId")}</label>
+        <label htmlFor="package-competition-region" className={labelClass}>{t("worldEditor.competitionRegionId")}</label>
         {confederations && confederations.length > 0 ? (
           <Select
+            id="package-competition-region"
             value={editing.regionId ?? ""}
             onChange={(e) => updateField("regionId", e.target.value || undefined)}
             fullWidth
@@ -280,6 +283,7 @@ export function CompetitionForm({
           </Select>
         ) : (
           <input
+            id="package-competition-region"
             type="text"
             value={editing.regionId ?? ""}
             onChange={(e) => updateField("regionId", e.target.value || undefined)}
@@ -334,7 +338,7 @@ export function CompetitionForm({
 
       {participantMode === "explicit" && (
         <div className="flex flex-col gap-2">
-          <label className={labelClass}>{t("worldEditor.competitionExplicitTeams")}</label>
+          <p className={labelClass}>{t("worldEditor.competitionExplicitTeams")}</p>
 
           {/* Team cards */}
           {explicitTeams.length > 0 && (
@@ -391,7 +395,6 @@ export function CompetitionForm({
                   <div className="p-2 border-b border-gray-100 dark:border-navy-600">
                     <input
                       type="text"
-                      autoFocus
                       placeholder={t("worldEditor.searchTeams")}
                       value={teamSearch}
                       onChange={(e) => setTeamSearch(e.target.value)}
@@ -448,9 +451,10 @@ export function CompetitionForm({
           />
           {selectorNeedsCountry && (
             <div className="flex flex-col gap-1">
-              <label className={labelClass}>{t("worldEditor.competitionSelectorCountry")}</label>
+              <label htmlFor="package-competition-selector-country" className={labelClass}>{t("worldEditor.competitionSelectorCountry")}</label>
               {teamCountries.length > 0 ? (
                 <Select
+                  id="package-competition-selector-country"
                   value={selector.country ?? ""}
                   onChange={(e) => updateSelector({ country: e.target.value || undefined })}
                   fullWidth
@@ -462,6 +466,7 @@ export function CompetitionForm({
                 </Select>
               ) : (
                 <input
+                  id="package-competition-selector-country"
                   type="text"
                   value={selector.country ?? ""}
                   onChange={(e) => updateSelector({ country: e.target.value || undefined })}
@@ -473,9 +478,10 @@ export function CompetitionForm({
           )}
           {selectorNeedsRegion && (
             <div className="flex flex-col gap-1">
-              <label className={labelClass}>{t("worldEditor.competitionSelectorRegion")}</label>
+              <label htmlFor="package-competition-selector-region" className={labelClass}>{t("worldEditor.competitionSelectorRegion")}</label>
               {confederations && confederations.length > 0 ? (
                 <Select
+                  id="package-competition-selector-region"
                   value={selector.region ?? ""}
                   onChange={(e) => updateSelector({ region: e.target.value || undefined })}
                   fullWidth
@@ -487,6 +493,7 @@ export function CompetitionForm({
                 </Select>
               ) : (
                 <input
+                  id="package-competition-selector-region"
                   type="text"
                   value={selector.region ?? ""}
                   onChange={(e) => updateSelector({ region: e.target.value || undefined })}
@@ -520,7 +527,7 @@ export function CompetitionForm({
 
       {projectDir && (
         <div className="flex flex-col gap-1">
-          <label className={labelClass}>{t("worldEditor.competitionLogo")}</label>
+          <p className={labelClass}>{t("worldEditor.competitionLogo")}</p>
           <div className="flex items-center gap-3">
             {logoDataUrl ? (
               <img src={logoDataUrl} alt="" className="w-12 h-12 rounded-lg object-contain border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 flex-shrink-0" />

@@ -173,7 +173,7 @@ export default function SimLab() {
             Batch match simulation &amp; engine analysis tool
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => { void run(); }}
           disabled={running}
           className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm transition-colors"
@@ -202,7 +202,7 @@ export default function SimLab() {
               value={cfg.games}
               onChange={(e) => {
                 const v = Math.max(1, Math.min(100000, Math.floor(Number(e.target.value))));
-                if (!isNaN(v)) update("games", v);
+                if (!Number.isNaN(v)) update("games", v);
               }}
               className={inputCls}
             />
@@ -297,7 +297,7 @@ export default function SimLab() {
               defaultVal={0.03}
               onChange={(v) => update("injury_probability", v)}
             />
-            <button
+            <button type="button"
               onClick={() => setCfg(defaultConfig())}
               className="w-full mt-2 text-xs text-slate-500 hover:text-slate-300 underline"
             >
@@ -330,7 +330,7 @@ export default function SimLab() {
               {/* Tab bar */}
               <div className="flex gap-1 mb-6 border-b border-navy-700">
                 {TABS.map((t) => (
-                  <button
+                  <button type="button"
                     key={t}
                     onClick={() => setActiveTab(t)}
                     className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -631,18 +631,18 @@ function HeatmapTab({ r }: { r: SimBatchResults }) {
               </tr>
             </thead>
             <tbody>
-              {r.scoreline_heatmap.map((row, hg) => (
-                <tr key={hg}>
+              {r.scoreline_heatmap.map((row, homeGoals) => ({ homeGoals, row })).map(({ homeGoals, row }) => (
+                <tr key={`home-goals-${homeGoals}`}>
                   <td className="w-10 text-xs text-slate-500 text-right pr-2">
-                    {hg === 5 ? "5+" : hg}
+                    {homeGoals === 5 ? "5+" : homeGoals}
                   </td>
-                  {row.map((frac, ag) => {
+                  {row.map((frac, awayGoals) => ({ frac, awayGoals })).map(({ frac, awayGoals }) => {
                     const opacity = max > 0 ? frac / max : 0;
                     const pct = (frac * 100).toFixed(1);
                     return (
                       <td
-                        key={ag}
-                        title={`${hg}-${ag}: ${pct}%`}
+                        key={`score-${homeGoals}-${awayGoals}`}
+                        title={`${homeGoals}-${awayGoals}: ${pct}%`}
                         className="w-14 h-10 text-center text-xs font-semibold rounded"
                         style={{
                           backgroundColor: `rgba(79,142,247,${Math.max(0.04, opacity * 0.9)})`,
@@ -672,9 +672,9 @@ function TimelineTab({ r }: { r: SimBatchResults }) {
           Fraction of all goals scored in each 15-minute window.
         </p>
         <div className="space-y-3">
-          {r.goals_by_bucket.map((frac, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <span className="text-xs text-slate-500 w-12 text-right">{BUCKET_LABELS[i]}</span>
+          {BUCKET_LABELS.map((label, bucket) => ({ label, frac: r.goals_by_bucket[bucket] ?? 0 })).map(({ label, frac }) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="text-xs text-slate-500 w-12 text-right">{label}</span>
               <div className="flex-1 h-5 bg-navy-800 rounded overflow-hidden">
                 <div
                   className="h-full rounded bg-blue-500 transition-all"
@@ -825,18 +825,18 @@ function Histogram({
   const max = Math.max(...data, 0.001);
   return (
     <div className="flex items-end gap-1.5" style={{ height: 100 }}>
-      {data.map((v, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+      {labels.map((label, bucket) => ({ label, value: data[bucket] ?? 0 })).map(({ label, value: v }) => (
+        <div key={label} className="flex-1 flex flex-col items-center gap-1">
           <div
             className="w-full rounded-t transition-all"
-            title={`${labels[i]}: ${(v * 100).toFixed(1)}%`}
+            title={`${label}: ${(v * 100).toFixed(1)}%`}
             style={{
               height: `${(v / max) * 80}px`,
               backgroundColor: color,
               minHeight: v > 0 ? 2 : 0,
             }}
           />
-          <span className="text-xs text-slate-500">{labels[i]}</span>
+          <span className="text-xs text-slate-500">{label}</span>
         </div>
       ))}
     </div>

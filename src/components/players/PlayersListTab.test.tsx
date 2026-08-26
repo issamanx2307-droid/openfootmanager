@@ -336,7 +336,9 @@ function setupSliceMock(
 ) {
   mockedInvoke.mockImplementation(async (cmd: string, args?: unknown) => {
     if (cmd in overrides) {
-      const result = overrides[cmd]!(args);
+      const handler = overrides[cmd];
+      if (!handler) throw new Error(`Missing mock handler for ${cmd}`);
+      const result = handler(args);
       if (result instanceof Error) throw result;
       return result;
     }

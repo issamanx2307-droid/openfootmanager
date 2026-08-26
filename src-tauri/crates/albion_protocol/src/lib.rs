@@ -16,7 +16,7 @@ pub mod event;
 
 pub use envelope::{Envelope, EnvelopePayload, MessageKind};
 pub use error::{ErrorCode, ProtocolError};
-pub use versions::{RulesetVersion, VersionSet, CURRENT_VERSIONS};
+pub use versions::{CURRENT_VERSIONS, RulesetVersion, VersionSet};
 
 #[cfg(test)]
 mod tests;

@@ -30,7 +30,7 @@ export default function DashboardAlerts({
   return (
     <div className="mb-4 flex flex-col gap-1.5">
       {alerts.map((alert) => (
-        <button
+        <button type="button"
           key={alert.id}
           onClick={() => onNavigate(alert.tab)}
           className={getAlertButtonClassName(alert.severity)}

@@ -38,7 +38,7 @@ export function StaffForm({
     setIdAutoMode(editingIndex === null && !editing.id);
   // Reset only when the selected record changes, not as auto-ID populates editing.id
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingIndex]);
+  }, [editingIndex, editing.id, editing.attributes]);
 
   function handleNameChange(field: "firstName" | "lastName", value: string) {
     updateField(field, value);
@@ -87,9 +87,10 @@ export function StaffForm({
     >
       {/* ID */}
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>{t("worldEditor.staffId")}</label>
+        <label htmlFor="package-staff-id" className={labelClass}>{t("worldEditor.staffId")}</label>
         <div className="flex gap-2 items-center">
           <input
+            id="package-staff-id"
             className="flex-1 rounded-lg border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-400 transition"
             value={editing.id}
             onChange={(e) => { setIdAutoMode(false); updateField("id", e.target.value); }}
@@ -153,7 +154,7 @@ export function StaffForm({
           onChange={(v) => updateField("club", v)}
         />
         <div className="flex flex-col gap-1">
-          <label className={labelClass}>{t("worldEditor.staffNationality")}</label>
+          <p className={labelClass}>{t("worldEditor.staffNationality")}</p>
           <CountryCombobox
             label={t("worldEditor.staffNationality")}
             value={editing.nationality}
@@ -180,15 +181,16 @@ export function StaffForm({
           <span className={labelClass}>{t("worldEditor.staffUseAttributes")}</span>
         </div>
         {useAttributes && editing.attributes != null && (() => {
-          const attrs = editing.attributes!;
+          const attrs = editing.attributes;
           return (
             <div className="grid grid-cols-2 gap-3">
               {STAFF_ATTR_KEYS.map((key) => (
                 <div key={key} className="flex flex-col gap-1">
-                  <label className={labelClass}>
+                  <label htmlFor={`staff-attribute-${key}`} className={labelClass}>
                     {t(`worldEditor.staffAttr.${key}`, { defaultValue: key })}
                   </label>
                   <input
+                    id={`staff-attribute-${key}`}
                     type="number"
                     min={1}
                     max={99}

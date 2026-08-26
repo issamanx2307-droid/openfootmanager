@@ -2,8 +2,8 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { GameStateData } from "../../store/gameStore";
-import { MatchSnapshot } from "./types";
+import type { GameStateData } from "../../store/gameStore";
+import type { MatchSnapshot } from "./types";
 import { Badge, ThemeToggle } from "../ui";
 import { ChevronRight, Mic, MessageSquare } from "lucide-react";
 
@@ -143,14 +143,14 @@ function generateQuestions(
       (e.event_type === "Goal" || e.event_type === "PenaltyGoal") &&
       e.player_id,
   );
-  let focusPlayer =
+  const focusPlayer =
     goalEvents.length > 0
       ? userTeam.players.find((p) => p.id === goalEvents[0].player_id)
       : userTeam.players[
           Math.floor(Math.random() * Math.min(userTeam.players.length, 5))
         ];
   if (focusPlayer) {
-    const scored = goalEvents.some((e) => e.player_id === focusPlayer!.id);
+    const scored = goalEvents.some((e) => e.player_id === focusPlayer.id);
     const playerName = focusPlayer.name;
     questions.push({
       id: "player_focus",
@@ -385,9 +385,9 @@ export default function PressConference({
             {t("match.pressSubtitle", { team: userTeamName })}
           </p>
           <div className="flex items-center justify-center gap-1 mt-3">
-            {questions.map((_, i) => (
+            {questions.map((question, i) => (
               <div
-                key={i}
+                key={question.id}
                 className={`w-8 h-1 rounded-full transition-colors ${
                   i < currentIdx
                     ? "bg-primary-500"
@@ -430,7 +430,7 @@ export default function PressConference({
               {currentQ.responses.map((r) => {
                 const isSelected = answers[currentQ.id] === r.id;
                 return (
-                  <button
+                  <button type="button"
                     key={r.id}
                     onClick={() => handleAnswer(r.id)}
                     disabled={hasAnswered}
@@ -463,7 +463,7 @@ export default function PressConference({
             {/* Next button */}
             {hasAnswered && (
               <div className="flex justify-end mt-6 ml-16">
-                <button
+                <button type="button"
                   onClick={handleNext}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 rounded-xl font-heading font-bold uppercase tracking-wider text-sm text-white shadow-lg shadow-primary-500/20 transition-all"
                 >
@@ -483,7 +483,7 @@ export default function PressConference({
       {/* Skip button */}
       <footer className="bg-white dark:bg-navy-800 border-t border-gray-200 dark:border-navy-700 px-6 py-3 transition-colors duration-300">
         <div className="max-w-3xl mx-auto flex justify-end">
-          <button
+          <button type="button"
             onClick={onFinish}
             className="text-xs font-heading uppercase tracking-wider text-gray-600 hover:text-gray-800 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
           >

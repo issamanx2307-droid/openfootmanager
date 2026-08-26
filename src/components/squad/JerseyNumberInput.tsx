@@ -30,7 +30,6 @@ export default function JerseyNumberInput({
     if (disabled) return;
     setDraft(value != null ? String(value) : "");
     setEditing(true);
-    // Focus happens via autoFocus on the input
   }
 
   async function commit() {
@@ -42,7 +41,7 @@ export default function JerseyNumberInput({
       next = null;
     } else {
       const parsed = parseInt(trimmed, 10);
-      if (isNaN(parsed)) {
+      if (Number.isNaN(parsed)) {
         // Revert non-numeric entry
         committingRef.current = false;
         setEditing(false);
@@ -84,7 +83,6 @@ export default function JerseyNumberInput({
         aria-label={t("squad.jerseyNumber")}
         min={1}
         max={99}
-        autoFocus
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}

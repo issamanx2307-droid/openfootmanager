@@ -25,6 +25,13 @@ const goal = (minute: number, player_id: string): MatchEvent => ({
   detail: { Goal: { context: "Extends" } },
 });
 
+function requireCommentary(
+  result: ReturnType<typeof getCommentary>,
+): NonNullable<ReturnType<typeof getCommentary>> {
+  if (!result) throw new Error("Expected commentary for the test event");
+  return result;
+}
+
 let previousLanguage: string;
 
 beforeAll(async () => {
@@ -54,9 +61,9 @@ describe("getCommentary", () => {
     const evt = goal(10, "p1");
     const result = getCommentary(evt, snapshot([evt]), i18n.t.bind(i18n));
     expect(result).not.toBeNull();
-    expect(result!.headline.length).toBeGreaterThan(0);
-    expect(result!.line.length).toBeGreaterThan(0);
-    expect(result!.line).toContain("Haaland");
+    expect(requireCommentary(result).headline.length).toBeGreaterThan(0);
+    expect(requireCommentary(result).line.length).toBeGreaterThan(0);
+    expect(requireCommentary(result).line).toContain("Haaland");
   });
 
   it("is deterministic — same event yields the same line", () => {
@@ -70,7 +77,7 @@ describe("getCommentary", () => {
     const g1 = goal(10, "p1");
     const g2 = goal(40, "p1");
     const result = getCommentary(g2, snapshot([g1, g2]), i18n.t.bind(i18n));
-    expect(result!.line.toLowerCase()).toMatch(/brace|two/);
+    expect(requireCommentary(result).line.toLowerCase()).toMatch(/brace|two/);
   });
 
   it("never leaks unresolved interpolation tokens", () => {
@@ -84,7 +91,7 @@ describe("getCommentary", () => {
       detail: { Foul: { severity: "Hard" } },
     };
     const result = getCommentary(evt, snapshot([evt]), i18n.t.bind(i18n));
-    expect(result!.line).not.toMatch(/\{\{.*?\}\}/);
+    expect(requireCommentary(result).line).not.toMatch(/\{\{.*?\}\}/);
   });
 
   it("falls back to the base key when detail is absent (penalty goal)", () => {
@@ -98,7 +105,7 @@ describe("getCommentary", () => {
     };
     const result = getCommentary(evt, snapshot([evt]), i18n.t.bind(i18n));
     expect(result).not.toBeNull();
-    expect(result!.line.length).toBeGreaterThan(0);
+    expect(requireCommentary(result).line.length).toBeGreaterThan(0);
   });
 
   it("uses the hat-trick variant and headline for a player's third goal", () => {
@@ -106,8 +113,8 @@ describe("getCommentary", () => {
     const g2 = goal(40, "p1");
     const g3 = goal(70, "p1");
     const result = getCommentary(g3, snapshot([g1, g2, g3]), i18n.t.bind(i18n));
-    expect(result!.headline).toBe("HAT-TRICK!");
-    expect(result!.line.toLowerCase()).toMatch(/hat-trick|three/);
+    expect(requireCommentary(result).headline).toBe("HAT-TRICK!");
+    expect(requireCommentary(result).line.toLowerCase()).toMatch(/hat-trick|three/);
   });
 
   it("only uses the hat-trick variant on the third goal", () => {
@@ -116,8 +123,8 @@ describe("getCommentary", () => {
     const g3 = goal(70, "p1");
     const g4 = goal(82, "p1");
     const result = getCommentary(g4, snapshot([g1, g2, g3, g4]), i18n.t.bind(i18n));
-    expect(result!.headline).not.toBe("HAT-TRICK!");
-    expect(result!.line.toLowerCase()).not.toContain("hat-trick");
+    expect(requireCommentary(result).headline).not.toBe("HAT-TRICK!");
+    expect(requireCommentary(result).line.toLowerCase()).not.toContain("hat-trick");
   });
 
   it("falls back from a missing variant key to the base key", () => {
@@ -135,7 +142,7 @@ describe("getCommentary", () => {
     };
     const result = getCommentary(evt, snapshot([evt]), i18n.t.bind(i18n));
     expect(result).not.toBeNull();
-    expect(result!.line.length).toBeGreaterThan(0);
-    expect(result!.line).not.toMatch(/\{\{.*?\}\}/);
+    expect(requireCommentary(result).line.length).toBeGreaterThan(0);
+    expect(requireCommentary(result).line).not.toMatch(/\{\{.*?\}\}/);
   });
 });

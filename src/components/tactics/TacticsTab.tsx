@@ -229,7 +229,9 @@ export default function TacticsTab({
       {/* Inspector modal — only when both players are selected for comparison */}
       {selectedPlayer && comparePlayer && (
         <>
-          <div
+          <button
+            type="button"
+            aria-label={t("common.close")}
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
             onClick={clearLineupSelection}
           />

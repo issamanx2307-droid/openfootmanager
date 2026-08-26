@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { formatDate } from "../../lib/helpers";
 import { resolveBackendText } from "../../utils/backendI18n";
 import { Play, Clock, Trash2, X, Loader2 } from "lucide-react";
@@ -62,20 +62,22 @@ export default function SavesList({ saves, isLoading, loadingSaveId, confirmDele
             <div key={save.id} className="group relative flex flex-col gap-2 w-full p-4 bg-white dark:bg-navy-700 hover:bg-primary-50 dark:hover:bg-navy-600 text-left rounded-xl transition-all duration-200 border border-gray-200 dark:border-navy-600 hover:border-primary-400 dark:hover:border-primary-500 shadow-sm">
               {confirmDeleteId === save.id ? (
                 <div className="flex flex-col gap-2">
-                  {/* The string carries its own <strong> markup, so it has to
-                      go through the HTML parser — but the save name is player
-                      text and must not. `escapeValue` is globally false
-                      (src/i18n/index.ts), so it is re-enabled for this one
-                      interpolation. */}
-                  <p className="text-sm text-gray-700 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: t('menu.deleteConfirm', { name: saveDisplayName(save.name), interpolation: { escapeValue: true } }) }} />
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <Trans
+                      i18nKey="menu.deleteConfirm"
+                      values={{ name: saveDisplayName(save.name) }}
+                      components={{ strong: <strong /> }}
+                      shouldUnescape
+                    />
+                  </p>
                   <div className="flex gap-2">
-                    <button
+                    <button type="button"
                       onClick={() => onDelete(save.id)}
                       className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-heading font-bold uppercase tracking-wider rounded-lg transition-colors"
                     >
                       {t('menu.delete')}
                     </button>
-                    <button
+                    <button type="button"
                       onClick={() => onConfirmDelete(null)}
                       className="flex-1 py-2 bg-gray-200 dark:bg-navy-600 hover:bg-gray-300 dark:hover:bg-navy-500 text-gray-700 dark:text-gray-300 text-sm font-heading font-bold uppercase tracking-wider rounded-lg transition-colors"
                     >
@@ -85,7 +87,7 @@ export default function SavesList({ saves, isLoading, loadingSaveId, confirmDele
                 </div>
               ) : (
                 <div className="flex items-center gap-3 w-full">
-                  <button
+                  <button type="button"
                     onClick={() => onLoad(save.id)}
                     className="flex flex-col gap-2 flex-1 text-left min-w-0"
                   >
@@ -101,7 +103,7 @@ export default function SavesList({ saves, isLoading, loadingSaveId, confirmDele
                       </div>
                     </div>
                   </button>
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); onConfirmDelete(save.id); }}
                     className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                     title={t('menu.deleteSave')}

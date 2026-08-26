@@ -177,7 +177,7 @@ export default function ScheduleCalendarGrid({
     <div className="rounded-xl border border-gray-200 bg-white dark:border-navy-600 dark:bg-navy-800 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-navy-600">
-        <button
+        <button type="button"
           onClick={prevMonth}
           aria-label={t("schedule.calendar.prevMonth", "Previous month")}
           className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-navy-700 transition-colors"
@@ -187,7 +187,7 @@ export default function ScheduleCalendarGrid({
         <span className="font-heading font-bold text-sm uppercase tracking-wider text-gray-700 dark:text-gray-200">
           {monthLabel}
         </span>
-        <button
+        <button type="button"
           onClick={nextMonth}
           aria-label={t("schedule.calendar.nextMonth", "Next month")}
           className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-navy-700 transition-colors"
@@ -213,7 +213,7 @@ export default function ScheduleCalendarGrid({
         {days.map((day) => {
           const clickable = day.hasFixture;
           return (
-            <button
+            <button type="button"
               key={day.date}
               disabled={!clickable}
               onClick={() => clickable && onSelectDate(day.date)}

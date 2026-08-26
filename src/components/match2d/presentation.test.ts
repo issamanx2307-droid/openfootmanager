@@ -133,7 +133,9 @@ describe("2D match presentation", () => {
       events: [{ ...event(10, "Dribble", "Home", "AttackingCentre"), player_id: "runner" }],
     };
     const live = presentationFrame(input, 280);
-    const runner = live.players.find((item) => item.id === "runner")!;
+    const runner = live.players.find((item) => item.id === "runner");
+    expect(runner).toBeDefined();
+    if (!runner) throw new Error("Expected runner in presentation frame");
     const distanceToBall = Math.hypot(runner.point.x - live.ball.x, runner.point.y - live.ball.y);
 
     expect(distanceToBall).toBeLessThan(0.05);
@@ -182,10 +184,15 @@ describe("2D match presentation", () => {
     };
     const start = presentationFrame(input, 0);
     const live = presentationFrame(input, 350);
-    const homeDefenderAtStart = start.players.find((item) => item.id === "home-defender")!;
-    const homeDefenderLive = live.players.find((item) => item.id === "home-defender")!;
-    const awayDefenderAtStart = start.players.find((item) => item.id === "away-defender")!;
-    const awayDefenderLive = live.players.find((item) => item.id === "away-defender")!;
+    const requiredPlayer = (players: typeof start.players, id: string) => {
+      const found = players.find((item) => item.id === id);
+      if (!found) throw new Error(`Expected ${id} in presentation frame`);
+      return found;
+    };
+    const homeDefenderAtStart = requiredPlayer(start.players, "home-defender");
+    const homeDefenderLive = requiredPlayer(live.players, "home-defender");
+    const awayDefenderAtStart = requiredPlayer(start.players, "away-defender");
+    const awayDefenderLive = requiredPlayer(live.players, "away-defender");
     const eventTarget = zonePoint("AttackingRight", "Home");
 
     expect(homeDefenderLive.point).not.toEqual(homeDefenderAtStart.point);

@@ -11,6 +11,16 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
+  Trans: ({
+    i18nKey,
+    values,
+  }: {
+    i18nKey: string;
+    values?: Record<string, string | number>;
+  }) =>
+    i18nKey === "training.todayIs"
+      ? `${values?.day} is ${values?.type}`
+      : i18nKey,
   useTranslation: () => ({
     t: (key: string, params?: Record<string, string | number>, fallback?: string) => {
       if (key === "common.noTeam") return "No team";

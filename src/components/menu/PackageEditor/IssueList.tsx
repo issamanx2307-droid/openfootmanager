@@ -12,8 +12,8 @@ export function IssueList({ issues }: { issues: PackageIssue[] }) {
         {t("worldEditor.issues", { count: issues.length })}
       </p>
       <ul className="list-disc pl-4 space-y-0.5 text-red-600 dark:text-red-300">
-        {issues.map((issue, i) => (
-          <li key={i}>
+        {issues.map((issue) => (
+          <li key={`${issue.code}-${issue.file ?? ""}-${JSON.stringify(issue.params)}`}>
             {issue.file ? `[${issue.file}] ` : ""}
             {t(issue.code, issue.params)}
           </li>

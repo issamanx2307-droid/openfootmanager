@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 
-import {
+import type {
   GameStateData,
   LeagueData,
   PlayerData,

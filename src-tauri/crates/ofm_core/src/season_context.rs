@@ -124,20 +124,47 @@ fn derive_configured_transfer_window_context(
 ) -> TransferWindowContext {
     let mut active = None;
     let mut next = None;
-    for year in [current_date.year() - 1, current_date.year(), current_date.year() + 1] {
+    for year in [
+        current_date.year() - 1,
+        current_date.year(),
+        current_date.year() + 1,
+    ] {
         for window in windows {
-            let Some(opens_on) = NaiveDate::from_ymd_opt(year, window.start_month.into(), window.start_day.into()) else { continue; };
-            let end_year = if (window.end_month, window.end_day) < (window.start_month, window.start_day) { year + 1 } else { year };
-            let Some(closes_on) = NaiveDate::from_ymd_opt(end_year, window.end_month.into(), window.end_day.into()) else { continue; };
+            let Some(opens_on) =
+                NaiveDate::from_ymd_opt(year, window.start_month.into(), window.start_day.into())
+            else {
+                continue;
+            };
+            let end_year =
+                if (window.end_month, window.end_day) < (window.start_month, window.start_day) {
+                    year + 1
+                } else {
+                    year
+                };
+            let Some(closes_on) =
+                NaiveDate::from_ymd_opt(end_year, window.end_month.into(), window.end_day.into())
+            else {
+                continue;
+            };
             if current_date >= opens_on && current_date <= closes_on {
                 active = Some((opens_on, closes_on));
-            } else if opens_on > current_date && next.is_none_or(|(candidate, _)| opens_on < candidate) {
+            } else if opens_on > current_date
+                && next.is_none_or(|(candidate, _)| opens_on < candidate)
+            {
                 next = Some((opens_on, closes_on));
             }
         }
     }
     let (opens_on, closes_on, status) = if let Some((opens_on, closes_on)) = active {
-        (opens_on, closes_on, if current_date == closes_on { TransferWindowStatus::DeadlineDay } else { TransferWindowStatus::Open })
+        (
+            opens_on,
+            closes_on,
+            if current_date == closes_on {
+                TransferWindowStatus::DeadlineDay
+            } else {
+                TransferWindowStatus::Open
+            },
+        )
     } else if let Some((opens_on, closes_on)) = next {
         (opens_on, closes_on, TransferWindowStatus::Closed)
     } else {
@@ -148,7 +175,8 @@ fn derive_configured_transfer_window_context(
         opens_on: Some(format_date(opens_on)),
         closes_on: Some(format_date(closes_on)),
         days_until_opens: (current_date < opens_on).then_some((opens_on - current_date).num_days()),
-        days_remaining: (current_date >= opens_on && current_date <= closes_on).then_some((closes_on - current_date).num_days()),
+        days_remaining: (current_date >= opens_on && current_date <= closes_on)
+            .then_some((closes_on - current_date).num_days()),
     }
 }
 
@@ -338,8 +366,14 @@ mod tests {
         let context = derive_season_context(&game);
 
         assert_eq!(context.transfer_window.status, TransferWindowStatus::Closed);
-        assert_eq!(context.transfer_window.opens_on.as_deref(), Some("2027-01-01"));
-        assert_eq!(context.transfer_window.closes_on.as_deref(), Some("2027-02-03"));
+        assert_eq!(
+            context.transfer_window.opens_on.as_deref(),
+            Some("2027-01-01")
+        );
+        assert_eq!(
+            context.transfer_window.closes_on.as_deref(),
+            Some("2027-02-03")
+        );
         assert_eq!(context.transfer_window.days_until_opens, Some(12));
     }
 

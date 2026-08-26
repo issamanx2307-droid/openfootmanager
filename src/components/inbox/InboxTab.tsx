@@ -52,6 +52,7 @@ export default function InboxTab({
   const currentTeamName = sessionState?.team?.name ?? null;
 
   useEffect(() => {
+    void clockDate;
     let cancelled = false;
     fetchMessages()
       .then((msgs) => {

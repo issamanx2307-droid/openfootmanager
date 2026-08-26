@@ -46,7 +46,7 @@ export default function HomeLeaguePositionCard({
     <Card accent="accent">
       <CardHeader
         action={
-          <button
+          <button type="button"
             onClick={() => onNavigate?.("Schedule")}
             className="text-primary-500 dark:text-primary-400 text-xs font-heading font-bold uppercase tracking-wider hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
           >
@@ -123,9 +123,16 @@ export default function HomeLeaguePositionCard({
             {teamForm.length > 0 && (
               <div className="flex flex-col items-center gap-1.5 mt-1">
                 <div className="flex gap-1.5">
-                  {teamForm.map((result, index) => (
+                  {(() => {
+                    const occurrences = new Map<string, number>();
+                    return teamForm.map((result) => {
+                      const occurrence = (occurrences.get(result) ?? 0) + 1;
+                      occurrences.set(result, occurrence);
+                      return { result, key: `${result}-${occurrence}` };
+                    });
+                  })().map(({ result, key }) => (
                     <span
-                      key={`${result}-${index}`}
+                      key={key}
                       className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-heading font-bold text-white ${
                         result === "W"
                           ? "bg-green-500"

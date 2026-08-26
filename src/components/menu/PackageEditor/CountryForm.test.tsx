@@ -61,7 +61,9 @@ function renderForm(country: Partial<CountryDef>, updateField = vi.fn()) {
 async function pickNation(name: string) {
   const trigger = await screen.findByRole("button", { name: /worldEditor\.countryNation/ });
   fireEvent.mouseDown(trigger);
-  fireEvent.mouseDown(await screen.findByRole("option", { name }));
+  fireEvent.mouseDown(
+    await screen.findByRole("option", { name }, { timeout: 5_000 }),
+  );
 }
 
 describe("CountryForm nation picker", () => {

@@ -45,9 +45,9 @@ function NationalityFieldFallback({
 
     return (
         <div id="create-manager-field-nationality">
-            <label className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <p className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 {t("createManager.countryOfOrigin")}
-            </label>
+            </p>
             <div className="relative">
                 <button
                     type="button"
@@ -124,10 +124,11 @@ export default function CreateManagerForm({
 
             <div className="flex gap-3">
                 <div className="flex-1" id="create-manager-field-firstName">
-                    <label className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <label htmlFor="create-manager-first-name" className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t("createManager.firstName")}
                     </label>
                     <input
+                        id="create-manager-first-name"
                         maxLength={30}
                         className={`w-full rounded-lg border bg-gray-50 p-3 text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:ring-2 dark:bg-navy-900 dark:text-white dark:placeholder:text-gray-500 ${formErrors.firstName
                             ? "border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500"
@@ -149,10 +150,11 @@ export default function CreateManagerForm({
                 </div>
 
                 <div className="flex-1" id="create-manager-field-lastName">
-                    <label className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <label htmlFor="create-manager-last-name" className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t("createManager.lastName")}
                     </label>
                     <input
+                        id="create-manager-last-name"
                         maxLength={30}
                         className={`w-full rounded-lg border bg-gray-50 p-3 text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:ring-2 dark:bg-navy-900 dark:text-white dark:placeholder:text-gray-500 ${formErrors.lastName
                             ? "border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500"
@@ -175,10 +177,11 @@ export default function CreateManagerForm({
             </div>
 
             <div id="create-manager-field-dob">
-                <label className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <label htmlFor="create-manager-dob" className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {t("createManager.dob")}
                 </label>
                 <DatePicker
+                    id="create-manager-dob"
                     value={formData.dob}
                     onChange={(value) => {
                         onChange("dob", value);
@@ -227,7 +230,7 @@ export default function CreateManagerForm({
                 </div>
 
                 <div className="flex-1" id="create-manager-field-startPhase">
-                    <label className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <label htmlFor="create-manager-start-phase" className="mb-1.5 block text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         {t("createManager.startPhase")}
                     </label>
                     <Select

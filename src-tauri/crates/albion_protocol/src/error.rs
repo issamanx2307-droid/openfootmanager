@@ -32,7 +32,10 @@ pub struct ProtocolError {
 
 impl ProtocolError {
     pub fn new(code: ErrorCode) -> Self {
-        Self { code, params: BTreeMap::new() }
+        Self {
+            code,
+            params: BTreeMap::new(),
+        }
     }
 
     pub fn with_param(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {

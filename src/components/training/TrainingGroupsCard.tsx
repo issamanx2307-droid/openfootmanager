@@ -18,6 +18,7 @@ import {
 } from "./trainingGroupsModel";
 
 type TrainingGroup = TrainingGroupData;
+type TeamWithTrainingGroups = TeamData & { training_groups?: TrainingGroup[] };
 
 interface TrainingGroupsCardProps {
   team: TeamData | null;
@@ -39,7 +40,7 @@ export default function TrainingGroupsCard({
   trainingFocusIcons,
 }: TrainingGroupsCardProps) {
   const { t } = useTranslation();
-  const groups: TrainingGroup[] = (team as any)?.training_groups ?? [];
+  const groups = (team as TeamWithTrainingGroups | null)?.training_groups ?? [];
   const teamFocus = team?.training_focus || "Physical";
 
   const saveGroups = useCallback(
@@ -120,7 +121,7 @@ export default function TrainingGroupsCard({
       <CardHeader
         action={
           groups.length < 5 ? (
-            <button
+            <button type="button"
               onClick={addGroup}
               disabled={isSaving}
               className="flex items-center gap-1.5 text-xs font-heading font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors disabled:opacity-50"
@@ -179,7 +180,7 @@ export default function TrainingGroupsCard({
                   <span className="text-[10px] text-gray-400 tabular-nums">
                     {count}
                   </span>
-                  <button
+                  <button type="button"
                     onClick={() => removeGroup(group.id)}
                     disabled={isSaving}
                     className="text-red-400 hover:text-red-500 transition-colors disabled:opacity-50"

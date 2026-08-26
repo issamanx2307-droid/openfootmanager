@@ -57,31 +57,52 @@ export function CountryFlag({
   // A `title` is announced by screen readers and shown as a tooltip, so leaving
   // one on a decorative flag puts back exactly the country name that hiding the
   // flag was meant to keep out of the reading.
-  const describedLabel = decorative ? undefined : accessibleLabel;
-
   if (!FlagIcon) {
+    const fallbackClasses = [
+      classes,
+      "rounded border border-white/15 bg-black/10 px-1 py-0.5 font-heading text-[0.65em] font-bold leading-none tracking-wide",
+    ].join(" ");
+
+    if (decorative) {
+      return (
+        <span aria-hidden="true" className={fallbackClasses}>
+          {normalisedCode}
+        </span>
+      );
+    }
+
     return (
       <span
-        role={decorative ? undefined : "img"}
-        aria-hidden={decorative || undefined}
-        aria-label={describedLabel}
-        title={describedLabel}
-        className={[
-          classes,
-          "rounded border border-white/15 bg-black/10 px-1 py-0.5 font-heading text-[0.65em] font-bold leading-none tracking-wide",
-        ].join(" ")}
+        role="img"
+        aria-label={accessibleLabel}
+        title={accessibleLabel}
+        className={fallbackClasses}
       >
         {normalisedCode}
       </span>
     );
   }
 
+  if (decorative) {
+    return (
+      <span aria-hidden="true" className={classes}>
+        <FlagIcon
+          focusable="false"
+          className="h-[1em] w-[1.5em] rounded-[2px] shadow-sm"
+        />
+      </span>
+    );
+  }
+
   return (
-    <span className={classes} title={describedLabel}>
+    <span
+      role="img"
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
+      className={classes}
+    >
       <FlagIcon
-        role={decorative ? undefined : "img"}
-        aria-hidden={decorative || undefined}
-        aria-label={describedLabel}
+        aria-hidden="true"
         focusable="false"
         className="h-[1em] w-[1.5em] rounded-[2px] shadow-sm"
       />

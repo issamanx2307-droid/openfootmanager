@@ -63,9 +63,10 @@ export default function CompetitionsOverview({
     if (bucket) bucket.push(c);
     else grouped.set(scope, [c]);
   }
-  const byScope = SCOPE_ORDER.filter((s) => grouped.has(s)).map(
-    (s) => [s, grouped.get(s)!] as const,
-  );
+  const byScope = SCOPE_ORDER.flatMap((scope) => {
+    const competitionsForScope = grouped.get(scope);
+    return competitionsForScope ? [[scope, competitionsForScope] as const] : [];
+  });
 
   return (
     <Card>
@@ -86,7 +87,7 @@ export default function CompetitionsOverview({
                   (comp.participant_ids?.includes(userTeamId) ?? false);
 
                 return (
-                  <button
+                  <button type="button"
                     key={comp.id}
                     onClick={() => onSelect(comp.id)}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-navy-700 text-left transition-colors"

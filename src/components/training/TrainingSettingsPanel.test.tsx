@@ -4,6 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 import TrainingSettingsPanel from "./TrainingSettingsPanel";
 
 vi.mock("react-i18next", () => ({
+  Trans: ({
+    i18nKey,
+    values,
+  }: {
+    i18nKey: string;
+    values: Record<string, string | number>;
+  }) => {
+    if (i18nKey === "training.currentlyTraining") {
+      return `Training ${values.attrs} at ${values.intensity}`;
+    }
+
+    if (i18nKey === "training.todayIs") {
+      return `${values.day} is ${values.type}`;
+    }
+
+    return i18nKey;
+  },
   useTranslation: () => ({
     t: (key: string, params?: Record<string, string | number>) => {
       const scheduleText: Record<string, string> = {

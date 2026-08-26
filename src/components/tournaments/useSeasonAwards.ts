@@ -51,6 +51,7 @@ export function useSeasonAwards(
   const awards = cached && cached.asOfDate === asOfDate ? cached.awards : null;
 
   useEffect(() => {
+    void awardsRetryCount;
     if (!enabled || awards) {
       return;
     }

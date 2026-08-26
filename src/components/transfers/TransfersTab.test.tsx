@@ -5,7 +5,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { invoke, isTauri, type InvokeArgs } from "@tauri-apps/api/core";
 
 import type {
   GameStateData,
@@ -14,6 +14,17 @@ import type {
   TeamData,
 } from "../../store/gameStore";
 import TransfersTab from "./TransfersTab";
+
+function recordInvokeArgs(args?: InvokeArgs): Record<string, unknown> {
+  return args !== undefined && !Array.isArray(args) && !(args instanceof ArrayBuffer) && !(args instanceof Uint8Array)
+    ? args
+    : {};
+}
+
+function required<T>(value: T | null | undefined, message: string): T {
+  if (value == null) throw new Error(message);
+  return value;
+}
 
 vi.mock("@tauri-apps/api/core", () => ({
   convertFileSrc: vi.fn((path: string) => path),
@@ -421,13 +432,15 @@ function createGameState(
   };
 }
 
-describe("TransfersTab", function (): void {
+describe("TransfersTab", (): void => {
   beforeEach(function resetMocks(): void {
     mockedInvoke.mockReset();
     mockedIsTauri.mockReturnValue(false);
-    mockedInvoke.mockImplementation(async (command: string, payload?: any) => {
+    mockedInvoke.mockImplementation(async (command: string, payload?: InvokeArgs) => {
+      const input = recordInvokeArgs(payload);
       if (command === "generate_player_portrait") {
-        const playerId = String(payload?.request?.playerId ?? "player");
+        const request = input.request as { playerId?: string } | undefined;
+        const playerId = String(request?.playerId ?? "player");
         return {
           generator: "test",
           cacheKey: playerId,
@@ -443,7 +456,7 @@ describe("TransfersTab", function (): void {
       }
 
       if (command === "preview_transfer_bid_financial_impact") {
-        const fee = Number(payload?.fee ?? 0);
+        const fee = Number(input.fee ?? 0);
         const transferBudgetBefore = 2000000;
         const financeBefore = 5000000;
         return {
@@ -463,7 +476,7 @@ describe("TransfersTab", function (): void {
       }
 
       if (command === "preview_free_agent_contract_impact") {
-        const wage = Number(payload?.weeklyWage ?? 0);
+        const wage = Number(input.weeklyWage ?? 0);
         return {
           projection: {
             current_annual_wage_bill: 0,
@@ -484,7 +497,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("renders a dual transfer and loan listed player once with both status badges", function (): void {
+  it("renders a dual transfer and loan listed player once with both status badges", (): void => {
     render(
       <TransfersTab
         gameState={createGameState([
@@ -509,7 +522,7 @@ describe("TransfersTab", function (): void {
     expect(screen.getByText(/My Transfer List \(1\)/)).toBeInTheDocument();
   });
 
-  it("paginates the transfer players list instead of mounting every market row", function (): void {
+  it("paginates the transfer players list instead of mounting every market row", (): void => {
     const marketPlayers = Array.from({ length: 65 }, (_, index) =>
       createPlayer({
         id: `market-player-${index + 1}`,
@@ -542,7 +555,7 @@ describe("TransfersTab", function (): void {
     expect(screen.getByText("Showing 31-60 of 65")).toBeInTheDocument();
   });
 
-  it("starts runtime portrait loading for the visible transfer market page", async function (): Promise<void> {
+  it("starts runtime portrait loading for the visible transfer market page", async (): Promise<void> => {
     mockedIsTauri.mockReturnValue(true);
     const marketPlayers = Array.from({ length: 35 }, (_, index) =>
       createPlayer({
@@ -564,7 +577,7 @@ describe("TransfersTab", function (): void {
       />,
     );
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       const portraitCalls = mockedInvoke.mock.calls.filter(
         ([command]) => command === "generate_player_portrait",
       );
@@ -582,7 +595,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("submits a counter offer for a pending incoming bid and publishes the updated game", async function (): Promise<void> {
+  it("submits a counter offer for a pending incoming bid and publishes the updated game", async (): Promise<void> => {
     const initialState = createGameState();
     const updatedState = createGameState([
       createPlayer({
@@ -635,7 +648,7 @@ describe("TransfersTab", function (): void {
     });
     fireEvent.click(screen.getByRole("button", { name: /submit counter/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("counter_offer", {
         playerId: "player-1",
         offerId: "offer-1",
@@ -655,7 +668,7 @@ describe("TransfersTab", function (): void {
     ).toBeInTheDocument();
   });
 
-  it("resumes an existing outgoing transfer negotiation when reopening the bid modal", async function (): Promise<void> {
+  it("resumes an existing outgoing transfer negotiation when reopening the bid modal", async (): Promise<void> => {
     const state = createGameState([
       createPlayer({
         id: "player-market-1",
@@ -714,7 +727,7 @@ describe("TransfersTab", function (): void {
     expect(screen.getByDisplayValue("1.15")).toBeInTheDocument();
   });
 
-  it("shows scout assignment errors inline on the player market", async function (): Promise<void> {
+  it("shows scout assignment errors inline on the player market", async (): Promise<void> => {
     const consoleErrorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
@@ -758,7 +771,7 @@ describe("TransfersTab", function (): void {
     }
   });
 
-  it("resumes an incoming transfer negotiation when reopening the counter-offer modal", function (): void {
+  it("resumes an incoming transfer negotiation when reopening the counter-offer modal", (): void => {
     const state = createGameState([
       createPlayer({
         transfer_offers: [
@@ -805,7 +818,7 @@ describe("TransfersTab", function (): void {
     expect(screen.getByDisplayValue("1150000")).toBeInTheDocument();
   });
 
-  it("shows a localized message when a counter-offer expires before submission", async function (): Promise<void> {
+  it("shows a localized message when a counter-offer expires before submission", async (): Promise<void> => {
     mockedInvoke.mockRejectedValue("Offer not found or not pending");
 
     render(
@@ -821,7 +834,7 @@ describe("TransfersTab", function (): void {
     fireEvent.click(screen.getByRole("button", { name: /counter offer/i }));
     fireEvent.click(screen.getByRole("button", { name: /submit counter/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(
         screen.getByText(
           "Talks cooled off before you could answer. Start a new negotiation if the club comes back.",
@@ -830,7 +843,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("renders withdrawn transfer offers with a localized cooled-off status", function (): void {
+  it("renders withdrawn transfer offers with a localized cooled-off status", (): void => {
     const state = createGameState([
       createPlayer({
         transfer_offers: [
@@ -863,7 +876,7 @@ describe("TransfersTab", function (): void {
     expect(screen.getByText(/Talks cooled off/i)).toBeInTheDocument();
   });
 
-  it("shows bid impact preview and blocks impossible bids", async function (): Promise<void> {
+  it("shows bid impact preview and blocks impossible bids", async (): Promise<void> => {
     const state = createGameState([
       createPlayer({
         id: "player-market-1",
@@ -887,7 +900,7 @@ describe("TransfersTab", function (): void {
       target: { value: "9.0" },
     });
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(screen.getByText("Projected impact")).toBeInTheDocument();
       expect(
         screen.getByText("This bid exceeds your transfer budget"),
@@ -898,7 +911,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("keeps the bid modal and deal workspace open after acceptance so the user can review the result", async function (): Promise<void> {
+  it("keeps the bid modal and deal workspace open after acceptance so the user can review the result", async (): Promise<void> => {
     const state = createGameState([
       createPlayer({
         id: "player-market-1",
@@ -918,9 +931,10 @@ describe("TransfersTab", function (): void {
       }),
     ]);
 
-    mockedInvoke.mockImplementation(async (command: string, payload?: any) => {
+    mockedInvoke.mockImplementation(async (command: string, payload?: InvokeArgs) => {
+      const input = recordInvokeArgs(payload);
       if (command === "preview_transfer_bid_financial_impact") {
-        const fee = Number(payload?.fee ?? 0);
+        const fee = Number(input.fee ?? 0);
         return {
           projection: {
             transfer_budget_before: 2000000,
@@ -972,14 +986,14 @@ describe("TransfersTab", function (): void {
       screen.getByRole("dialog", { name: /john smith/i }),
     ).toBeInTheDocument();
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(
         screen.getByRole("button", { name: /submit bid/i }),
       ).toBeEnabled();
     });
     fireEvent.click(screen.getByRole("button", { name: /submit bid/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("make_transfer_bid", {
         playerId: "player-market-1",
         fee: 1000000,
@@ -997,14 +1011,14 @@ describe("TransfersTab", function (): void {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^close$/i }));
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(
         screen.queryByRole("dialog", { name: /john smith/i }),
       ).not.toBeInTheDocument();
     });
   });
 
-  it("filters free agents in the player market and opens the contract modal", async function (): Promise<void> {
+  it("filters free agents in the player market and opens the contract modal", async (): Promise<void> => {
     const state = createGameState([
       createPlayer({
         id: "free-agent-1",
@@ -1031,7 +1045,7 @@ describe("TransfersTab", function (): void {
 
     fireEvent.click(screen.getByRole("button", { name: /offer contract/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(
         screen.getByText("Projected financial impact"),
       ).toBeInTheDocument();
@@ -1039,7 +1053,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("submits a loan offer from the player market", async function (): Promise<void> {
+  it("submits a loan offer from the player market", async (): Promise<void> => {
     const initialState = createGameState([
       createPlayer({
         id: "loan-target",
@@ -1088,7 +1102,7 @@ describe("TransfersTab", function (): void {
     });
     fireEvent.click(screen.getByRole("button", { name: /submit loan offer/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("make_loan_offer", {
         playerId: "loan-target",
         endDate: "2027-01-01",
@@ -1099,7 +1113,7 @@ describe("TransfersTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(updatedState);
   });
 
-  it("explains deferred registration and allows closed-window loan negotiations", async function (): Promise<void> {
+  it("explains deferred registration and allows closed-window loan negotiations", async (): Promise<void> => {
     const state = createGameState([
       createPlayer({
         id: "loan-target",
@@ -1109,7 +1123,7 @@ describe("TransfersTab", function (): void {
         transfer_offers: [],
       }),
     ]);
-    state.season_context!.transfer_window = {
+    required(state.season_context, "Expected season context").transfer_window = {
       status: "Closed",
       opens_on: "2027-01-01",
       closes_on: null,
@@ -1179,7 +1193,7 @@ describe("TransfersTab", function (): void {
     fireEvent.click(screen.getByRole("button", { name: /make offer/i }));
   });
 
-  it("allows closed-window transfer bid submission when the next opening date is scheduled", async function (): Promise<void> {
+  it("allows closed-window transfer bid submission when the next opening date is scheduled", async (): Promise<void> => {
     const state = createGameState([
       createPlayer({
         id: "transfer-target",
@@ -1190,7 +1204,7 @@ describe("TransfersTab", function (): void {
         market_value: 1_000_000,
       }),
     ]);
-    state.season_context!.transfer_window = {
+    required(state.season_context, "Expected season context").transfer_window = {
       status: "Closed",
       opens_on: "2027-01-01",
       closes_on: null,
@@ -1213,9 +1227,10 @@ describe("TransfersTab", function (): void {
       },
     ];
 
-    mockedInvoke.mockImplementation(async (command: string, payload?: any) => {
+    mockedInvoke.mockImplementation(async (command: string, payload?: InvokeArgs) => {
+      const input = recordInvokeArgs(payload);
       if (command === "preview_transfer_bid_financial_impact") {
-        const fee = Number(payload?.fee ?? 0);
+        const fee = Number(input.fee ?? 0);
         return {
           projection: {
             transfer_budget_before: 2_000_000,
@@ -1279,7 +1294,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("locks transfer and loan routes when the opening date is stale", function (): void {
+  it("locks transfer and loan routes when the opening date is stale", (): void => {
     const state = createGameState([
       createPlayer({
         id: "loan-target",
@@ -1290,7 +1305,7 @@ describe("TransfersTab", function (): void {
       }),
     ]);
     state.clock.current_date = "2026-09-15T12:00:00Z";
-    state.season_context!.transfer_window = {
+    required(state.season_context, "Expected season context").transfer_window = {
       status: "Closed",
       opens_on: "2026-07-02",
       closes_on: "2026-08-31",
@@ -1323,7 +1338,7 @@ describe("TransfersTab", function (): void {
     ).not.toBeInTheDocument();
   });
 
-  it("submits a loan offer with a buy option", async function (): Promise<void> {
+  it("submits a loan offer with a buy option", async (): Promise<void> => {
     const initialState = createGameState([
       createPlayer({
         id: "loan-buy-target",
@@ -1379,7 +1394,7 @@ describe("TransfersTab", function (): void {
     });
     fireEvent.click(screen.getByRole("button", { name: /submit loan offer/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("make_loan_offer", {
         playerId: "loan-buy-target",
         endDate: "2027-06-30",
@@ -1390,7 +1405,7 @@ describe("TransfersTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(updatedState);
   });
 
-  it("accepts an incoming loan offer from the offers view", async function (): Promise<void> {
+  it("accepts an incoming loan offer from the offers view", async (): Promise<void> => {
     const initialState = createGameState([
       createPlayer({
         id: "loan-owned",
@@ -1435,7 +1450,7 @@ describe("TransfersTab", function (): void {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByTitle("Accept Loan"));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("respond_to_loan_offer", {
         playerId: "loan-owned",
         offerId: "loan-offer-1",
@@ -1445,7 +1460,7 @@ describe("TransfersTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(updatedState);
   });
 
-  it("submits a counter offer for an incoming loan offer", async function (): Promise<void> {
+  it("submits a counter offer for an incoming loan offer", async (): Promise<void> => {
     const initialState = createGameState([
       createPlayer({
         id: "loan-counter-owned",
@@ -1502,7 +1517,7 @@ describe("TransfersTab", function (): void {
     });
     fireEvent.click(screen.getByRole("button", { name: /submit counter/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("counter_loan_offer", {
         playerId: "loan-counter-owned",
         offerId: "loan-offer-counter",
@@ -1514,7 +1529,7 @@ describe("TransfersTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(updatedState);
   });
 
-  it("exercises an accepted loan buy option from the offers view", async function (): Promise<void> {
+  it("exercises an accepted loan buy option from the offers view", async (): Promise<void> => {
     const initialState = createGameState([
       createPlayer({
         id: "loan-buy-player",
@@ -1567,7 +1582,7 @@ describe("TransfersTab", function (): void {
     fireEvent.click(screen.getByRole("button", { name: /offers/i }));
     fireEvent.click(screen.getByRole("button", { name: /exercise option/i }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("exercise_loan_buy_option", {
         playerId: "loan-buy-player",
       });
@@ -1575,7 +1590,7 @@ describe("TransfersTab", function (): void {
     expect(onGameUpdate).toHaveBeenCalledWith(updatedState);
   });
 
-  it("offers transfer-list actions from the my-list context menu", async function (): Promise<void> {
+  it("offers transfer-list actions from the my-list context menu", async (): Promise<void> => {
     const gameState = createGameState([
       createPlayer({ transfer_listed: true }),
     ]);
@@ -1602,7 +1617,7 @@ describe("TransfersTab", function (): void {
       screen.getByRole("menuitem", { name: "Remove from transfer list" }),
     );
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(mockedInvoke).toHaveBeenCalledWith("toggle_transfer_list", {
         playerId: "player-1",
       });
@@ -1610,7 +1625,7 @@ describe("TransfersTab", function (): void {
     });
   });
 
-  it("surfaces listing toggle failures from the my-list context menu", async function (): Promise<void> {
+  it("surfaces listing toggle failures from the my-list context menu", async (): Promise<void> => {
     const gameState = createGameState([
       createPlayer({ transfer_listed: true, loan_listed: false }),
     ]);
@@ -1637,7 +1652,7 @@ describe("TransfersTab", function (): void {
     fireEvent.contextMenu(playerRow as HTMLTableRowElement);
     fireEvent.click(screen.getByRole("menuitem", { name: "Add to loan list" }));
 
-    await waitFor(function (): void {
+    await waitFor((): void => {
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Player already loaned",
       );
@@ -1645,7 +1660,7 @@ describe("TransfersTab", function (): void {
     expect(onGameUpdate).not.toHaveBeenCalled();
   });
 
-  it("shows wage budget in annual units (/yr) matching the player wage display (regression #212)", function (): void {
+  it("shows wage budget in annual units (/yr) matching the player wage display (regression #212)", (): void => {
     // wage_budget = 52000 annual → should render as "50K/yr" style value
     // If shown weekly: floor(52000/52) = 1000 → "1K/wk" — a clear unit mismatch
     // Player.wage = 52000 annual → displayed as "50K/yr" in the player row
@@ -1671,7 +1686,7 @@ describe("TransfersTab", function (): void {
     expect(wageBudgetCard.textContent).toContain("/yr");
   });
 
-  it("shows a dual-listed player once in the my-list view", function (): void {
+  it("shows a dual-listed player once in the my-list view", (): void => {
     const gameState = createGameState([
       createPlayer({ transfer_listed: true, loan_listed: true }),
     ]);

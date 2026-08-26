@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type {
   GameStateData,
   PlayerData,
@@ -196,21 +196,21 @@ export default function SquadRosterView({
     });
   };
 
-  const isOutOfPosition = (player: PlayerData): boolean => {
+  const isOutOfPosition = useCallback((player: PlayerData): boolean => {
     return (
       xiIds.has(player.id) &&
       isPlayerOutOfPosition(player, getCurrentPosition(player, xiActivePosition))
     );
-  };
+  }, [xiActivePosition, xiIds]);
 
-  const getTacticalFit = (player: PlayerData) => {
+  const getTacticalFit = useCallback((player: PlayerData) => {
     return getSquadTacticalFit(
       player,
       getCurrentPosition(player, xiActivePosition),
     );
-  };
+  }, [xiActivePosition]);
 
-  const matchesFilters = (player: PlayerData): boolean => {
+  const matchesFilters = useCallback((player: PlayerData): boolean => {
     const inXI = xiIds.has(player.id);
     const currentPos = normalisePosition(
       getCurrentPosition(player, xiActivePosition),
@@ -257,7 +257,18 @@ export default function SquadRosterView({
       default:
         return true;
     }
-  };
+  }, [
+    formation,
+    getTacticalFit,
+    isOutOfPosition,
+    playerSearch,
+    positionFilter,
+    rolesNeedingCover,
+    statusFilter,
+    t,
+    xiActivePosition,
+    xiIds,
+  ]);
 
   const filteredRoster = useMemo(() => {
     const list = roster.filter((player) => matchesFilters(player));
@@ -326,18 +337,11 @@ export default function SquadRosterView({
     return sortDir === "desc" ? sorted.reverse() : sorted;
   }, [
     activePlayStyle,
-    formation,
-    playerSearch,
-    positionFilter,
-    roleCoverage,
     roster,
     sortDir,
     sortKey,
-    startingXiIds,
-    statusFilter,
-    t,
     xiActivePosition,
-    xiIds,
+    xiIds, matchesFilters, getTacticalFit
   ]);
 
   const hasActiveFilters =
@@ -443,10 +447,11 @@ export default function SquadRosterView({
       <Card>
         <div className="p-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_220px_220px_auto] gap-3 items-end">
           <div>
-            <label className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
+            <label htmlFor="squad-player-search" className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
               {t("common.search")}
             </label>
             <input
+              id="squad-player-search"
               type="text"
               value={playerSearch}
               onChange={(event) => setPlayerSearch(event.target.value)}
@@ -455,10 +460,11 @@ export default function SquadRosterView({
             />
           </div>
           <div>
-            <label className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
+            <label htmlFor="squad-position-filter" className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
               {t("squad.pos")}
             </label>
             <Select
+              id="squad-position-filter"
               value={positionFilter}
               onChange={(event) => setPositionFilter(event.target.value)}
               fullWidth
@@ -472,10 +478,11 @@ export default function SquadRosterView({
             </Select>
           </div>
           <div>
-            <label className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
+            <label htmlFor="squad-status-filter" className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 block">
               {t("common.status")}
             </label>
             <Select
+              id="squad-status-filter"
               value={statusFilter}
               onChange={(event) =>
                 setStatusFilter(event.target.value as FilterScope)
@@ -955,7 +962,7 @@ export default function SquadRosterView({
                         </div>
                       </td>
                       {/* Actions (last column) */}
-                      <td className="py-2.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-2.5 px-4 text-right">
                         <button
                           type="button"
                           onClick={(e) => {

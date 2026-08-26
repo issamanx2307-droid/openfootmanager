@@ -155,7 +155,9 @@ pub fn load_meta(conn: &Connection) -> Result<Option<GameMeta>, String> {
                     .unwrap_or_else(|_| default_package_lockfile_json()),
                 ruleset_id: row.get(19).ok(),
                 ruleset_version: row.get(20).ok(),
-                transfer_windows_json: row.get(21).unwrap_or_else(|_| default_package_lockfile_json()),
+                transfer_windows_json: row
+                    .get(21)
+                    .unwrap_or_else(|_| default_package_lockfile_json()),
             })
         })
         .map_err(|_| GAME_PERSISTENCE_LOAD_ERROR.to_string())?;

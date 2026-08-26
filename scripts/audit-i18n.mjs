@@ -146,7 +146,9 @@ function looksLikeUserFacingText(text) {
   if (/\s/.test(trimmed)) return true;
   if (/[!?]/.test(trimmed)) return true;
   if (/^[A-Z][a-z]/.test(trimmed)) return true;
-  if (/[^\u0000-\u007F]/.test(trimmed)) return true;
+  if ([...trimmed].some((character) => (character.codePointAt(0) ?? 0) > 0x7f)) {
+    return true;
+  }
 
   return false;
 }
@@ -223,7 +225,7 @@ function templateExpressionText(node) {
   const parts = [node.head.text];
 
   for (const span of node.templateSpans) {
-    parts.push("${...}", span.literal.text);
+    parts.push("$" + "{...}", span.literal.text);
   }
 
   return parts.join("").trim();

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, Check } from "lucide-react";
 
 interface DatePickerProps {
+  id?: string;
   value: string; // YYYY-MM-DD
   onChange: (date: string) => void;
   error?: boolean;
@@ -38,19 +39,19 @@ function getDaysInMonth(month: number, year: number) {
 }
 
 function clampDayValue(dayValue: string, monthValue: string, yearValue: string) {
-  if (!dayValue || parseInt(dayValue) <= 0) {
+  if (!dayValue || parseInt(dayValue, 10) <= 0) {
     return dayValue;
   }
 
-  const monthNumber = parseInt(monthValue) || 1;
-  const yearNumber = parseInt(yearValue) || 2000;
+  const monthNumber = parseInt(monthValue, 10) || 1;
+  const yearNumber = parseInt(yearValue, 10) || 2000;
   const maxDays = getDaysInMonth(monthNumber, yearNumber);
-  return Math.min(parseInt(dayValue), maxDays).toString();
+  return Math.min(parseInt(dayValue, 10), maxDays).toString();
 }
 
 function normaliseDayOnBlur(dayValue: string) {
-  if (dayValue && parseInt(dayValue) > 0) {
-    return parseInt(dayValue).toString().padStart(2, "0");
+  if (dayValue && parseInt(dayValue, 10) > 0) {
+    return parseInt(dayValue, 10).toString().padStart(2, "0");
   }
 
   return "";
@@ -61,7 +62,7 @@ function normaliseYearOnBlur(yearValue: string, currentYear: number) {
     return yearValue;
   }
 
-  const parsedYear = parseInt(yearValue);
+  const parsedYear = parseInt(yearValue, 10);
   if (Number.isNaN(parsedYear) || parsedYear >= 100) {
     return yearValue;
   }
@@ -87,10 +88,10 @@ function getSelectedMonthLabel(monthValue: string, months: MonthOption[], fallba
     return fallback;
   }
 
-  return months.find(m => m.value === monthValue || m.value === parseInt(monthValue).toString())?.label ?? fallback;
+  return months.find(m => m.value === monthValue || m.value === parseInt(monthValue, 10).toString())?.label ?? fallback;
 }
 
-export function DatePicker({ value, onChange, error }: DatePickerProps) {
+export function DatePicker({ id, value, onChange, error }: DatePickerProps) {
   const { t, i18n } = useTranslation();
 
   // Parse initial value or use current date components
@@ -180,6 +181,7 @@ export function DatePicker({ value, onChange, error }: DatePickerProps) {
       {/* Day */}
       <div className="flex-1">
         <input
+          id={id}
           type="text"
           inputMode="numeric"
           placeholder={t('date.day', 'DD')}

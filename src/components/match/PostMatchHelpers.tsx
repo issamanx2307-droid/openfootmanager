@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { MatchSnapshot, MatchEvent } from "./types";
+import type { MatchSnapshot, MatchEvent } from "./types";
 import { getPlayerName } from "./helpers";
 import { Badge } from "../ui";
 import { Circle, Star } from "lucide-react";
@@ -75,8 +75,8 @@ export function renderScorers(
       >
         {team.name}
       </p>
-      {goals.map((g, i) => (
-        <div key={i} className="flex items-center gap-2 text-xs py-0.5">
+      {goals.map((g) => (
+        <div key={`${g.minute}-${g.event_type}-${g.player_id ?? ""}`} className="flex items-center gap-2 text-xs py-0.5">
           <span className="text-gray-600 dark:text-gray-500 tabular-nums w-6 text-right font-heading">
             {g.minute}'
           </span>

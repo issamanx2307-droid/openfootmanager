@@ -29,6 +29,15 @@ function league(overrides: Partial<LeagueData> = {}): LeagueData {
   };
 }
 
+function requireCompetition(
+  competitions: LeagueData[],
+  id: string,
+): LeagueData {
+  const competition = competitions.find((item) => item.id === id);
+  if (!competition) throw new Error(`Expected competition ${id}`);
+  return competition;
+}
+
 // Selected team (team-1) participates in epl (Domestic, requires home region
 // "europe") and intl (Continental, requires non-home "south_america"); both are
 // therefore mandatory. asia_cup is a non-mandatory Continental comp requiring
@@ -149,7 +158,7 @@ describe("useTeamSelection scope toggles", () => {
   it("auto-enables missing regions when enabling a competition", () => {
     const { result } = renderController();
     const asiaCup = () =>
-      result.current.availableCompetitions.find((c) => c.id === "asia_cup")!;
+      requireCompetition(result.current.availableCompetitions, "asia_cup");
 
     act(() => result.current.handleCompetitionToggle(asiaCup())); // turn asia_cup off
     act(() => result.current.handleCompetitionToggle(asiaCup())); // turn back on -> needs asia
@@ -163,7 +172,7 @@ describe("useTeamSelection scope toggles", () => {
 
   it("locks mandatory competitions against being disabled", () => {
     const { result } = renderController();
-    const epl = result.current.availableCompetitions.find((c) => c.id === "epl")!;
+    const epl = requireCompetition(result.current.availableCompetitions, "epl");
 
     act(() => result.current.handleCompetitionToggle(epl));
 
@@ -175,9 +184,7 @@ describe("useTeamSelection scope toggles", () => {
 
   it("disables an enabled non-locked competition and clears the message", () => {
     const { result } = renderController();
-    const asiaCup = result.current.availableCompetitions.find(
-      (c) => c.id === "asia_cup",
-    )!;
+    const asiaCup = requireCompetition(result.current.availableCompetitions, "asia_cup");
 
     act(() => result.current.handleCompetitionToggle(asiaCup));
 

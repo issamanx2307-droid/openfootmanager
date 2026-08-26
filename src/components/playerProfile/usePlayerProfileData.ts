@@ -100,15 +100,7 @@ export function usePlayerProfileData({
     // `fallbackAdvancedStats`, which is rebuilt every render and would refetch
     // on each one.
   }, [
-    player.id,
-    player.stats.minutes_played,
-    player.stats.shots,
-    player.stats.shots_on_target,
-    player.stats.passes_completed,
-    player.stats.passes_attempted,
-    player.stats.tackles_won,
-    player.stats.interceptions,
-    player.stats.fouls_committed,
+    player.id, fallbackAdvancedStats
   ]);
 
   useEffect(() => {

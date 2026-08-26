@@ -80,15 +80,17 @@ function MatchSlot({
     result.home_penalties != null &&
     result.away_penalties != null &&
     result.home_goals === result.away_goals;
+  const homePenalties = result?.home_penalties ?? 0;
+  const awayPenalties = result?.away_penalties ?? 0;
   const isHomeWinner =
     !!result &&
     (decidedByPenalties
-      ? result.home_penalties! > result.away_penalties!
+      ? homePenalties > awayPenalties
       : result.home_goals > result.away_goals);
   const isAwayWinner =
     !!result &&
     (decidedByPenalties
-      ? result.away_penalties! > result.home_penalties!
+      ? awayPenalties > homePenalties
       : result.away_goals > result.home_goals);
 
   const userInvolved =

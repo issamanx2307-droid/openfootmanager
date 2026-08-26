@@ -142,7 +142,7 @@ export default function GenerationStep({
       {/* Header */}
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             onClick={onBack}
             className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-navy-600"
           >
@@ -248,10 +248,9 @@ export default function GenerationStep({
             </span>
           </div>
 
-          <div
-            role="radiogroup"
+          <fieldset
             aria-labelledby={historyDepthLabelId}
-            className="mt-3 grid grid-cols-2 gap-2"
+            className="m-0 mt-3 grid min-w-0 grid-cols-2 gap-2 border-0 p-0"
           >
             {HISTORY_DEPTH_OPTIONS.map((value) => {
               const selected = historyDepthYears === value;
@@ -259,8 +258,7 @@ export default function GenerationStep({
                 <button
                   key={value}
                   type="button"
-                  role="radio"
-                  aria-checked={selected}
+                  aria-pressed={selected}
                   onClick={() => onChangeHistoryDepthYears(value)}
                   className={`rounded-xl border px-3 py-3 text-left transition-all ${
                     selected
@@ -279,7 +277,7 @@ export default function GenerationStep({
                 </button>
               );
             })}
-          </div>
+          </fieldset>
         </div>
       )}
 

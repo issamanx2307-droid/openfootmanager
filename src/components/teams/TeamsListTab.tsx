@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight, Search, Trophy, Users } from "lucide-react";
 import { formatVal } from "../../lib/helpers";
 import { buildRegionLabel } from "../../lib/teamRegions";
 import { competitionDisplayName } from "../../lib/competitionName";
-import { GameStateData } from "../../store/gameStore";
+import type { GameStateData } from "../../store/gameStore";
 import {
   fetchTeamsDirectory,
   UNGROUPED_LEAGUE_ID,
@@ -239,7 +239,11 @@ function TeamCardView({
     <Card
       className={`cursor-pointer hover:shadow-lg transition-all ${isUser ? "ring-2 ring-primary-500/30" : ""}`}
     >
-      <div onClick={() => onSelect(team.id)} className="overflow-hidden rounded-xl">
+      <button
+        type="button"
+        onClick={() => onSelect(team.id)}
+        className="w-full overflow-hidden rounded-xl text-left"
+      >
         <div
           className="p-5 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${team.colors.primary}, ${team.colors.secondary}40)` }}
@@ -303,7 +307,7 @@ function TeamCardView({
             )}
           </div>
         </CardBody>
-      </div>
+      </button>
     </Card>
   );
 }

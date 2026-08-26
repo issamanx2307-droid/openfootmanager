@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { MatchSnapshot, EnginePlayerData } from "./types";
+import type { MatchSnapshot, EnginePlayerData } from "./types";
 import { Badge } from "../ui";
 import { ArrowUpDown, AlertTriangle, Wand2 } from "lucide-react";
 import ContextMenu from "../ContextMenu";
@@ -117,7 +117,7 @@ export function parseFormationNeeds(formation: string): Record<string, number> {
   const parts = formation
     .split("-")
     .map(Number)
-    .filter((n) => !isNaN(n));
+    .filter((n) => !Number.isNaN(n));
   if (parts.length === 3)
     return {
       Goalkeeper: 1,
@@ -225,7 +225,7 @@ export default function PreMatchLineup({
             },
           )}
         </div>
-        <button
+        <button type="button"
           onClick={onAutoSelect}
           disabled={isAutoSelecting}
           className={`flex w-full items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-heading font-bold uppercase tracking-wider transition-all ${isAutoSelecting
@@ -247,7 +247,7 @@ export default function PreMatchLineup({
             </h3>
             <div className="flex items-center gap-2">
               {selectedStarterId && (
-                <button
+                <button type="button"
                   onClick={() => onSelectStarter(null)}
                   className="text-[10px] text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 font-heading uppercase tracking-wider"
                 >

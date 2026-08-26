@@ -1,7 +1,6 @@
 import {
   cloneElement,
   forwardRef,
-  isValidElement,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -27,7 +26,7 @@ export interface ContextMenuHandle {
 
 interface ContextMenuProps {
   items: ContextMenuItem[];
-  children: React.ReactNode;
+  children: React.ReactElement;
   onOpenChange?: (open: boolean) => void;
 }
 
@@ -39,19 +38,20 @@ const ContextMenu = forwardRef<ContextMenuHandle, ContextMenuProps>(
     const instanceId = useRef(Math.random().toString(36));
     const triggerRef = useRef<HTMLElement | null>(null);
     const onOpenChangeRef = useRef(onOpenChange);
+    const previousVisibleRef = useRef(visible);
 
     useEffect(() => {
       onOpenChangeRef.current = onOpenChange;
     }, [onOpenChange]);
 
+    useEffect(() => {
+      if (previousVisibleRef.current === visible) return;
+      previousVisibleRef.current = visible;
+      onOpenChangeRef.current?.(visible);
+    }, [visible]);
+
     const setOpen = useCallback((next: boolean) => {
-      // Notify only on real transitions so consumers wiring aria-expanded on
-      // their trigger don't get spurious "closed" pings when closeFromOther
-      // fires while we're already closed.
-      setVisible((prev) => {
-        if (prev !== next) onOpenChangeRef.current?.(next);
-        return next;
-      });
+      setVisible(next);
     }, []);
 
     const closeAndRestoreFocus = useCallback(() => {
@@ -111,15 +111,9 @@ const ContextMenu = forwardRef<ContextMenuHandle, ContextMenuProps>(
       };
     }, [visible, setOpen, closeAndRestoreFocus]);
 
-    const trigger = isValidElement(children) ? (
-      cloneElement(children, {
-        onContextMenu: handleContextMenu,
-      } as React.HTMLAttributes<HTMLElement>)
-    ) : (
-      <div onContextMenu={handleContextMenu} className="contents">
-        {children}
-      </div>
-    );
+    const trigger = cloneElement(children, {
+      onContextMenu: handleContextMenu,
+    } as React.HTMLAttributes<HTMLElement>);
 
     return (
       <>
@@ -132,16 +126,27 @@ const ContextMenu = forwardRef<ContextMenuHandle, ContextMenuProps>(
               className="fixed z-50 min-w-[180px] bg-white dark:bg-navy-800 rounded-lg shadow-xl border border-gray-200 dark:border-navy-600 py-1 animate-in fade-in duration-100"
               style={{ left: pos.x, top: pos.y }}
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             >
-              {items.map((item, i) =>
-                item.divider ? (
+              {(() => {
+                const occurrences = new Map<string, number>();
+
+                return items.map((item) => {
+                  const keyBase = item.divider
+                    ? "divider"
+                    : `${item.type ?? "action"}-${item.label}`;
+                  const occurrence = occurrences.get(keyBase) ?? 0;
+                  occurrences.set(keyBase, occurrence + 1);
+                  const key = `${keyBase}-${occurrence}`;
+
+                  return item.divider ? (
                   <div
-                    key={i}
+                    key={key}
                     className="border-t border-gray-100 dark:border-navy-600 my-1"
                   />
                 ) : item.type === "label" ? (
                   <div
-                    key={i}
+                    key={key}
                     className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400"
                   >
                     {item.icon && (
@@ -152,8 +157,8 @@ const ContextMenu = forwardRef<ContextMenuHandle, ContextMenuProps>(
                     <span>{item.label}</span>
                   </div>
                 ) : (
-                  <button
-                    key={i}
+                  <button type="button"
+                    key={key}
                     role="menuitem"
                     onClick={() => {
                       item.onClick?.();
@@ -175,8 +180,9 @@ const ContextMenu = forwardRef<ContextMenuHandle, ContextMenuProps>(
                     )}
                     <span className="font-medium">{item.label}</span>
                   </button>
-                ),
-              )}
+                  );
+                });
+              })()}
             </div>,
             document.body,
           )}

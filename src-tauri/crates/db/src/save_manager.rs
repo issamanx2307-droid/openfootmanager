@@ -49,8 +49,7 @@ fn save_not_found_error(save_id: &str) -> String {
 /// pinned ruleset. Older and freely generated careers remain loadable without
 /// inventing a ruleset retroactively.
 fn persist_career_versions(db: &GameDatabase, game: &Game) -> Result<(), String> {
-    let (Some(ruleset_id), Some(ruleset_version)) = (&game.ruleset_id, game.ruleset_version)
-    else {
+    let (Some(ruleset_id), Some(ruleset_version)) = (&game.ruleset_id, game.ruleset_version) else {
         return Ok(());
     };
     let versions = CURRENT_VERSIONS
@@ -86,8 +85,7 @@ fn snapshot_db_before_write(db_path: &Path) -> Result<(), String> {
         .ok_or_else(|| "save-snapshot: invalid db filename".to_string())?;
     let snap_name = format!("{}.snap-{}", file_name, stamp);
     let snap_path = db_path.with_file_name(&snap_name);
-    fs::copy(db_path, &snap_path)
-        .map_err(|err| format!("save-snapshot: copy failed: {err}"))?;
+    fs::copy(db_path, &snap_path).map_err(|err| format!("save-snapshot: copy failed: {err}"))?;
     info!(
         "[save_manager] snapshot {} -> {}",
         db_path.display(),
@@ -203,7 +201,10 @@ impl SaveManager {
     /// save directory layout to desktop callers.
     pub fn database_path(&mut self, save_id: &str) -> Result<PathBuf, String> {
         self.ensure_save_index_ready()?;
-        let entry = self.save_index.list_saves().iter()
+        let entry = self
+            .save_index
+            .list_saves()
+            .iter()
             .find(|entry| entry.id == save_id)
             .ok_or_else(|| save_not_found_error(save_id))?;
         Ok(self.saves_dir.join(&entry.db_filename))
@@ -498,8 +499,7 @@ impl SaveManager {
             .map_err(|_| crate::save_load_error::SaveLoadError::MissingData.i18n_key())?;
         let mut needs_resave = false;
 
-        if let (Some(ruleset_id), Some(ruleset_version)) =
-            (&game.ruleset_id, game.ruleset_version)
+        if let (Some(ruleset_id), Some(ruleset_version)) = (&game.ruleset_id, game.ruleset_version)
         {
             let runtime = CURRENT_VERSIONS
                 .to_owned_set()
@@ -1829,9 +1829,8 @@ mod tests {
         // manager comes back identical down to the id. Reading the file settles
         // it — the save itself has to carry the manager.
         let manager_id = manager.id.clone();
-        let db =
-            crate::game_database::GameDatabase::open(&saves_dir.join(format!("{save_id}.db")))
-                .unwrap();
+        let db = crate::game_database::GameDatabase::open(&saves_dir.join(format!("{save_id}.db")))
+            .unwrap();
         let stored = crate::repositories::manager_repo::load_all_managers(db.conn()).unwrap();
         assert!(
             stored.iter().any(|candidate| candidate.id == manager_id),

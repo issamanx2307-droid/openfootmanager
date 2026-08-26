@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { FinanceCashFlowChart } from "./FinanceCashFlowChart";
-import {
+import type {
   GameStateData,
   PlayerSelectionOptions,
   TeamData,
@@ -47,6 +47,13 @@ interface FinancesTabProps {
   gameState: GameStateData;
   onGameUpdate?: (state: GameStateData) => void;
   onSelectPlayer?: (id: string, options?: PlayerSelectionOptions) => void;
+}
+
+function haveSamePlayerIds(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((playerId, index) => playerId === right[index])
+  );
 }
 
 /**
@@ -302,6 +309,7 @@ function FinancesTabContent({
     selectedRiskPlayerIds.includes(player.id),
   );
   const allRiskPlayerIds = contractRiskPlayers.map(({ player }) => player.id);
+  const allRiskPlayerIdsKey = allRiskPlayerIds.join("|");
 
   useEffect(() => {
     let cancelled = false;
@@ -328,19 +336,25 @@ function FinancesTabContent({
   }, [financeSnapshotKey, myTeam.id]);
 
   useEffect(() => {
+    const riskPlayerIds = allRiskPlayerIdsKey
+      ? allRiskPlayerIdsKey.split("|")
+      : [];
+
     setSelectedRiskPlayerIds((currentIds) => {
-      const availableIdSet = new Set(allRiskPlayerIds);
+      const availableIdSet = new Set(riskPlayerIds);
       const nextIds = currentIds.filter((playerId) =>
         availableIdSet.has(playerId),
       );
 
       if (nextIds.length > 0) {
-        return nextIds;
+        return haveSamePlayerIds(currentIds, nextIds) ? currentIds : nextIds;
       }
 
-      return allRiskPlayerIds;
+      return haveSamePlayerIds(currentIds, riskPlayerIds)
+        ? currentIds
+        : riskPlayerIds;
     });
-  }, [allRiskPlayerIds.join("|")]);
+  }, [allRiskPlayerIdsKey]);
 
   function handleToggleRiskPlayer(playerId: string): void {
     setSelectedRiskPlayerIds((currentIds) => {

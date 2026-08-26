@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 interface AssetImageProps {
   src: string | null;
@@ -13,11 +13,8 @@ export default function AssetImage({
   className = "",
   fallback,
 }: AssetImageProps) {
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = failedSrc === src;
 
   if (!src || failed) {
     return <>{fallback}</>;
@@ -30,7 +27,7 @@ export default function AssetImage({
       className={className}
       loading="lazy"
       referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   );
 }

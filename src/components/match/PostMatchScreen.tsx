@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { GameStateData } from "../../store/gameStore";
+import type { GameStateData } from "../../store/gameStore";
 import {
-  MatchSnapshot,
-  MatchEvent,
+  type MatchSnapshot,
+  type MatchEvent,
   getTeamTalkOptions,
-  TeamTalkTone,
+  type TeamTalkTone,
 } from "./types";
 import { getEventDisplay, getPlayerName, makeTeamFallback } from "./helpers";
 import { getTalkIcon } from "./TeamTalkIcons";
@@ -289,7 +289,7 @@ export default function PostMatchScreen({
                 className="w-14 h-14 rounded-xl flex items-center justify-center font-heading font-bold text-lg overflow-hidden"
                 imageClassName="h-10 w-10 object-contain drop-shadow"
                 style={{
-                  backgroundColor: homeTeamColor + "30",
+                  backgroundColor: `${homeTeamColor}30`,
                   borderColor: homeTeamColor,
                   borderWidth: 2,
                 }}
@@ -330,7 +330,7 @@ export default function PostMatchScreen({
                 className="w-14 h-14 rounded-xl flex items-center justify-center font-heading font-bold text-lg overflow-hidden"
                 imageClassName="h-10 w-10 object-contain drop-shadow"
                 style={{
-                  backgroundColor: awayTeamColor + "30",
+                  backgroundColor: `${awayTeamColor}30`,
                   borderColor: awayTeamColor,
                   borderWidth: 2,
                 }}
@@ -640,10 +640,10 @@ export default function PostMatchScreen({
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {keyEvents.map((evt, i) => {
+                    {keyEvents.map((evt) => {
                       const display = getEventDisplay(evt);
                       return (
-                        <div key={i} className="flex items-center gap-2 text-xs">
+                        <div key={`${evt.minute}-${evt.side}-${evt.event_type}-${evt.player_id ?? ""}-${evt.secondary_player_id ?? ""}`} className="flex items-center gap-2 text-xs">
                           <span className="text-gray-600 dark:text-gray-500 tabular-nums w-6 text-right font-heading">
                             {evt.minute}'
                           </span>
@@ -675,8 +675,8 @@ export default function PostMatchScreen({
                     {t("match.substitutions")}
                   </h3>
                   <div className="flex flex-col gap-2">
-                    {snapshot.substitutions.map((sub, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
+                    {snapshot.substitutions.map((sub) => (
+                      <div key={`${sub.minute}-${sub.side}-${sub.player_off_id}-${sub.player_on_id}`} className="flex items-center gap-2 text-xs">
                         <span className="text-gray-600 dark:text-gray-500 tabular-nums w-6 text-right font-heading">
                           {sub.minute}'
                         </span>

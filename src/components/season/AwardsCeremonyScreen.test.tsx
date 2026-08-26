@@ -232,8 +232,11 @@ describe("AwardsCeremonyScreen", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Victor Vale" })[0]!);
-    fireEvent.click(screen.getAllByRole("button", { name: "Alpha FC" })[0]!);
+    const victorVale = screen.getAllByRole("button", { name: "Victor Vale" })[0];
+    const alphaFc = screen.getAllByRole("button", { name: "Alpha FC" })[0];
+    if (!victorVale || !alphaFc) throw new Error("Expected award winner buttons");
+    fireEvent.click(victorVale);
+    fireEvent.click(alphaFc);
     fireEvent.click(screen.getByRole("button", { name: "Continue to dashboard" }));
 
     expect(onSelectPlayer).toHaveBeenCalledWith("player-1");

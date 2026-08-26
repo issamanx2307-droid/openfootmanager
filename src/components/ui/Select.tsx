@@ -11,6 +11,8 @@ import {
   type ChangeEvent,
   type FocusEventHandler,
   type KeyboardEvent,
+  type KeyboardEventHandler,
+  type MouseEventHandler,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -35,7 +37,9 @@ interface SelectProps {
   required?: boolean;
   title?: string;
   tabIndex?: number;
-  autoFocus?: boolean;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  onMouseDown?: MouseEventHandler<HTMLButtonElement>;
+  onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
   onBlur?: FocusEventHandler<HTMLButtonElement>;
   onFocus?: FocusEventHandler<HTMLButtonElement>;
   "aria-label"?: string;
@@ -85,7 +89,9 @@ export function Select({
   required,
   title,
   tabIndex,
-  autoFocus,
+  onClick,
+  onMouseDown,
+  onKeyDown,
   onBlur,
   onFocus,
   "aria-label": ariaLabel,
@@ -281,7 +287,7 @@ export function Select({
       window.removeEventListener("resize", schedulePlace);
       window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [isOpen, options]);
+  }, [isOpen]);
 
   const handleSelect = (nextValue: string) => {
     if (controlledValue === undefined) {
@@ -417,14 +423,18 @@ export function Select({
         aria-haspopup="listbox"
         aria-controls={listboxId}
         tabIndex={tabIndex}
-        autoFocus={autoFocus}
         className={`${base} ${variants[variant]} ${sizes[selectSize]} ${leftPadding} ${rightPadding} ${fullWidth ? "w-full" : ""} ${className} flex items-center justify-between text-left`}
         style={style}
         onClick={(event) => {
           event.stopPropagation();
+          onClick?.(event);
           toggleOpen();
         }}
-        onKeyDown={handleTriggerKeyDown}
+        onMouseDown={onMouseDown}
+        onKeyDown={(event) => {
+          handleTriggerKeyDown(event);
+          onKeyDown?.(event);
+        }}
         onBlur={onBlur}
         onFocus={onFocus}
       >
@@ -448,7 +458,7 @@ export function Select({
             aria-required={required}
             className="max-h-60 overflow-y-auto p-1"
           >
-            {groupedOptions.map((section, sectionIndex) => {
+            {groupedOptions.map((section) => {
               const rendered = section.options.map((option) => {
               const isSelected = option.value === currentValue;
 
@@ -485,15 +495,15 @@ export function Select({
                 // Keyed by position, not by label: two `optgroup`s may carry the
                 // same label without being adjacent, and keying on the label
                 // would give them the same key.
-                <div key={`group-${sectionIndex}`} role="group" aria-label={section.label}>
-                  <div
-                    aria-hidden="true"
-                    className="px-3 pb-1 pt-2 text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500"
-                  >
+                <fieldset
+                  key={`group-${section.options.map((option) => option.value).join("-")}`}
+                  className="m-0 min-w-0 border-0 p-0"
+                >
+                  <legend className="px-3 pb-1 pt-2 text-[10px] font-heading font-bold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">
                     {section.label}
-                  </div>
+                  </legend>
                   {rendered}
-                </div>
+                </fieldset>
               );
             })}
           </div>

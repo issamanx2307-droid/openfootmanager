@@ -88,7 +88,7 @@ export default function YouthAcademyTab({
     return () => {
       cancelled = true;
     };
-  }, [teamId, clockDate]);
+  }, [teamId]);
 
   const team = sessionState?.team ?? gameState?.teams.find((tm) => tm.id === teamId) ?? null;
   const scouts =
@@ -336,7 +336,7 @@ export default function YouthAcademyTab({
                     <div className="min-w-0 flex items-center gap-3">
                       <PlayerAvatar player={player} />
                       <div className="min-w-0">
-                        <button
+                        <button type="button"
                           onClick={() => onSelectPlayer?.(player.id)}
                           className="text-left font-heading font-bold text-sm text-gray-800 dark:text-gray-100 hover:text-primary-500 transition-colors truncate block"
                         >
@@ -584,7 +584,7 @@ export default function YouthAcademyTab({
                             {player.condition}%
                           </span>
                         </td>
-                        <td className="py-2.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-2.5 px-4">
                           <button
                             type="button"
                             onClick={(e) => {

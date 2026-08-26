@@ -64,7 +64,7 @@ export function buildFormationSlots(
   // or non-numeric ("442", "5-5", "abc") can't be laid out by the row logic
   // below without dropping the midfield/forward rows, so fall back to an even
   // single-row spread that still renders every player.
-  if (nums.length < 3 || nums.some((n) => isNaN(n))) {
+  if (nums.length < 3 || nums.some((n) => Number.isNaN(n))) {
     return active.map((p, i) => ({
       player: p,
       x: Math.round((100 * (i + 1)) / (active.length + 1)),
@@ -154,6 +154,7 @@ export function FormationPitch({
     >
       <svg
         className="absolute inset-0 h-full w-full"
+        aria-hidden="true"
         viewBox="0 0 100 140"
         preserveAspectRatio="none"
       >
@@ -307,6 +308,7 @@ export function FormationPitch({
           // interactive controls (e.g. the role combobox), which HTML forbids
           // inside a real <button>.
           return (
+            // biome-ignore lint/a11y/useSemanticElements: A native button cannot validly contain a token's optional interactive controls.
             <div
               key={p.id}
               role="button"

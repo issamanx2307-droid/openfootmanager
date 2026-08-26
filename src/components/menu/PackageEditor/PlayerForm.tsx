@@ -123,7 +123,7 @@ export function PlayerForm({
       {/* Photo */}
       {projectDir && (
         <div className="flex flex-col gap-1">
-          <label className={labelClass}>{t("worldEditor.playerPhoto")}</label>
+          <p className={labelClass}>{t("worldEditor.playerPhoto")}</p>
           <div className="flex items-center gap-3">
             {photoDataUrl ? (
               <img src={photoDataUrl} alt="" className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 flex-shrink-0" />
@@ -156,9 +156,10 @@ export function PlayerForm({
 
       {/* Club picker */}
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>{t("worldEditor.playerClub")}</label>
+        <label htmlFor="package-player-club" className={labelClass}>{t("worldEditor.playerClub")}</label>
         {teamsWithIds.length > 0 ? (
           <Select
+            id="package-player-club"
             value={editing.club}
             onChange={(e) => updateField("club", e.target.value)}
             fullWidth
@@ -172,6 +173,7 @@ export function PlayerForm({
           </Select>
         ) : (
           <input
+            id="package-player-club"
             type="text"
             value={editing.club}
             onChange={(e) => updateField("club", e.target.value)}
@@ -208,8 +210,9 @@ export function PlayerForm({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className={labelClass}>{t("worldEditor.playerDateOfBirth")}</label>
+        <label htmlFor="package-player-date-of-birth" className={labelClass}>{t("worldEditor.playerDateOfBirth")}</label>
         <DatePicker
+          id="package-player-date-of-birth"
           value={editing.dateOfBirth ?? ""}
           onChange={(v) => updateField("dateOfBirth", v || null)}
         />
@@ -244,11 +247,12 @@ export function PlayerForm({
               <div className="grid grid-cols-2 gap-2">
                 {keys.map((key) => (
                   <div key={key} className="flex flex-col gap-0.5">
-                    <label className="text-[10px] font-heading uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    <label htmlFor={`player-attribute-${key}`} className="text-[10px] font-heading uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       {t(`common.attributes.${key}`)}
                     </label>
                     <div className="flex items-center gap-1.5">
                       <input
+                        id={`player-attribute-${key}`}
                         type="range"
                         min={1}
                         max={99}

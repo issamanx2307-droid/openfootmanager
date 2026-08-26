@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach } from "vitest";
 import { describe, expect, it, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, type InvokeArgs } from "@tauri-apps/api/core";
 import type {
   GameStateData,
   PlayerData,
@@ -10,6 +10,12 @@ import type {
   TeamData,
 } from "../../store/gameStore";
 import PlayerProfile from "./PlayerProfile";
+
+function recordInvokeArgs(args?: InvokeArgs): Record<string, unknown> {
+  return args !== undefined && !Array.isArray(args) && !(args instanceof ArrayBuffer) && !(args instanceof Uint8Array)
+    ? args
+    : {};
+}
 
 function hasAnnualWage(text: string, amount: string): boolean {
   return text.replace(/\s+/g, "").includes(`€${amount}/yr`);
@@ -881,9 +887,9 @@ describe("PlayerProfile contract surfaces", () => {
 
   it("validates renewal offers before submission", async () => {
     vi.mocked(invoke).mockImplementation(
-      async (command: string, payload?: any) => {
+      async (command: string, payload?: InvokeArgs) => {
         if (command === "preview_renewal_financial_impact") {
-          const offered = Number(payload?.weeklyWage ?? 0);
+          const offered = Number(recordInvokeArgs(payload).weeklyWage ?? 0);
           return {
             projection: {
               current_annual_wage_bill: 24000,

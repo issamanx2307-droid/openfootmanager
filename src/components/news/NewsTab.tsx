@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { GameStateData, NewsArticle } from "../../store/gameStore";
+import type { GameStateData, NewsArticle } from "../../store/gameStore";
 import {
   Newspaper,
   Trophy,
@@ -118,7 +118,7 @@ export default function NewsTab({ gameState, onSelectTeam }: NewsTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentDate]);
+  }, []);
 
   // Use slice data when available; fall back to gameState while loading. The
   // fallback is unfiltered, so drop future-dated articles (e.g. a World Cup
@@ -207,7 +207,7 @@ export default function NewsTab({ gameState, onSelectTeam }: NewsTabProps) {
       {/* Filters row */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Category pills */}
-        <button
+        <button type="button"
           onClick={() => {
             setFilterCategory(null);
             setPage(0);
@@ -220,7 +220,7 @@ export default function NewsTab({ gameState, onSelectTeam }: NewsTabProps) {
           {t("common.all")}
         </button>
         {categories.map((cat) => (
-          <button
+          <button type="button"
             key={cat}
             onClick={() => {
               setFilterCategory(filterCategory === cat ? null : cat);
@@ -294,7 +294,7 @@ export default function NewsTab({ gameState, onSelectTeam }: NewsTabProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 pt-2">
-          <button
+          <button type="button"
             disabled={safePage === 0}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             className="p-2 rounded-lg bg-gray-100 dark:bg-navy-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-navy-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -304,7 +304,7 @@ export default function NewsTab({ gameState, onSelectTeam }: NewsTabProps) {
           <span className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             {safePage + 1} / {totalPages}
           </span>
-          <button
+          <button type="button"
             disabled={safePage >= totalPages - 1}
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             className="p-2 rounded-lg bg-gray-100 dark:bg-navy-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-navy-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -339,12 +339,12 @@ function HeroArticle({
   };
 
   const articleButton = (
-    <button
+    <div
       data-testid={`news-article-${article.id}`}
-      onClick={onSelect}
-      className="w-full text-left bg-white dark:bg-navy-800 rounded-xl border border-gray-200 dark:border-navy-700 shadow-sm overflow-hidden hover:shadow-md dark:hover:border-navy-600 transition-all group"
+      className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-navy-700 dark:bg-navy-800 dark:hover:border-navy-600 group"
     >
-      <div className="p-6">
+      <button type="button" onClick={onSelect} className="w-full text-left">
+        <div className="p-6 pb-3">
         <div className="flex items-center gap-2 mb-3">
           <span
             className={`inline-flex items-center gap-1.5 text-[10px] font-heading font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${meta.color} ${meta.bg}`}
@@ -378,33 +378,31 @@ function HeroArticle({
           </div>
         )}
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed">
+          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed">
           {article.body}
-        </p>
-
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-navy-700">
-          <p className="text-[10px] text-gray-400 dark:text-gray-600 font-heading uppercase tracking-widest">
-            — {article.source}
           </p>
-          {(article.team_ids ?? []).length > 0 && onSelectTeam && (
-            <div className="flex gap-1.5">
-              {(article.team_ids ?? []).slice(0, 3).map((tid) => (
-                <span
-                  key={tid}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectTeam(tid);
-                  }}
-                  className="text-[10px] font-heading font-bold uppercase tracking-wider text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 bg-primary-500/5 hover:bg-primary-500/10 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
-                >
-                  {teamNames[tid] ?? tid}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
+      </button>
+      <div className="flex items-center justify-between px-6 pb-6 pt-3 border-t border-gray-100 dark:border-navy-700">
+        <p className="text-[10px] text-gray-400 dark:text-gray-600 font-heading uppercase tracking-widest">
+          — {article.source}
+        </p>
+        {(article.team_ids ?? []).length > 0 && onSelectTeam && (
+          <div className="flex gap-1.5">
+            {(article.team_ids ?? []).slice(0, 3).map((tid) => (
+              <button
+                key={tid}
+                type="button"
+                onClick={() => onSelectTeam(tid)}
+                className="rounded-md bg-primary-500/5 px-2 py-0.5 text-[10px] font-heading font-bold uppercase tracking-wider text-primary-500 transition-colors hover:bg-primary-500/10 hover:text-primary-600 dark:hover:text-primary-400"
+              >
+                {teamNames[tid] ?? tid}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-    </button>
+    </div>
   );
 
   if (contextItems.length > 0) {
@@ -436,7 +434,7 @@ function ArticleCard({
   };
 
   const articleButton = (
-    <button
+    <button type="button"
       data-testid={`news-article-${article.id}`}
       onClick={onSelect}
       className="w-full text-left bg-white dark:bg-navy-800 rounded-xl border border-gray-200 dark:border-navy-700 shadow-sm overflow-hidden hover:shadow-md dark:hover:border-navy-600 transition-all group flex flex-col"
@@ -516,7 +514,7 @@ function ArticleDetail({
 
   return (
     <div className="max-w-3xl mx-auto">
-      <button
+      <button type="button"
         onClick={onBack}
         className="flex items-center gap-1.5 text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 mb-4 transition-colors"
       >
@@ -578,7 +576,7 @@ function ArticleDetail({
             {(article.team_ids ?? []).length > 0 && onSelectTeam && (
               <div className="flex flex-wrap gap-2">
                 {(article.team_ids ?? []).map((tid) => (
-                  <button
+                  <button type="button"
                     key={tid}
                     onClick={() => onSelectTeam(tid)}
                     className="text-[10px] font-heading font-bold uppercase tracking-wider text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 bg-primary-500/5 hover:bg-primary-500/10 px-2.5 py-1 rounded-md transition-colors"

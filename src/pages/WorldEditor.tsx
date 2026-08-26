@@ -165,10 +165,10 @@ export default function WorldEditor() {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  function flashError(msg: string) {
+  const flashError = useCallback((msg: string) => {
     setErrorMsg(msg);
     setTimeout(() => setErrorMsg(null), 5000);
-  }
+  }, []);
 
   function flashSuccess(msg: string) {
     setSuccessMsg(msg);
@@ -248,7 +248,7 @@ export default function WorldEditor() {
       throw err;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [projectDir]);
+  }), [projectDir, flashError, enqueueWrite]);
 
   function handleToggleAutoSave() {
     const next = !autoSave;
