@@ -1,4 +1,21 @@
 import "@testing-library/jest-dom/vitest";
+import { vi } from "vitest";
+import { cloneElement, isValidElement, type ReactNode } from "react";
+
+// jsdom has no layout engine, so Recharts cannot measure a responsive parent.
+// Give chart children a stable test-only viewport instead of emitting misleading
+// negative-size warnings during unrelated component tests.
+vi.mock("recharts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("recharts")>();
+
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) =>
+      isValidElement<{ width?: number; height?: number }>(children)
+        ? cloneElement(children, { width: 800, height: 400 })
+        : children,
+  };
+});
 
 // Polyfill localStorage for jsdom environment in Node 22+.
 // Node 24+ removed the built-in localStorage implementation and now requires

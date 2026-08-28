@@ -48,7 +48,10 @@ export function useTournamentsData(
     let cancelled = false;
     fetchCompetitionsView()
       .then((view) => {
-        if (!cancelled) setCompetitionsView(view);
+        // A malformed or empty bridge response must not replace the in-memory
+        // fallback data. This also keeps the first paint stable while the
+        // desktop bridge is unavailable (such as during browser-only tests).
+        if (!cancelled && view) setCompetitionsView(view);
       })
       // A failed slice fetch is not fatal: every field below falls back to
       // gameState, so the screen still renders from the world already in
@@ -138,11 +141,11 @@ export function useTournamentsData(
       return;
     }
 
-    if (hasSelectedCompetition) {
+    if (selectedCompetitionId === null || hasSelectedCompetition) {
       return;
     }
 
-    setSelectedCompetitionId(userCompetitions[0]?.id ?? activeCompetitions[0].id);
+    setSelectedCompetitionId(null);
   // activeCompetitionIds / userCompetitionIds are stable string keys standing in
   // for activeCompetitions and userCompetitions. Both are rebuilt by .filter()
   // above on every render, so depending on the arrays themselves would refire
@@ -151,11 +154,9 @@ export function useTournamentsData(
   }, [
     activeCompetitionIds,
     activeCompetitions.length,
-    activeCompetitions[0]?.id,
     hasSelectedCompetition,
     selectedCompetitionId,
     userCompetitionIds,
-    userCompetitions[0]?.id,
   ]);
 
   return {

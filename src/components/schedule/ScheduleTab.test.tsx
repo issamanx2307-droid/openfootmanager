@@ -211,7 +211,9 @@ describe("ScheduleTab", () => {
   });
 
   it("fetches the schedule slice on mount and shows upcoming fixture", async () => {
-    render(<ScheduleTab gameState={makeGameState(true)} onSelectTeam={vi.fn()} />);
+    await act(async () => {
+      render(<ScheduleTab gameState={makeGameState(true)} onSelectTeam={vi.fn()} />);
+    });
     await waitFor(() => {
       expect(screen.getByTestId("schedule-fixture-fix-1")).toBeInTheDocument();
     });
@@ -381,7 +383,9 @@ describe("ScheduleTab", () => {
     expect(screen.getByTestId("schedule-fixture-fix-past-3")).toBeInTheDocument();
     expect(screen.queryByTestId("schedule-fixture-fix-past-4")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Load more/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Load more/i }));
+    });
     expect(screen.getByTestId("schedule-fixture-fix-past-4")).toBeInTheDocument();
     expect(screen.getByTestId("schedule-fixture-fix-past-6")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Load more/i })).not.toBeInTheDocument();
@@ -431,8 +435,10 @@ describe("ScheduleTab", () => {
     });
   });
 
-  it("hides the international toggle when there are no national-team fixtures", () => {
-    render(<ScheduleTab gameState={makeGameState(true)} onSelectTeam={vi.fn()} />);
+  it("hides the international toggle when there are no national-team fixtures", async () => {
+    await act(async () => {
+      render(<ScheduleTab gameState={makeGameState(true)} onSelectTeam={vi.fn()} />);
+    });
     expect(
       screen.queryByRole("button", { name: /International/i }),
     ).not.toBeInTheDocument();
@@ -526,8 +532,12 @@ describe("ScheduleTab", () => {
       },
     ] as GameStateData["national_teams"];
 
-    render(<ScheduleTab gameState={state} onSelectTeam={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: /International/i }));
+    await act(async () => {
+      render(<ScheduleTab gameState={state} onSelectTeam={vi.fn()} />);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /International/i }));
+    });
 
     expect(screen.getByTestId("schedule-callup-p1")).toBeInTheDocument();
     expect(screen.getByTestId("schedule-international-int-fix-1")).toBeInTheDocument();

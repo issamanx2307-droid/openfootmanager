@@ -85,14 +85,9 @@ export default function ScheduleTab({ gameState, onSelectTeam }: ScheduleTabProp
       return;
     }
     const hasSelection = activeCompetitions.some((c) => c.id === selectedCompetitionId);
-    if (hasSelection) return;
-    const preferred =
-      userCompetitions.find((c) => c.standings.length > 0)?.id ??
-      activeCompetitions.find((c) => c.standings.length > 0)?.id ??
-      userCompetitions[0]?.id ??
-      activeCompetitions[0].id;
-    setSelectedCompetitionId(preferred);
-  }, [activeCompetitions, selectedCompetitionId, userCompetitions]);
+    if (selectedCompetitionId === null || hasSelection) return;
+    setSelectedCompetitionId(null);
+  }, [activeCompetitions, selectedCompetitionId]);
 
   // Fetch schedule slice whenever the competition changes.
   useEffect(() => {
@@ -103,7 +98,7 @@ export default function ScheduleTab({ gameState, onSelectTeam }: ScheduleTabProp
     let cancelled = false;
     fetchSchedule({ competition_id: selectedCompetition.id })
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled || !result) return;
         setSlice(result);
         setFetchError(null);
       })
