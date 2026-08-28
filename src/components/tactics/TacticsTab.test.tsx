@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -360,7 +361,7 @@ describe("TacticsTab", () => {
     });
   });
 
-  it("shows injured bench players with injury details in the left panel", () => {
+  it("shows injured bench players with injury details in the left panel", async () => {
     const gameState = makeGameState();
     const injuredBenchPlayer = gameState.players.find(
       (player) => player.id === "d5",
@@ -371,14 +372,22 @@ describe("TacticsTab", () => {
         days_remaining: 6,
       };
     }
+    mockedInvoke.mockImplementation(async (command: string) => {
+      if (command === "get_squad") {
+        return gameState.players.filter((player) => player.team_id === "team1");
+      }
+      return gameState;
+    });
 
-    render(
-      <TacticsTab
-        gameState={gameState}
-        onSelectPlayer={vi.fn()}
-        onGameUpdate={vi.fn()}
-      />,
-    );
+    await act(async () => {
+      render(
+        <TacticsTab
+          gameState={gameState}
+          onSelectPlayer={vi.fn()}
+          onGameUpdate={vi.fn()}
+        />,
+      );
+    });
 
     expect(screen.getByText("Ankle sprain")).toBeInTheDocument();
     expect(screen.getByText("6d")).toBeInTheDocument();
@@ -400,13 +409,15 @@ describe("TacticsTab", () => {
       return gameState;
     });
 
-    render(
-      <TacticsTab
-        gameState={gameState}
-        onSelectPlayer={vi.fn()}
-        onGameUpdate={vi.fn()}
-      />,
-    );
+    await act(async () => {
+      render(
+        <TacticsTab
+          gameState={gameState}
+          onSelectPlayer={vi.fn()}
+          onGameUpdate={vi.fn()}
+        />,
+      );
+    });
 
     await waitFor(() => {
       expect(screen.queryByText("Academy Prospect")).not.toBeInTheDocument();
@@ -899,14 +910,22 @@ describe("TacticsTab", () => {
           }
         : player,
     );
+    mockedInvoke.mockImplementation(async (command: string) => {
+      if (command === "get_squad") {
+        return gameState.players.filter((player) => player.team_id === "team1");
+      }
+      return gameState;
+    });
 
-    render(
-      <TacticsTab
-        gameState={gameState}
-        onSelectPlayer={vi.fn()}
-        onGameUpdate={vi.fn()}
-      />,
-    );
+    await act(async () => {
+      render(
+        <TacticsTab
+          gameState={gameState}
+          onSelectPlayer={vi.fn()}
+          onGameUpdate={vi.fn()}
+        />,
+      );
+    });
 
     fireEvent.contextMenu(screen.getByTestId("bench-player-d5"));
 
@@ -916,7 +935,7 @@ describe("TacticsTab", () => {
     expect(mockedInvoke).not.toHaveBeenCalledWith("set_starting_xi", expect.anything());
   });
 
-  it("does not allow swapping an injured bench player into the starting XI", () => {
+  it("does not allow swapping an injured bench player into the starting XI", async () => {
     const gameState = makeGameState();
     gameState.players = gameState.players.map((player) =>
       player.id === "d5"
@@ -926,14 +945,22 @@ describe("TacticsTab", () => {
           }
         : player,
     );
+    mockedInvoke.mockImplementation(async (command: string) => {
+      if (command === "get_squad") {
+        return gameState.players.filter((player) => player.team_id === "team1");
+      }
+      return gameState;
+    });
 
-    render(
-      <TacticsTab
-        gameState={gameState}
-        onSelectPlayer={vi.fn()}
-        onGameUpdate={vi.fn()}
-      />,
-    );
+    await act(async () => {
+      render(
+        <TacticsTab
+          gameState={gameState}
+          onSelectPlayer={vi.fn()}
+          onGameUpdate={vi.fn()}
+        />,
+      );
+    });
 
     fireEvent.click(screen.getByTestId("pitch-bench-player-d5"));
     fireEvent.click(screen.getByTestId("pitch-player-d2"));

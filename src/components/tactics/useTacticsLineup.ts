@@ -53,8 +53,10 @@ export function useTacticsLineup({
   onGameUpdate,
 }: UseTacticsLineupArgs) {
   const { sessionState } = useGameStore();
-  const [fetchedSquad, setFetchedSquad] = useState<PlayerData[] | null>(null);
   const teamId = sessionState?.manager?.team_id ?? gameState?.manager?.team_id ?? null;
+  const [fetchedSquad, setFetchedSquad] = useState<PlayerData[] | null>(() =>
+    teamId ? (gameState?.players.filter((player) => player.team_id === teamId) ?? null) : null,
+  );
   const initialTeam = sessionState?.team ?? gameState?.teams?.find((t) => t.id === teamId) ?? null;
   const initialPreset = initialTeam
     ? findTacticsPresetBySetup(
@@ -79,7 +81,17 @@ export function useTacticsLineup({
 
   useEffect(() => {
     if (!teamId) return;
-    void getSquad(teamId).then(setFetchedSquad).catch(() => {});
+    void getSquad(teamId)
+      .then((nextSquad) => {
+        if (!nextSquad) return;
+        setFetchedSquad((current) =>
+          current?.length === nextSquad.length &&
+          JSON.stringify(current) === JSON.stringify(nextSquad)
+            ? current
+            : nextSquad,
+        );
+      })
+      .catch(() => {});
   }, [teamId]);
 
   const team = sessionState?.team ?? gameState?.teams?.find((t) => t.id === teamId) ?? null;

@@ -1145,7 +1145,7 @@ describe("TransfersTab", (): void => {
         date: "2026-12-20",
       },
     ];
-    mockedInvoke.mockResolvedValueOnce({
+    const loanOfferResponse = {
       decision: "accepted",
       offer_id: "scheduled-loan",
       suggested_wage_contribution_pct: null,
@@ -1153,6 +1153,24 @@ describe("TransfersTab", (): void => {
       suggested_buy_option_fee: null,
       is_terminal: true,
       game: updatedState,
+    };
+    mockedInvoke.mockImplementation(async (command: string) => {
+      if (command === "make_loan_offer") return loanOfferResponse;
+      if (command === "generate_player_portrait") {
+        return {
+          generator: "test",
+          cacheKey: "loan-target",
+          sourceId: "loan-target",
+          cachePath: "/tmp/loan-target.png",
+          dataUrl: null,
+          generated: true,
+          renderMs: 10,
+          elapsedMs: 10,
+          width: 128,
+          height: 128,
+        };
+      }
+      return undefined;
     });
 
     render(
@@ -1188,9 +1206,11 @@ describe("TransfersTab", (): void => {
         buyOptionFee: null,
       });
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /close/i }));
-    fireEvent.click(screen.getByRole("button", { name: /make offer/i }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /submit loan offer/i }),
+      ).toBeDisabled();
+    });
   });
 
   it("allows closed-window transfer bid submission when the next opening date is scheduled", async (): Promise<void> => {

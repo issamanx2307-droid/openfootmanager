@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GameStateData, PlayerData, TeamData } from "../../store/gameStore";
@@ -196,8 +196,10 @@ describe("TrainingTab", () => {
     });
   });
 
-  it("renders the no-team state when the manager has no club", () => {
-    render(<TrainingTab gameState={createGameState(false)} />);
+  it("renders the no-team state when the manager has no club", async () => {
+    await act(async () => {
+      render(<TrainingTab gameState={createGameState(false)} />);
+    });
 
     expect(screen.getByText("No team")).toBeInTheDocument();
   });

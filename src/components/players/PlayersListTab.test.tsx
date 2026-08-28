@@ -26,8 +26,7 @@ vi.mock("../../utils/backendI18n", () => ({
     error instanceof Error ? error.message : String(error),
 }));
 
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
+const translation = vi.hoisted(() => ({
     t: (key: string, params?: Record<string, string | number>) => {
       if (key === "players.searchPlaceholder") return "Search players";
       if (key === "players.allPos") return "All positions";
@@ -88,7 +87,10 @@ vi.mock("react-i18next", () => ({
       }
       return key;
     },
-  }),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => translation,
 }));
 
 function createTeam(overrides: Partial<TeamData> = {}): TeamData {

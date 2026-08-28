@@ -32,28 +32,31 @@ export function useTacticsLibrary({
   onPlayStyleChange,
 }: UseTacticsLibraryArgs) {
   const { t } = useTranslation();
+  const initialMatchedPreset = findTacticsPresetBySetup(formation, activePlayStyle);
+  const initialPresetId = initialPreset?.id ?? initialMatchedPreset?.id ?? null;
   const [customTactics, setCustomTactics] = useState<TacticsLibraryEntry[]>(() =>
     gameState ? loadCustomTactics(gameState) : [],
   );
   const [activeTacticId, setActiveTacticId] = useState<string | null>(
-    initialPreset ? `preset:${initialPreset.id}` : null,
+    initialPresetId ? `preset:${initialPresetId}` : null,
   );
   const [draftTacticName, setDraftTacticName] = useState(
-    initialPreset?.id
-      ? t(`tactics.presetNames.${initialPreset.id}`, initialPreset.id)
+    initialPresetId
+      ? t(`tactics.presetNames.${initialPresetId}`, initialPresetId)
       : t("tactics.customTactic"),
   );
   const [presetAnchorId, setPresetAnchorId] = useState<string | null>(
-    initialPreset?.id ?? null,
+    initialPresetId,
   );
-  const hydratedCustomTacticsScopeRef = useRef<string | null>(null);
 
   const customTacticsStorageKey = gameState
     ? buildCustomTacticsStorageKey(gameState)
     : null;
+  const hydratedCustomTacticsScopeRef = useRef<string | null>(customTacticsStorageKey);
 
   useEffect(() => {
     if (!gameState || !customTacticsStorageKey) return;
+    if (hydratedCustomTacticsScopeRef.current === customTacticsStorageKey) return;
     hydratedCustomTacticsScopeRef.current = null;
     setCustomTactics(loadCustomTactics(gameState));
   }, [customTacticsStorageKey, gameState]);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { GameStateData } from "../store/gameStore";
 import { applyExtraTranslations } from "../lib/extraTranslations";
@@ -461,7 +461,9 @@ describe("Dashboard", () => {
     const gameStateChangedHandler = registeredEventHandlers.get("game-state-changed");
     expect(gameStateChangedHandler).toBeTypeOf("function");
 
-    await gameStateChangedHandler?.();
+    await act(async () => {
+      await gameStateChangedHandler?.();
+    });
 
     await waitFor(() => {
       expect(getItemSpy).toHaveBeenCalledWith(legacyStorageKey);
